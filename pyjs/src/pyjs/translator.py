@@ -16,6 +16,7 @@
 import sys
 from types import StringType
 import os
+import os.path
 import copy
 from cStringIO import StringIO
 import re
@@ -24,14 +25,17 @@ try:
 except:
     from md5 import md5
 import logging
-import compiler
-from compiler.visitor import ASTVisitor
+
 from options import (all_compile_options, add_compile_options,
                      get_compile_options, debug_options, speed_options, 
                      pythonic_options)
 
 if os.environ.has_key('PYJS_SYSPATH'):
     sys.path[0:0] = [os.environ['PYJS_SYSPATH']]
+
+sys.path[0:0] = [os.path.join(os.path.dirname(__file__), "lib_trans")]
+import compiler
+from compiler.visitor import ASTVisitor
 
 import pyjs
 
@@ -422,53 +426,6 @@ for a in ECMAScipt_Reserved_Words:
 def bracket_fn(s):
     return s # "(%s)" % s
 
-# pass in the compiler module (lib2to3 pgen or "standard" python one)
-# and patch transformer. see http://bugs.python.org/issue6978
-def monkey_patch_broken_transformer(compiler):
-
-    if compiler.__name__ != 'compiler':
-        return # don't patch pgen.lib2to3.compiler.transformer!
-
-    # assumes that compiler.transformer imports all these
-    extractLineNo = compiler.transformer.extractLineNo
-    token = compiler.transformer.token
-    symbol = compiler.transformer.symbol
-    Subscript = compiler.transformer.Subscript
-    Tuple = compiler.transformer.Tuple
-    Ellipsis = compiler.transformer.Ellipsis
-    Sliceobj = compiler.transformer.Sliceobj
-
-    # Bugfix compiler.transformer.Transformer.com_subscriptlist
-    def com_subscriptlist(self, primary, nodelist, assigning):
-        # slicing:      simple_slicing | extended_slicing
-        # simple_slicing:   primary "[" short_slice "]"
-        # extended_slicing: primary "[" slice_list "]"
-        # slice_list:   slice_item ("," slice_item)* [","]
-
-        # backwards compat slice for '[i:j]'
-        if len(nodelist) == 2:
-            sub = nodelist[1]
-            if (sub[1][0] == token.COLON or \
-                            (len(sub) > 2 and sub[2][0] == token.COLON)) and \
-                            sub[-1][0] != symbol.sliceop:
-                return self.com_slice(primary, sub, assigning)
-
-        subscripts = []
-        for i in range(1, len(nodelist), 2):
-            subscripts.append(self.com_subscript(nodelist[i]))
-        if len(nodelist) > 2:
-            tulplesub = [sub for sub in subscripts \
-                            if not (isinstance(sub, Ellipsis) or \
-                            isinstance(sub, Sliceobj))]
-            if len(tulplesub) == len(subscripts):
-                subscripts = [Tuple(subscripts)]
-        return Subscript(primary, assigning, subscripts,
-                         lineno=extractLineNo(nodelist))
-
-    compiler.transformer.Transformer.com_subscriptlist = com_subscriptlist
-
-
-
 re_return = re.compile(r'\breturn\b')
 class __Pyjamas__(object):
     console = "console"
@@ -750,8 +707,6 @@ class Translator(object):
     def __init__(self, compiler,
                  module_name, module_file_name, src, mod, output,
                  dynamic=0, findFile=None, **kw):
-
-        monkey_patch_broken_transformer(compiler)
 
         self.compiler = compiler
         self.ast = compiler.ast
@@ -4268,15 +4223,6 @@ function(){
             raise TranslationError(
                 "unsupported type (in expr)", node, self.module_name)
 
-def import_compiler(internal_ast):
-
-    if internal_ast:
-        from lib2to3 import compiler
-    else:
-        import compiler
-
-    return compiler
-
 def translate(compiler, sources, output_file, module_name=None, **kw):
     kw = dict(all_compile_options, **kw)
     list_imports = kw.get('list_imports', False)
@@ -4749,8 +4695,6 @@ def main():
 
     if len(args)<1:
         parser.error("incorrect number of arguments")
-
-    compiler = import_compiler(options.internal_ast)
 
     if not options.output:
         parser.error("No output file specified")
