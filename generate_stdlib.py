@@ -10,14 +10,30 @@ from os.path import join, dirname, basename, abspath, exists, isdir
 from optparse import OptionParser
 
 root_path = dirname(abspath(__file__))
-pyjslib_path = join(root_path, 'pyjs', 'src', 'pyjs', 'lib')
 dest_path = join(root_path, 'stdlib')
 
-pyjslib_excludes = ['output']
-pypy_excludes = ['site-packages']
+imports = [
+    ('pyjs', join(root_path, 'pyjs', 'src', 'pyjs', 'lib'), ['output', 'test']),
+    ('pyjs', join(root_path, 'pyjs', 'src', 'pyjs', 'lib_trans'), ['output', 'test']),
+    ]
+
+pypy_excludes = ['site-packages', 'pypy_test']
 cpython_excludes = ['site-packages', 'lib-dynload', 'test']
 
 mod_src = {}
+def copy_tests(dest, src):
+    dest = join(dest, 'test')
+    src = join(src, 'test')
+    if not exists(src):
+        return
+    if not isdir(src):
+        return
+    for p in os.listdir(src):
+        if (not isdir(join(src, p)) 
+            and p.endswith('.py')
+            and not exists(join(dest, p))):
+            shutil.copy2(join(src, p), join(dest, p))
+    
 def copy_libs(dest, src, src_name, excludes):
     for p in os.listdir(src):
         if isdir(join(src, p)):
@@ -54,20 +70,23 @@ def main():
     else:
         cpython_path = options.cpython
     
-    pypy_path = options.pypy
+    if options.pypy:
+        imports.append(('pypy', options.pypy, pypy_excludes))
     
-    print ("Exporting data from:\n"
-           "PyJS lib: {0}\nPyPy lib: {2}\nCPython lib: {1}\n".
-           format(pyjslib_path, cpython_path, pypy_path))
-    
+    if cpython_path:
+        imports.append(('cpython', cpython_path, cpython_excludes))
+        
     if exists(dest_path):
         shutil.rmtree(dest_path)
     os.mkdir(dest_path)
+    os.mkdir(join(dest_path, 'test'))
     
-    copy_libs(dest_path, pyjslib_path, 'pyjs', pyjslib_excludes)
-    if pypy_path:
-        copy_libs(dest_path, pypy_path, 'pypy', pypy_excludes)
-    copy_libs(dest_path, cpython_path, 'cpython', cpython_excludes)
+    print ("Exporting data from:")
+    for name, path, exc in imports:
+        print ("{0}: {1}".format(name, path))  
+        copy_libs(dest_path, path, name, exc)
+        copy_tests(dest_path, path)
+
     f_mod_src = open(join(dest_path, 'modules_sources'), 'w')
     for mod, src in mod_src.iteritems():
         f_mod_src.write("{}:{}\n".format(mod, src))
