@@ -28,7 +28,7 @@ from pprint import pprint
 #   http://www.opensource.org/licenses/bsd-license.html
 # and replace OWNER, ORGANIZATION, and YEAR as appropriate.
 
-from .ast import *
+from compiler.ast import *
 import parser
 import symbol
 import token
