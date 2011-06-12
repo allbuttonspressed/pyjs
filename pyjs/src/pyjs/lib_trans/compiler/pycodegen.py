@@ -3,7 +3,10 @@ import os
 import marshal
 import struct
 import sys
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from . import ast, parse, walk, syntax
 from . import pyassem, misc, future, symbols
@@ -50,7 +53,7 @@ def compileFile(filename, display=0):
 def compile(source, filename, mode, flags=None, dont_inherit=None):
     """Replacement for builtin compile() function"""
     if flags is not None or dont_inherit is not None:
-        raise RuntimeError, "not implemented yet"
+        raise RuntimeError("not implemented yet")
 
     if mode == "single":
         gen = Interactive(source, filename)
@@ -112,7 +115,7 @@ class Module(AbstractCompileMode):
         gen = ModuleCodeGenerator(tree)
         if display:
             import pprint
-            print pprint.pprint(tree)
+            print(pprint.pprint(tree))
         self.code = gen.getCode()
 
     def dump(self, f):
@@ -233,7 +236,7 @@ class CodeGenerator:
             assert getattr(self, 'ClassGen')
         except AssertionError, msg:
             intro = "Bad class construction for %s" % self.__class__.__name__
-            raise AssertionError, intro
+            raise AssertionError(intro)
 
     def _setupGraphDelegation(self):
         self.emit = self.graph.emit
@@ -258,7 +261,7 @@ class CodeGenerator:
         return s.scopes
 
     def get_module(self):
-        raise RuntimeError, "should be implemented by subclasses"
+        raise RuntimeError("should be implemented by subclasses")
 
     # Next five methods handle name access
 
@@ -290,8 +293,8 @@ class CodeGenerator:
         elif scope == SC_FREE or scope == SC_CELL:
             self.emit(prefix + '_DEREF', name)
         else:
-            raise RuntimeError, "unsupported scope for var %s: %d" % \
-                  (name, scope)
+            raise RuntimeError("unsupported scope for var %s: %d" % \
+                  (name, scope))
 
     def _implicitNameOp(self, prefix, name):
         """Emit name ops for names generated implicitly by for loops
@@ -484,15 +487,15 @@ class CodeGenerator:
 
     def visitBreak(self, node):
         if not self.setups:
-            raise SyntaxError, "'break' outside loop (%s, %d)" % \
-                  (node.filename, node.lineno)
+            raise SyntaxError("'break' outside loop (%s, %d)" % 
+                  (node.filename, node.lineno))
         self.set_lineno(node)
         self.emit('BREAK_LOOP')
 
     def visitContinue(self, node):
         if not self.setups:
-            raise SyntaxError, "'continue' outside loop (%s, %d)" % \
-                  (node.filename, node.lineno)
+            raise SyntaxError("'continue' outside loop (%s, %d)" %
+                  (node.filename, node.lineno))
         kind, block = self.setups.top()
         if kind == LOOP:
             self.set_lineno(node)
@@ -508,13 +511,13 @@ class CodeGenerator:
                 if kind == LOOP:
                     break
             if kind != LOOP:
-                raise SyntaxError, "'continue' outside loop (%s, %d)" % \
-                      (node.filename, node.lineno)
+                raise SyntaxError("'continue' outside loop (%s, %d)" %
+                      (node.filename, node.lineno))
             self.emit('CONTINUE_LOOP', loop_block)
             self.nextBlock()
         elif kind == END_FINALLY:
             msg = "'continue' not allowed inside 'finally' clause (%s, %d)"
-            raise SyntaxError, msg % (node.filename, node.lineno)
+            raise SyntaxError(msg % (node.filename, node.lineno))
 
     def visitTest(self, node, jump):
         end = self.newBlock()
@@ -893,7 +896,7 @@ class CodeGenerator:
         level = node.level
         if level == 0 and not self.graph.checkFlag(CO_FUTURE_ABSIMPORT):
             level = -1
-        fromlist = map(lambda (name, alias): name, node.names)
+        fromlist = map(lambda names: names[0], node.names)
         if VERSION > 1:
             self.emit('LOAD_CONST', level)
             self.emit('LOAD_CONST', tuple(fromlist))
@@ -945,7 +948,7 @@ class CodeGenerator:
             self.set_lineno(node)
             self.delName(node.name)
         else:
-            print "oops", node.flags
+            print("oops", node.flags)
 
     def visitAssAttr(self, node):
         self.visit(node.expr)
@@ -954,8 +957,8 @@ class CodeGenerator:
         elif node.flags == 'OP_DELETE':
             self.emit('DELETE_ATTR', self.mangle(node.attrname))
         else:
-            print "warning: unexpected flags:", node.flags
-            print node
+            print("warning: unexpected flags:", node.flags)
+            print(node)
 
     def _visitAssSequence(self, node, op='UNPACK_SEQUENCE'):
         if findOp(node) != 'OP_DELETE':
@@ -1122,7 +1125,7 @@ class CodeGenerator:
         elif node.flags == 'OP_DELETE':
             self.emit('DELETE_SLICE+%d' % slice)
         else:
-            print "weird slice", node.flags
+            print("weird slice", node.flags)
             raise
 
     def visitSubscript(self, node, aug_flag=None):
@@ -1453,7 +1456,7 @@ def generateArgList(arglist):
             extra.extend(misc.flatten(elt))
             count = count + 1
         else:
-            raise ValueError, "unexpect argument type:", elt
+            raise ValueError("unexpect argument type:", elt)
     return args + extra, count
 
 def findOp(node):
@@ -1469,7 +1472,7 @@ class OpFinder:
         if self.op is None:
             self.op = node.flags
         elif self.op != node.flags:
-            raise ValueError, "mixed ops in stmt"
+            raise ValueError("mixed ops in stmt")
     visitAssAttr = visitAssName
     visitSubscript = visitAssName
 

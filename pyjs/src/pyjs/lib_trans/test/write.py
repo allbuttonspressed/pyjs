@@ -32,7 +32,7 @@ def write_std(text):
 
 def writebr_std(text):
     text = tag_re.sub("",text)
-    print text
+    print(text)
 
 if sys.platform in ['mozilla', 'ie6', 'opera', 'oldmoz', 'safari']:
     init_web()

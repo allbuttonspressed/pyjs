@@ -35,7 +35,7 @@ class UnitTest:
         try:        
             try:
                 test_method()
-            except Exception,e:
+            except Exception, e:
                 self.fail("uncaught exception:" + str(e))
         except:
             self.fail("uncaught javascript exception")

@@ -15,7 +15,10 @@ import sys
 
 __all__ = ('printAst','getAststr')
 
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 def getAststr(astmod, ast, indent='  ', initlevel=0):
     "Pretty-print an AST to the given output stream."
@@ -77,7 +80,7 @@ def main():
 
     import compiler, traceback
     for fn in args:
-        print '\n\n%s:\n' % fn
+        print('\n\n%s:\n' % fn)
         try:
             printAst(ast, compiler.parseFile(fn), initlevel=1)
         except SyntaxError, e:

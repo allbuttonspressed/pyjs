@@ -4,6 +4,7 @@ import os.path
 import sys
 sys.path[0:0] = [os.path.dirname(os.path.dirname(os.path.abspath(__file__)))]
 import compiler
+import traceback
 
 class CompilerTest(UnitTest):
     def _test_compile(self, code, codestr):
@@ -54,7 +55,10 @@ class CompilerTest(UnitTest):
         ]
             
         for code, codestr in statements:
-            self._test_compile(code, codestr)
+            try:
+                self._test_compile(code, codestr)
+            except Exception:
+                traceback.print_exc()
 
 from RunTests import RunTests
 def test_main():

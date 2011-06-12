@@ -52,8 +52,8 @@ class Scope:
         if name in self.uses or name in self.defs:
             pass # XXX warn about global following def/use
         if name in self.params:
-            raise SyntaxError, "%s in %s is global and parameter" % \
-                  (name, self.name)
+            raise SyntaxError("%s in %s is global and parameter" %
+                  (name, self.name))
         self.globals[name] = 1
         self.module.add_def(name)
 
@@ -388,7 +388,7 @@ class SymbolVisitor:
 
     # prune if statements if tests are false
 
-    _const_types = types.StringType, types.IntType, types.FloatType
+    _const_types = str, int, float
 
     def visitIf(self, node, scope):
         for test, body in node.tests:
@@ -424,7 +424,7 @@ if __name__ == "__main__":
         return res
 
     for file in sys.argv[1:]:
-        print file
+        print(file)
         f = open(file)
         buf = f.read()
         f.close()
@@ -438,10 +438,10 @@ if __name__ == "__main__":
         names2 = s.scopes[tree].get_names()
 
         if not list_eq(mod_names, names2):
-            print
-            print "oops", file
-            print sorted(mod_names)
-            print sorted(names2)
+            print()
+            print("oops", file)
+            print(sorted(mod_names))
+            print(sorted(names2))
             sys.exit(-1)
 
         d = {}
@@ -455,11 +455,11 @@ if __name__ == "__main__":
                 l = [sc for sc in scopes
                      if sc.name == s.get_name()]
                 if len(l) > 1:
-                    print "skipping", s.get_name()
+                    print("skipping", s.get_name())
                 else:
                     if not list_eq(get_names(s.get_namespace()),
                                    l[0].get_names()):
-                        print s.get_name()
-                        print sorted(get_names(s.get_namespace()))
-                        print sorted(l[0].get_names())
+                        print(s.get_name())
+                        print(sorted(get_names(s.get_namespace())))
+                        print(sorted(l[0].get_names()))
                         sys.exit(-1)
