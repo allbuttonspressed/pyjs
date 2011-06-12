@@ -1,5 +1,5 @@
-from .driver import Driver
-from .grammar2x import Grammar
+from parser.driver import Driver
+from parser.grammar2x import Grammar
 
 g = Grammar()
 
