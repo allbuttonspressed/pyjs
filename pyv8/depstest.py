@@ -104,7 +104,7 @@ def main():
         
     translator_arguments = translator.get_compile_options(options)
     out = mkdtemp(prefix='pyjs_depstest')
-    compiler=translator.import_compiler(options.internal_ast)
+    compiler = translator.compiler
     pyjs.path[0:0] = [join(pyjs.pyjspth, 'stdlib')]
     pyjs.path.append(join(pyjs.pyjspth, 'pyjs', 'src'))
     linker = DepsExport([mod], output=out,
