@@ -14,7 +14,6 @@ import os
 import sys
 import stat
 import genericpath
-import warnings
 from genericpath import *
 
 __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
@@ -94,7 +93,6 @@ def split(p):
 
 def splitext(p):
     return genericpath._splitext(p, sep, altsep, extsep)
-splitext.__doc__ = genericpath._splitext.__doc__
 
 # Split a pathname into a drive specification and the rest of the
 # path.  Useful on DOS/Windows/NT; on Unix, the drive is always empty.
@@ -130,8 +128,7 @@ def samestat(s1, s2):
 
 def normpath(path):
     """Normalize path, eliminating double slashes, etc."""
-    # Preserve unicode (if path is unicode)
-    slash, dot = (u'/', u'.') if isinstance(path, unicode) else ('/', '.')
+    slash, dot = ('/', '.')
     if path == '':
         return dot
     initial_slashes = path.startswith('/')

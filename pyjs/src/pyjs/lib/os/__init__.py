@@ -1,4 +1,4 @@
-
+import path
 
 def urandom(n):
     # """urandom(n) -> str
