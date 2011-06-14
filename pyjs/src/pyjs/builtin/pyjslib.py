@@ -23,6 +23,7 @@ setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noAttributeChe
 platform = JS("$pyjs.platform")
 sys = None
 dynamic = None
+Ellipsis = None
 JS("""
 var $max_float_int = 1;
 for (var i = 0; i < 1000; i++) {
@@ -148,6 +149,22 @@ class ModuleType(TypeClass):
     pass
 class FunctionType(TypeClass):
     pass
+class CodeType(TypeClass):
+    pass
+class TracebackType(TypeClass):
+    pass
+class FrameType(TypeClass):
+    pass
+class EllipsisType(TypeClass):
+    def __new__(cls):
+        if Ellipsis is None:
+            return object.__new__(cls)
+        else:
+            return Ellipsis
+    def __repr__(self):
+        return 'Ellipsis'
+    def __str__(self):
+        return 'Ellipsis'
 
 def op_is(a,b):
     JS("""
@@ -6755,6 +6772,8 @@ wrapped_next = JS("""function (iter) {
 }""")
 
 init()
+
+Ellipsis = EllipsisType()
 
 __nondynamic_modules__ = {}
 

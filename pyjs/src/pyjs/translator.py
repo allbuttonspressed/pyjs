@@ -374,6 +374,8 @@ PYJSLIB_BUILTIN_CLASSES=[
     "property",
     "set",
     "tuple",
+    
+    "Ellipsis", # atom
     ]
 
 PYJSLIB_BUILTIN_MAPPING = {\
