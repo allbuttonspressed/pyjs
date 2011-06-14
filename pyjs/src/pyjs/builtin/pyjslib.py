@@ -6557,13 +6557,15 @@ def sprintf(strng, args):
     return result.join("");
 """)
 
+__module_internals = set(['__track_lines__'])
 def _globals(module):
     """
     XXX: It should return dictproxy instead!
     """
     d = dict()
     for name in dir(module):
-        d[name] = JS("@{{module}}[@{{name}}]")
+        if not name in __module_internals:
+            d[name] = JS("@{{module}}[@{{name}}]")
     return d
     
 def debugReport(msg):
