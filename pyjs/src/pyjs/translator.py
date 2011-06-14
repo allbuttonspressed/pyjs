@@ -783,6 +783,11 @@ class Translator(object):
 
         self.w( self.spacing() + self.module_prefix + '__repr__ = function() { return "<module: %s>"; };' % (module_name))
         self.w( self.spacing() + self.module_prefix + "__was_initialized__ = true;")
+        
+        # XXX: Docstrings could be useful sometimes, maybe introduce flag for 
+        #      keeping them intact?
+        self.w( self.spacing() + self.module_prefix + "__doc__ = null;")
+        
         self.w( self.spacing() + "if ((__mod_name__ === null) || (typeof __mod_name__ == 'undefined')) __mod_name__ = '%s';" % (module_name))
         lhs = self.scopeName('__name__', 0, False)
         self.w( self.spacing() + "%s = __mod_name__;" % (lhs))

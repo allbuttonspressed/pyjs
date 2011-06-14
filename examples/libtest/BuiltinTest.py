@@ -283,6 +283,11 @@ class BuiltinTest(UnitTest):
         self.assertTrue(CLS is imports.loccls.CLS, "CLS is imports.loccls.CLS")
         self.assertTrue(CLS is imports.upcls.CLS, "CLS is imports.upcls.CLS")
 
+        from imports import __doc__ as imports_doc
+        self.assertEqual(imports.__doc__, imports_doc, "Module object must have __doc__ attribute")
+        from imports import __name__ as imports_name
+        self.assertEqual(imports.__name__, imports_name)
+
         # from ... import * tests, issue #615
         self.assertEqual(imports.all_masked, False, "from ... import * should respect __all__, #615")
         self.assertEqual(imports.all_override, True, "Should override globals, #615")
