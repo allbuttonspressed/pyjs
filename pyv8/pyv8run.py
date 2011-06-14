@@ -101,8 +101,10 @@ def main():
         else:
             _modules.append(mod)
     modules = _modules
-            
-
+    
+    pyjs.path[0:0] = [join(pyjs.pyjspth, 'stdlib')]
+    pyjs.path.append(join(pyjs.pyjspth, 'pyjs', 'src'))
+    
     for d in options.library_dirs:
         pyjs.path.append(os.path.abspath(d))
 
