@@ -356,26 +356,9 @@ def build(top_module, pyjs, options, app_platforms,
           runtime_options, args):
     print "Building :", top_module
     print "PYJSPATH :", '\n    '.join(['['] + [p for p in pyjs.path]) + '\n]'
-    translator_arguments=dict(
-        debug=options.debug,
-        print_statements = options.print_statements,
-        function_argument_checking=options.function_argument_checking,
-        attribute_checking=options.attribute_checking,
-        bound_methods=options.bound_methods,
-        descriptors=options.descriptors,
-        source_tracking=options.source_tracking,
-        stupid_mode=options.stupid_mode,
-        line_tracking=options.line_tracking,
-        store_source=options.store_source,
-        inline_code = options.inline_code,
-        operator_funcs = options.operator_funcs,
-        number_classes = options.number_classes,
-        list_imports=options.list_imports,
-    )
-
-    if options.internal_ast:
-        translator_arguments['internal_ast'] = True
-
+    
+    translator_arguments= translator.get_compile_options(options)
+    
     l = BrowserLinker(args,
                       output=options.output,
                       platforms=app_platforms,
