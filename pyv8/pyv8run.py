@@ -58,6 +58,16 @@ def main():
         modules = ['main']
     else:
         modules = args
+    
+    _modules = []
+    for mod in modules:
+        if mod.startswith('.') or mod.startswith('/') or mod.endswith('.py'):
+            pyjs.path[0:0] = [os.path.dirname(os.path.abspath(mod))]
+            _modules.append(os.path.basename(mod).split('.')[0])
+        else:
+            _modules.append(mod)
+    modules = _modules
+            
 
     for d in options.library_dirs:
         pyjs.path.append(os.path.abspath(d))
