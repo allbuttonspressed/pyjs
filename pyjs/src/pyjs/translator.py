@@ -783,7 +783,7 @@ class Translator(object):
 
         self.w( self.spacing() + self.module_prefix + '__repr__ = function() { return "<module: %s>"; };' % (module_name))
         self.w( self.spacing() + self.module_prefix + "__was_initialized__ = true;")
-        
+        self.w( self.spacing() + self.module_prefix + "__builtins__ = $pyjs.loaded_modules['pyjslib'];")
         # XXX: Docstrings could be useful sometimes, maybe introduce flag for 
         #      keeping them intact?
         self.w( self.spacing() + self.module_prefix + "__doc__ = null;")
