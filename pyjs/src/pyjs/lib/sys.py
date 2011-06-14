@@ -13,6 +13,12 @@ appname = None
 version_info = (2, 5, 0, 'pyjamas', 0)
 subversion = ('Pyjamas', '', '')
 
+# XXX: Should be populated somehow
+path = []
+
+# XXX: Should be populated somehow
+argv = []
+
 def setloadpath(lp):
     global loadpath
     loadpath = lp
