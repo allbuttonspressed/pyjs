@@ -73,6 +73,10 @@ def type(clsname, bases=None, methods=None):
             return float
         if JS("typeof @{{clsname}} == 'number'"):
             return float
+        if JS("@{{clsname}} == null"):
+            return NoneType
+        if JS("typeof @{{clsname}} == 'function'"):
+            return FunctionType
         raise ValueError("Cannot determine type for %r" % clsname)
 
     # creates a class, derived from bases, with methods and variables
@@ -134,6 +138,16 @@ object.__str__ = JS("""function (self) {
 class basestring(object):
     pass
 
+class TypeClass:
+    def __repr__(cls):
+        return "<type '%s'>" % cls.__name__
+
+class NoneType(TypeClass):
+    pass
+class ModuleType(TypeClass):
+    pass
+class FunctionType(TypeClass):
+    pass
 
 def op_is(a,b):
     JS("""
