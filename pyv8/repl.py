@@ -208,8 +208,6 @@ class InteractiveTranslator(translator.Translator):
                  module_name, module_file_name, src, mod, output,
                  dynamic=0, findFile=None, **kw):
 
-        translator.monkey_patch_broken_transformer(compiler)
-
         self.compiler = compiler
         self.ast = compiler.ast
         self.js_module_name = self.jsname("variable", module_name)
