@@ -803,12 +803,18 @@ JS("""
 def ___import___(path, context, module_name=None, get_base=True):
     save_track_module = JS("$pyjs.track.module")
     sys = JS("$pyjs.loaded_modules['sys']")
+    pyjslib = JS("$pyjs.loaded_modules['pyjslib']")
     if JS("@{{sys}}.__was_initialized__ != true"):
         module = JS("$pyjs.loaded_modules[@{{path}}]")
         module()
         JS("$pyjs.track.module = @{{save_track_module}};")
         if path == 'sys':
-            module.modules = dict({'pyjslib': pyjslib, 'sys': module})
+            module.modules = dict({'pyjslib': pyjslib,
+                                   '__builtin__':pyjslib,
+                                   'builtins':pyjslib,
+                                   'sys': module})
+            JS("$pyjs.loaded_modules['__builtin__'] = @{{pyjslib}};")
+            JS("$pyjs.loaded_modules['builtins'] = @{{pyjslib}};")
         return module
     importName = path
     is_module_object = False
@@ -916,7 +922,7 @@ def ___import___(path, context, module_name=None, get_base=True):
             if get_base:
                 return JS("$pyjs.loaded_modules[@{{topName}}]")
             return module
-
+    
     # If we are here, the module is not loaded (yet).
     if JS("$pyjs.options.dynamic_loading"):
         module = __dynamic_load__(importName)
