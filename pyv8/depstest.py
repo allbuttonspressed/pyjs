@@ -10,7 +10,7 @@ from optparse import OptionParser
 from os.path import join, dirname, basename, abspath, pathsep, sep
 from pyv8run import (PyV8Linker, translator, PLATFORM, pyjs,
                      add_linker_options,
-                     PyV8, Global)
+                     PyV8, Global, JSRuntimeError)
 from pyjs.translator import translate
 from pyjs.linker import module_path
 from collections import defaultdict
@@ -65,10 +65,15 @@ class Module(object):
     
     def set_result(self, r):
         err = ''
-        if isinstance(r, Exception):
+        if isinstance(r, JSRuntimeError):
+            t = 'JSRuntimeError'
+            err = r.full()
+        elif isinstance(r, Exception):
+            t = r.__class__.__name__
             err = str(r)
-            r = r.__class__.__name__
-        self.result = r
+        else:
+            t = r
+        self.result = t
         self.error = err
         
     def set_source(self, stdlib_sources):
@@ -158,16 +163,21 @@ def test_dependency(linker):
     res = True
     g = Global()
     ctxt = PyV8.JSContext(g)
-    g.__context__ = ctxt    
+    g.__context__ = ctxt
+    runtime = False
     try:
         linker()
         fp = open(linker.out_file_mod, 'r')
         txt = fp.read()
         fp.close()
+    except Exception, e:
+        return e
+    
+    try:
         ctxt.enter()
         x = ctxt.eval(txt)
     except Exception, e:
-        res = e
+        res = JSRuntimeError(ctxt, e)
     finally:
         if ctxt.entered:
             ctxt.leave()    

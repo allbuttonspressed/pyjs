@@ -29,6 +29,40 @@ from pyjs import translator
 from linker import PLATFORM, PyV8Linker, add_linker_options
 from jsglobal import Global
 
+class JSRuntimeError(Exception):
+    def __init__(self, ctxt, exc):
+        self.module = ctxt.locals['$pyjs']['track']['module']        
+        self.lineno = ctxt.locals['$pyjs']['track']['lineno']
+        self.traceback = self.get_traceback(ctxt.locals['$pyjs']['trackstack'])
+        errortype, errortext = exc.message.split(':', 1)
+        if not ' ' in errortype:
+            self.jserrortype = errortype
+            self.jserrortext = errortext
+        else:
+            self.jserrortype = exc.__class__.__name__
+            self.jserrortext = exc.message
+    
+    def __str__(self):
+        return "{0.jserrortype}: {0.module}.py:{0.lineno} {0.jserrortext}".\
+               format(self)
+    
+    def full(self):
+        return ("{0.jserrortype}: {0.module}.py:{0.lineno}\n"
+                "Traceback:\n{trace}\n"
+                "{0.jserrortext}".format(self, trace=self.get_traceback_text()))
+    
+    def get_traceback(self, jstb):
+        tb = []
+        for x in jstb:
+            tb.append(dict(module=x['module'], lineno=x['lineno']))
+        return tb
+    
+    def get_traceback_text(self):
+        trace = []
+        for x in self.traceback:
+            trace.append("  {0}.py:{1}".format(x['module'], x['lineno']))
+        return "\n".join(trace)
+
 def main():
     usage = """
     usage: %prog [ options ] [ -c command | module_name | script | - ] [ -- arguments ]
@@ -96,9 +130,7 @@ def main():
     try:
         x = ctxt.eval(txt)
     except Exception, e:
-        raise
-        #ei = ctxt.locals['$pyjs']['loaded_modules']['sys']['exc_info']()
-        #print ei
+        print JSRuntimeError(ctxt, e).full()
     
     if IS_REPL:
         from repl import REPL
