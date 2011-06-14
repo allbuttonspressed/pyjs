@@ -294,6 +294,13 @@ class BuiltinTest(UnitTest):
         self.assertEqual(imports.all_import1, 1)
         self.assertEqual(imports.all_import2, 3)
         self.assertEqual(imports.all_import3, 3)
+        
+        # import builtins module
+        import __builtin__
+        self.assertEqual(__builtin__.dict, dict, "__builtin__.dict != dict")
+        
+        from __builtin__ import dict as dict_bltin
+        self.assertEqual(dict_bltin, dict, "__builtin__.dict != dict")
 	
     def testBitOperations(self):
         self.assertEqual(1 << 2 - 1, 2, "shift error 1")
