@@ -33,7 +33,7 @@ from options import (all_compile_options, add_compile_options,
 if os.environ.has_key('PYJS_SYSPATH'):
     sys.path[0:0] = [os.environ['PYJS_SYSPATH']]
 
-sys.path[0:0] = [os.path.join(os.path.dirname(__file__), "lib_trans")]
+sys.path[1:1] = [os.path.join(os.path.dirname(__file__), "lib_trans")]
 import compiler
 from compiler.visitor import ASTVisitor
 
