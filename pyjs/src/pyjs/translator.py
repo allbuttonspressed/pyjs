@@ -295,6 +295,7 @@ PYJSLIB_BUILTIN_FUNCTIONS=frozenset((
     "wrapped_next",
     "__iter_prepare",
     "__wrapped_next",
+    "__ass_unpack",
     "printFunc",
     "debugReport",
     "_isinstance",
@@ -3295,7 +3296,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 pass
             
             tempName = self.uniqid("$tupleassign")
-            unpack_call = self.track_call("$p['__ass_unpack']"
+            unpack_call = self.track_call("@{{__ass_unpack}}"
                                           "(%(expr)s, %(count)s, %(extended)s)"%
                                           {'expr':expr,
                                            'count':len(child_nodes),
@@ -3576,6 +3577,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             list_expr = self._tuple(node.list, current_klass)
         elif isinstance(node.list, self.ast.Add):
             list_expr = self._add(node.list, current_klass)
+        elif isinstance(node.list, self.ast.Mul):
+            list_expr = self._mul(node.list, current_klass)
         else:
             raise TranslationError(
                 "unsupported type (in _for)", node.list, self.module_name)
