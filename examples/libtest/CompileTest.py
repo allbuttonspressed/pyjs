@@ -74,10 +74,17 @@ class CompileTest(UnitTest.UnitTest):
     def test_deep_tuple_unpacking(self):
         x = ((1, 2), 3, (4, 5))
         (a, b), c, (d, e) = x
+        self.assertEqual(a, 1)
+        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
+
         for (a, b), c, (d, e) in [x]*5:
             pass
+        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
+
         x = (1, (2, (3, (4, 5), 6), 7), 8, (9, 10))
         a1, (b1, (c1, (d1, d2), c2), b2), a2, a3 = x
+        self.assertEqual(d1, 4)
+        self.assertEqual([a1, b1, c1, d1, d2, c2, b2, a2, a3], [1, 2, 3, 4, 5, 6, 7, 8, (9, 10)])
         #a1, (b1, (c1, *c2), b2), a2, a3 = x # Py3 syntax
         
         class X(object):
