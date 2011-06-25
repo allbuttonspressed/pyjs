@@ -6,6 +6,7 @@ When you've patched the bug, remove the comments.
 """
 
 import UnitTest
+gl = None
 class CompileTest(UnitTest.UnitTest):
     def test_issue_432(self):
         #issue 432
@@ -40,13 +41,57 @@ class CompileTest(UnitTest.UnitTest):
         ("    " + s).rstrip()
         """
         self.fail("Callfunc over expressions, #591")
-    
+        
+    def test_for_args(self):
+        class X(object):
+            pass
+        x = X()
+        x.a = 1
+        for x.a in [3,4,5]:
+            print x.a
+        self.assertEqual(x.a, 5)
+        
+        global gl
+        for gl in [1,2,3]:
+            pass
+        self.assertEqual(globals()['gl'], 3)
+        
+        d = {}
+        for d['zz'] in [1,2,3]:
+            pass
+        self.assertEqual(d, {'zz': 3})
+        
+        l = [1]
+        for l[0] in [1,2,3]:
+            pass
+        self.assertEqual(l, [3])
+        
+        l = [1,3,4]
+        for l[1:2] in [[5,6,7]]:
+            pass
+        self.assertEqual(l, [1, 5, 6, 7, 4])
+        
     def test_deep_tuple_unpacking(self):
-        """
         x = ((1, 2), 3, (4, 5))
         (a, b), c, (d, e) = x
-        """
-        self.fail("Bug #527 Tuple unpacking not supported for more than one level")
+        for (a, b), c, (d, e) in [x]*5:
+            pass
+        x = (1, (2, (3, (4, 5), 6), 7), 8, (9, 10))
+        a1, (b1, (c1, (d1, d2), c2), b2), a2, a3 = x
+        #a1, (b1, (c1, *c2), b2), a2, a3 = x # Py3 syntax
+        
+        class X(object):
+            pass
+        x = X()
+        x.a = 1
+        d = {}
+        l = [1,3,4]
+        l[1:2], x.a, d['zz'] = ((10, 11), 20, 30)
+        self.assertEqual(l, [1, 10, 11, 4])
+        self.assertEqual(x.a, 20)
+        self.assertEqual(d, {'zz': 30})
+        
+        #self.fail("Bug #527 Tuple unpacking not supported for more than one level")
 
     def test_subscript_tuple(self):
         """
