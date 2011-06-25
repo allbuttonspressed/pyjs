@@ -6775,6 +6775,58 @@ wrapped_next = JS("""function (iter) {
     return res;
 }""")
 
+# Slice `data` in `count`-long array.
+# If not `extended`, make sure `data` length is same as count
+# Otherwise put all excessive elements in new array at `extended` position
+__ass_unpack = JS("""function (data, count, extended) {
+    if (data === null) {
+        throw @{{TypeError}}("'NoneType' is not iterable");
+    }
+    if (data.constructor === Array) {
+    } else if (typeof data.__iter__ == 'function') {
+        if (typeof data.__array == 'object') {
+            data = data.__array;
+        } else {
+            var iter = data.__iter__();
+            if (typeof iter.__array == 'object') {
+                data = iter.__array;
+            }
+            data = [];
+            var item, i = 0;
+            if (typeof iter.$genfunc == 'function') {
+                while (typeof (item=iter.next(true)) != 'undefined') {
+                    data[i++] = item;
+                }
+            } else {
+                try {
+                    while (true) {
+                        data[i++] = iter.next();
+                    }
+                }
+                catch (e) {
+                    if (e.__name__ != 'StopIteration') throw e;
+                }
+            }
+        }
+    } else {
+        throw @{{TypeError}}("'" + @{{repr}}(data) + "' is not iterable");
+    }
+    var res = new Array();
+    if (typeof extended == 'undefined' || extended === null)
+    {
+        if (data.length != count)
+        if (data.length > count)
+            throw @{{ValueError}}("too many values to unpack");
+        else
+            throw @{{ValueError}}("need more than "+data.length+" values to unpack");
+        return data;
+    }
+    else
+    {
+        throw @{{NotImplemented}}("Extended unpacking is not implemented");
+    }
+}""")
+
 init()
 
 Ellipsis = EllipsisType()
