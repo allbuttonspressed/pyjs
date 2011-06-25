@@ -3557,6 +3557,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             rhs = "%s.$nextval" % nextval
         assigns = self._assigns_list(node.assign, current_klass, rhs)
 
+        # XXX: This should be moved in generic method
         if isinstance(node.list, self.ast.Name):
             list_expr = self._name(node.list, current_klass)
         elif isinstance(node.list, self.ast.Getattr):
@@ -3579,6 +3580,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             list_expr = self._add(node.list, current_klass)
         elif isinstance(node.list, self.ast.Mul):
             list_expr = self._mul(node.list, current_klass)
+        elif isinstance(node.list, self.ast.Sub):
+            list_expr = self._sub(node.list, current_klass)            
         else:
             raise TranslationError(
                 "unsupported type (in _for)", node.list, self.module_name)
