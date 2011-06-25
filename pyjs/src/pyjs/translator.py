@@ -3214,22 +3214,20 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             raise TranslationError(
                 "unsupported type (in _assign)", v.expr, self.module_name)
         return lhs
-
-    def _assign(self, node, current_klass):
-        if len(node.nodes) != 1:
-            tempvar = self.uniqid("$assign")
-            tnode = self.ast.Assign([self.ast.AssName(tempvar, "OP_ASSIGN", node.lineno)], node.expr, node.lineno)
-            self._assign(tnode, current_klass)
-            for v in node.nodes:
-               tnode2 = self.ast.Assign([v], self.ast.Name(tempvar, node.lineno), node.lineno)
-               self._assign(tnode2, current_klass)
-            return
-
-        dbg = 0
-        v = node.nodes[0]
+    
+    def _assigns_list(self, v, current_klass, expr):
+        """
+        Handles all kinds of assignments for Assign, For and so on.
+        
+        expr is string representing expr to assign, i.e. self.expr() result
+        
+        Calls itself recursively for AssTuple
+        
+        Returns list of JS strings
+        """
+        assigns = []
         if isinstance(v, self.ast.AssAttr):
             attr_name = self.attrib_remap(v.attrname)
-            rhs = self.expr(node.expr, current_klass)
             lhs = self._lhsFromAttr(v, current_klass)
             if v.flags == "OP_ASSIGN":
                 op = "="
@@ -3243,12 +3241,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     "%(l)s.__setattr__('%(a)s', %(r)s) :",
                     "@{{setattr}}(%(l)s, '%(a)s', %(r)s);",
                 ]
-                self.w( self.spacing() + ' '.join(desc_setattr) % {'l': lhs, 'a': attr_name, 'r': rhs})
-                return
+                assigns.append(' '.join(desc_setattr) % {'l': lhs, 'a': attr_name, 'r': expr})
+                return assigns
             lhs += '.' + attr_name
-
         elif isinstance(v, self.ast.AssName):
-            rhs = self.expr(node.expr, current_klass)
             lhs = self._lhsFromName(v.name, current_klass)
             if v.flags == "OP_ASSIGN":
                 op = "="
@@ -3262,9 +3258,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     raise TranslationError(
                         "must have one sub (in _assign)", v, self.module_name)
                 idx = self.expr(v.subs[0], current_klass)
-                value = self.expr(node.expr, current_klass)
-                self.w( self.spacing() + self.track_call(obj + ".__setitem__(" + idx + ", " + value + ")", v.lineno) + ';')
-                return
+                assigns.append(self.track_call(obj + ".__setitem__(" + idx + ", " + expr + ")", v.lineno) + ';')
+                return assigns
             else:
                 raise TranslationError(
                     "unsupported flag (in _assign)", v, self.module_name)
@@ -3279,69 +3274,62 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 else:
                     upper = self.expr(v.upper, current_klass)
                 obj = self.expr(v.expr, current_klass)
-                value = self.expr(node.expr, current_klass)
-                self.w( self.spacing() + self.track_call("@{{__setslice}}(%s, %s, %s, %s)" % (obj, lower, upper, value), v.lineno) + ';')
-                return
+                assigns.append(self.track_call("@{{__setslice}}(%s, %s, %s, %s)" % (obj, lower, upper, expr), v.lineno) + ';')
+                return assigns
             else:
                 raise TranslationError(
                     "unsupported flag (in _assign)", v, self.module_name)
         elif isinstance(v, (self.ast.AssList, self.ast.AssTuple)):
+            """
+            1. Calculate number of values to unpack
+            2. Check for star unpack, PEP 3132
+            3. Prepare unpacked array
+            4. Assign values by calling myself
+            """
+            child_nodes = v.getChildNodes()
+            extended_unpack = 'null'
+            
+            # Grammar and parser do not support extended unpack yet, 
+            #   should check each child and assign index if found extended flag
+            for child in child_nodes:
+                pass
+            
             tempName = self.uniqid("$tupleassign")
-            self.w( self.spacing() + "var " + tempName + " = " + \
-                                 self.expr(node.expr, current_klass) + ";")
-            for index,child in enumerate(v.getChildNodes()):
-                rhs = self.track_call(tempName + ".__getitem__(" + str(index) + ")", v.lineno)
-
-                if isinstance(child, self.ast.AssAttr):
-                    lhs = self._lhsFromAttr(child, current_klass) + '.' + self.attrib_remap(child.attrname)
-                elif isinstance(child, self.ast.AssName):
-                    lhs = self._lhsFromName(child.name, current_klass)
-                elif isinstance(child, self.ast.Subscript):
-                    if child.flags == "OP_ASSIGN":
-                        obj = self.expr(child.expr, current_klass)
-                        if len(child.subs) != 1:
-                            raise TranslationError("must have one sub " +
-                                                   "(in _assign)",
-                                                   child,
-                                                   self.module_name)
-                        idx = self.expr(child.subs[0], current_klass)
-                        value = self.expr(node.expr, current_klass)
-                        self.w( self.spacing() + self.track_call(obj + ".__setitem__(" \
-                                           + idx + ", " + rhs + ")", v.lineno) + ';')
-                        continue
-                elif isinstance(child, self.ast.Slice):
-                    if child.flags == "OP_ASSIGN":
-                        if not child.lower:
-                            lower = 0
-                        else:
-                            lower = self.expr(child.lower, current_klass)
-                        if not child.upper:
-                            upper = 'null'
-                        else:
-                            upper = self.expr(child.upper, current_klass)
-                        obj = self.expr(child.expr, current_klass)
-                        self.w( self.spacing()
-                                + self.track_call("@{{__setslice}}"
-                                                  "(%s, %s, %s, %s)"
-                                                  % (obj, lower, upper, rhs)
-                                                  , v.lineno) + ';')
-                        continue
-                    else:
-                        raise TranslationError(
-                            "unsupported flag (in _assign)", v, self.module_name)
-                else:
-                    raise TranslationError(
-                        "unsupported type in assignment list",
-                        v, self.module_name)
-                self.w( self.spacing() + lhs + " = " + rhs + ";")
-            return
+            unpack_call = self.track_call("$p['__ass_unpack']"
+                                          "(%(expr)s, %(count)s, %(extended)s)"%
+                                          {'expr':expr,
+                                           'count':len(child_nodes),
+                                           'extended':extended_unpack
+                                           },
+                                          v.lineno)
+            
+            assigns.append("var " + tempName + " = " + unpack_call + ";")
+            
+            for index,child in enumerate(child_nodes):
+                unpacked_value = tempName + "[" + str(index) + "]";
+                assigns.extend(self._assigns_list(child, current_klass, unpacked_value))
+            return assigns
         else:
             raise TranslationError(
                 "unsupported type (in _assign)", v, self.module_name)
+        assigns.append(lhs + " "+ op + " " + expr + ";")
+        return assigns
 
-        if dbg:
-            print "b", repr(node.expr), rhs
-        self.w( self.spacing() + lhs + " " + op + " " + rhs + ";")
+    def _assign(self, node, current_klass):
+        if len(node.nodes) != 1:
+            tempvar = self.uniqid("$assign")
+            tnode = self.ast.Assign([self.ast.AssName(tempvar, "OP_ASSIGN", node.lineno)], node.expr, node.lineno)
+            self._assign(tnode, current_klass)
+            for v in node.nodes:
+               tnode2 = self.ast.Assign([v], self.ast.Name(tempvar, node.lineno), node.lineno)
+               self._assign(tnode2, current_klass)
+            return
+
+        v = node.nodes[0]
+        rhs = self.expr(node.expr, current_klass)
+        assigns = self._assigns_list(v, current_klass, rhs)
+        for line in assigns:
+            self.w( self.spacing() + line)
 
     def _discard(self, node, current_klass):
 
@@ -3561,27 +3549,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         else:
             assTestvar = ""
         reuse_tuple = "false"
-
-        if isinstance(node.assign, self.ast.AssName):
-            assign_name = self.add_lookup('variable', node.assign.name, node.assign.name)
-            if node.assign.flags == "OP_ASSIGN":
-                op = "="
-        elif isinstance(node.assign, self.ast.AssTuple):
-            reuse_tuple = "true"
-            op = "="
-            i = 0
-            for child in node.assign:
-                child_name = child.name
-                self.add_lookup('variable', child_name, child_name)
-                child_name = self.add_lookup('variable', child_name, child_name)
-                if self.inline_code:
-                    assign_tuple.append("""%(child_name)s %(op)s %(nextval)s.__array[%(i)i];""" % locals())
-                else:
-                    assign_tuple.append("""%(child_name)s %(op)s %(nextval)s.$nextval.__array[%(i)i];""" % locals())
-                i += 1
+        
+        if self.inline_code:
+            rhs = nextval
         else:
-            raise TranslationError(
-                "unsupported type (in _for)", node.assign, self.module_name)
+            rhs = "%s.$nextval" % nextval
+        assigns = self._assigns_list(node.assign, current_klass, rhs)
 
         if isinstance(node.list, self.ast.Name):
             list_expr = self._name(node.list, current_klass)
@@ -3606,9 +3579,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         else:
             raise TranslationError(
                 "unsupported type (in _for)", node.list, self.module_name)
-
-        if not assign_tuple:
-            assign_name = self.add_lookup('variable', assign_name, assign_name)
 
         if self.source_tracking:
             self.stacksize_depth += 1
@@ -3647,15 +3617,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.generator_add_state()
         self.generator_switch_open()
         self.generator_switch_case(increment=False)
-
-        if not assign_tuple:
-            if self.inline_code:
-                self.w( self.spacing() + """%(assign_name)s %(op)s %(nextval)s;""" % locals())
-            else:
-                self.w( self.spacing() + """%(assign_name)s %(op)s %(nextval)s.$nextval;""" % locals())
-        else:
-            for line in assign_tuple:
-                self.w( self.spacing() + line)
+        
+        for line in assigns:
+            self.w( self.spacing() + line)
 
         for n in node.body.nodes:
             self._stmt(n, current_klass)
