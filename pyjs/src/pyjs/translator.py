@@ -3362,8 +3362,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node.expr, self.ast.Yield):
             self._yield(node.expr, current_klass)
         else:
-            raise TranslationError(
-                "unsupported type, must be call or const (in _discard)", node.expr,  self.module_name)
+            # XXX: should trigger exceptions if expr resolves to undefined
+            expr = self.expr(node.expr, current_klass)
+            self.w(self.spacing() + expr + ";")
+            
+        # Never happens
+        #raise TranslationError(
+        #        "unsupported type, must be call or const (in _discard)", node.expr,  self.module_name)
 
 
     def _if(self, node, current_klass):

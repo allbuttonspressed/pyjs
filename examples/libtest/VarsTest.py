@@ -82,8 +82,13 @@ class VarsTest(UnitTest.UnitTest):
         self.assertEqual([a,b,c], [1,2,3])
         [a,b,c] = 1,2,3
         self.assertEqual([a,b,c], [1,2,3])
+        
+        # XXX: Parser fails on this!
+        """ 
         a,b,c = {1,2,3}
-        self.assertEqual([a,b,c], [1,2,3])        
+        """
+        a,b,c = set([1,2,3])
+        self.assertEqual([a,b,c], [1,2,3])
 
     def testUnpackInLoop(self):
         l = [[1, 2],[1, 2]]
@@ -126,6 +131,25 @@ class VarsTest(UnitTest.UnitTest):
         
         globals()['new_global_via_dict'] = True
         self.assertTrue(globals()['new_global_via_dict'])
+
+    def testDiscardNames(self):
+        try:
+            someundefinedvariable1234
+        except NameError:
+            pass
+        else:
+            self.fail("Discarded names should trigger NameError if undefined, bug #584")
+        
+        class X(object):
+            pass
+            
+        x = X()
+        try:
+            x.a
+        except AttributeError:
+            pass
+        else:
+            self.fail("Discarded getattr should trigger AttributeError if undefined, bug #584")
    
     def testAugmentedAssignments(self):
         a = a0 = 100

@@ -19,13 +19,11 @@ class CompileTest(UnitTest.UnitTest):
             pass
 
     def test_discard_expressions(self):
-        """
         (1, 2)
         x = 10
         x
         "some string"
-        """
-        self.fail("ast.Discard nodes, #584")
+        #self.fail("ast.Discard nodes, #584")
         
     def test_callfunc_expressions(self):
         """
@@ -50,6 +48,12 @@ class CompileTest(UnitTest.UnitTest):
         x = d[1,2]
         """
         self.fail("Tuple subscripts issue #496")
+        
+    def test_set_literal(self):
+        """
+        s = {1,2,3}
+        """
+        self.fail("Set literals syntax, bug #621")
 
     def test_bad_import(self):
         try: import _nonexistentmodule
