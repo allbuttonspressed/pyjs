@@ -6116,6 +6116,28 @@ def sum(iterable, start=None):
         start += i
     return start
 
+class complex:
+    def __init__(self, real, imag):
+        self.real = float(real)
+        self.imag = float(imag)
+        
+    def __repr__(self):
+        if self.real:
+            return "(%s+%sj)" % (self.real, self.imag)
+        else:
+            return "%sj" % self.imag
+    
+    def __add__(self, b):
+        if isinstance(b, complex):
+            return complex(self.real + b.real, self.imag + b.imag)
+        elif JS("typeof @{{b}}.__number__ != 'undefined'"):
+            return complex(self.real + b, self.imag)
+        else:
+            raise TypeError("unsupported operand type(s) for +: '%r', '%r'" % (self, b))
+        
+JS("@{{complex}}['__radd__'] = @{{complex}}['__add__'];")
+JS("@{{complex}}['__str__'] = @{{complex}}['__repr__'];")
+JS("@{{complex}}['toString'] = @{{complex}}['__repr__'];")
 
 JS("@{{next_hash_id}} = 0;")
 

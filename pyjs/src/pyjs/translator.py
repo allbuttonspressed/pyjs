@@ -375,6 +375,7 @@ PYJSLIB_BUILTIN_CLASSES=[
     "property",
     "set",
     "tuple",
+    "complex",
     
     "Ellipsis", # atom
     ]
@@ -3714,6 +3715,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return  "'%s'" % escapejs(v)
         elif node.value is None:
             return "null"
+        elif isinstance(node.value, complex):
+            return "@{{complex}}(%s, %s)" % (node.value.real, node.value.imag)
         else:
             raise TranslationError(
                 "unsupported type (in _const)", node, self.module_name)
