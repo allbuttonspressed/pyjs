@@ -972,6 +972,31 @@ class ClassTest(UnitTest):
                 msg = "bug #318 - " + msg
                 self.fail("Bug #580 : %s " % msg)
 
+    def testExpressionInherit(self):
+        class X(object):
+            def m1(self):
+                return 1
+        class Y(object):
+            def m2(self):
+                return 2
+
+        cl = [int, X, Y]
+        class T(cl[0]):
+            pass
+        self.assertEqual(T(1), 1)
+        
+        class T(cl[1], cl[2]):
+            pass
+        t = T()
+        self.assertEqual(t.m1(), 1)
+        self.assertEqual(t.m2(), 2)
+        
+        class T2(type(t)):
+            pass
+        t2 = T2()
+        self.assertEqual(t2.m1(), 1)
+        self.assertEqual(t2.m2(), 2)        
+
 class PassMeAClass(object):
     def __init__(self):
         pass

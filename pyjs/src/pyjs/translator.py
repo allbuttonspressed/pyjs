@@ -2718,9 +2718,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     node_base_name = node_base.attrname
                     base_class = self.expr(node_base, None)
                 else:
-                    raise TranslationError(
-                        "unsupported type (in _class)",
-                        node_base, self.module_name)
+                    node_base_name = ''
+                    base_class = self.expr(node_base, parent_class)
                 base_classes.append((node_base_name, base_class))
             current_klass.set_base(base_classes[0][1])
 
