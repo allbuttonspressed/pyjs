@@ -1,3 +1,4 @@
+import sys
 import PyV8
 
 class FileWrapper(object):
@@ -22,11 +23,29 @@ class FileWrapper(object):
 
 # Create a python class to be used in the context
 class Global(PyV8.JSClass):
+    # Funcs to initialize sys
+    def pyv8_sys_get_stdin(self):
+        return sys.stdin
+    
+    def pyv8_sys_get_stdout(self):
+        return sys.stdout
+    
+    def pyv8_sys_get_stderr(self):
+        return sys.stderr
+    
+    def pyv8_sys_get_argv(self):
+        # Should trim compiler args
+        return sys.argv
+    
+    def pyv8_sys_get_path(self):
+        # Should provide some kind of paths
+        return []
+    
     def pyv8_open(self, fname, mode):
         return FileWrapper(fname, mode)
+   
 
-    def pyv8_print_fn(self, arg):
-        print arg
+        
 
     def pyv8_import_module(self, parent_name, module_name):
         #print "pyv8_import_module", parent_name, module_name

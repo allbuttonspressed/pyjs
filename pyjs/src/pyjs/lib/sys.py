@@ -13,10 +13,7 @@ appname = None
 version_info = (2, 5, 0, 'pyjamas', 0)
 subversion = ('Pyjamas', '', '')
 
-# XXX: Should be populated somehow
 path = []
-
-# XXX: Should be populated somehow
 argv = []
 
 def setloadpath(lp):
@@ -149,5 +146,14 @@ class _StdStream(object):
             self.flush()
 
 stdin  = None
-stdout = _StdStream()
-stderr = _StdStream()
+stdout = None
+stderr = None
+
+def sys_init():
+    global stdout
+    stdout = _StdStream()
+    
+    global stderr
+    stderr = _StdStream()
+
+sys_init()
