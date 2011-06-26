@@ -148,5 +148,6 @@ class _StdStream(object):
         if self.content.endswith('\n'):
             self.flush()
 
+stdin  = None
 stdout = _StdStream()
 stderr = _StdStream()
