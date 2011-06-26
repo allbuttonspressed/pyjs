@@ -34,8 +34,8 @@ class JSRuntimeError(Exception):
         self.module = ctxt.locals['$pyjs']['track']['module']        
         self.lineno = ctxt.locals['$pyjs']['track']['lineno']
         self.traceback = self.get_traceback(ctxt.locals['$pyjs']['trackstack'])
-        errortype, errortext = exc.message.split(':', 1)
-        if not ' ' in errortype:
+        if ':' in exc.message and not ' ' in exc.message.split(':', 1)[0]:
+            errortype, errortext = exc.message.split(':', 1)
             self.jserrortype = errortype
             self.jserrortext = errortext
         else:
