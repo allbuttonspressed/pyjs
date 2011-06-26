@@ -468,7 +468,38 @@ class BuiltinTest(UnitTest):
             e = 2
         self.assertEqual(i, 0)
         self.assertEqual(e, 1)
-
+        
+        class X(object):
+            pass
+        x = X()
+        x.a = 1
+        for x.a in [3,4,5]:
+            pass
+        self.assertEqual(x.a, 5)
+                
+        d = {}
+        for d['zz'] in [1,2,3]:
+            pass
+        self.assertEqual(d, {'zz': 3})
+        
+        l = [1]
+        for l[0] in [1,2,3]:
+            pass
+        self.assertEqual(l, [3])
+        
+        l = [1,3,4]
+        for l[1:2] in [[5,6,7]]:
+            pass
+        self.assertEqual(l, [1, 5, 6, 7, 4])
+        
+        x = ((1, 2), 3, (4, 5))
+        for (a, b), c, (d, e) in [x]*5:
+            pass
+        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
+        
+        for [[a, b], c, [d, e]] in [x]*5:
+            pass
+        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
 
     def testIter(self):
 

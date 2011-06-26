@@ -54,6 +54,36 @@ class VarsTest(UnitTest.UnitTest):
         x, y = l
         self.assertEqual(x, 1)
         self.assertEqual(y, 2)
+        
+        x = ((1, 2), 3, (4, 5))
+        (a, b), c, (d, e) = x
+        self.assertEqual(a, 1)
+        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
+
+        x = (1, (2, (3, (4, 5), 6), 7), 8, (9, 10))
+        a1, (b1, (c1, (d1, d2), c2), b2), a2, a3 = x
+        self.assertEqual(d1, 4)
+        self.assertEqual([a1, b1, c1, d1, d2, c2, b2, a2, a3], [1, 2, 3, 4, 5, 6, 7, 8, (9, 10)])
+        #a1, (b1, (c1, *c2), b2), a2, a3 = x # Py3 syntax
+        
+        class X(object):
+            pass
+        
+        x = X()        
+        x.a = 1
+        d = {}
+        l = [1,3,4]
+        l[1:2], x.a, d['zz'] = ((10, 11), 20, 30)
+        self.assertEqual(l, [1, 10, 11, 4])
+        self.assertEqual(x.a, 20)
+        self.assertEqual(d, {'zz': 30})
+        
+        [a,b,c] = [1,2,3]
+        self.assertEqual([a,b,c], [1,2,3])
+        [a,b,c] = 1,2,3
+        self.assertEqual([a,b,c], [1,2,3])
+        a,b,c = {1,2,3}
+        self.assertEqual([a,b,c], [1,2,3])        
 
     def testUnpackInLoop(self):
         l = [[1, 2],[1, 2]]

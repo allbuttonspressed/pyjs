@@ -18,13 +18,6 @@ class CompileTest(UnitTest.UnitTest):
         for x in [1, 2] + [3, 4]:
             pass
 
-    def test_slice_span(self):
-        """
-        self.assertEqual([1,2,3,4][::2], [1,3])
-        """
-        self.fail("Slice span, #364, #434, #577, #582")
-
-
     def test_discard_expressions(self):
         """
         (1, 2)
@@ -42,63 +35,13 @@ class CompileTest(UnitTest.UnitTest):
         """
         self.fail("Callfunc over expressions, #591")
         
-    def test_for_args(self):
-        class X(object):
-            pass
-        x = X()
-        x.a = 1
-        for x.a in [3,4,5]:
-            print x.a
-        self.assertEqual(x.a, 5)
-        
-        global gl
-        for gl in [1,2,3]:
-            pass
-        self.assertEqual(globals()['gl'], 3)
-        
-        d = {}
-        for d['zz'] in [1,2,3]:
-            pass
-        self.assertEqual(d, {'zz': 3})
-        
-        l = [1]
-        for l[0] in [1,2,3]:
-            pass
-        self.assertEqual(l, [3])
-        
-        l = [1,3,4]
-        for l[1:2] in [[5,6,7]]:
-            pass
-        self.assertEqual(l, [1, 5, 6, 7, 4])
-        
-    def test_deep_tuple_unpacking(self):
-        x = ((1, 2), 3, (4, 5))
-        (a, b), c, (d, e) = x
-        self.assertEqual(a, 1)
-        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
-
-        for (a, b), c, (d, e) in [x]*5:
-            pass
-        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
-
-        x = (1, (2, (3, (4, 5), 6), 7), 8, (9, 10))
-        a1, (b1, (c1, (d1, d2), c2), b2), a2, a3 = x
-        self.assertEqual(d1, 4)
-        self.assertEqual([a1, b1, c1, d1, d2, c2, b2, a2, a3], [1, 2, 3, 4, 5, 6, 7, 8, (9, 10)])
-        #a1, (b1, (c1, *c2), b2), a2, a3 = x # Py3 syntax
-        
-        class X(object):
-            pass
-        x = X()
-        x.a = 1
-        d = {}
-        l = [1,3,4]
-        l[1:2], x.a, d['zz'] = ((10, 11), 20, 30)
-        self.assertEqual(l, [1, 10, 11, 4])
-        self.assertEqual(x.a, 20)
-        self.assertEqual(d, {'zz': 30})
-        
-        #self.fail("Bug #527 Tuple unpacking not supported for more than one level")
+    def test_function_deep_args_unpacking(self):
+        """
+        def func(a, (b, (c, d)), e):
+            return a + b + c + d + e
+        self.assertEqual(func(1, (2, (3, 4)), 5), 15, 'Tuple unpacking for args not supported')
+        """
+        self.fail('Bug #527, Function deep args unpacking fails to compile')
 
     def test_subscript_tuple(self):
         """
