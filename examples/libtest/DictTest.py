@@ -43,20 +43,18 @@ class DictTest(UnitTest):
     def testTupleKeys(self):
         d = {}
         d[1] = 1
-        #d[1,] = 2
         d[(2,)] = 3
         d[(1,1)] = 4
-        #d[1,2] = 5 # can't cope with more than one: thinks it's a slice.
-                    # see translator _assign ast.Subscript, OP_ASSIGN.
-        #v = {(1, 2): 5, 1: 1, (1, 1): 4, (2,): 3}
-        v = {1: 1, (1, 1): 4, (2,): 3}
+        d[1,2] = 5
+
+        v = {(1, 2): 5, 1: 1, (1, 1): 4, (2,): 3}
         self.assertTrue(d == v, "%r == %r" % (d, v))
 
         d = {}
         d[1] = 1
         d[1,] = 2
         v = {1: 1, (1,): 2}
-        self.assertTrue(d == v, "%r == %r bug #273" % (d, v))
+        self.assertEqual(d, v, "%r == %r bug #273" % (d, v))
 
     def testObjectKeys(self):
         f1 = Foo()

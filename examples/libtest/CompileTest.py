@@ -40,12 +40,11 @@ class CompileTest(UnitTest.UnitTest):
         self.fail('Bug #527, Function deep args unpacking fails to compile')
 
     def test_subscript_tuple(self):
-        """
         d = {}
         d[(1,2)] = 3
         x = d[1,2]
-        """
-        self.fail("Tuple subscripts issue #496")
+        d[3,4] = 5
+        #self.fail("Tuple subscripts issue #496")
         
     def test_set_literal(self):
         """
