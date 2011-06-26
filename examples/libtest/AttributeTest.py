@@ -160,3 +160,21 @@ class AttributeTest(UnitTest):
             x = "asdfgd".rjust
         except Exception, e:
             self.fail("String attribute, #595, '%s'" % e)
+    
+    def testExpressionAttributeCall(self):
+        s1 = "    1234"
+        s2 = "5678    "
+        
+        def s3():
+            return " 6 "
+        
+        l = [" 1 ", " 2", "3 "]
+        
+        self.assertEqual((s1 + s2).strip(), "12345678")
+        self.assertEqual((s1 + "").strip(), "1234")
+        self.assertEqual(l[0].strip(), "1")
+        self.assertEqual((''.join(l)).strip(), "1  23")
+        self.assertEqual((s3() + s2).strip(), "6 5678")
+        self.assertEqual(s3().strip(), "6")
+        self.assertEqual(" 6 ".strip(), "6")
+        self.assertEqual([1,2,3].pop(), 3)
