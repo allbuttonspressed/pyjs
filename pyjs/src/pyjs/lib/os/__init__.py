@@ -1,5 +1,7 @@
 import path
 
+environ = {}
+
 def urandom(n):
     # """urandom(n) -> str
     # Return a string of n random bytes suitable for cryptographic use.
