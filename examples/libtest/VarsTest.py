@@ -118,16 +118,19 @@ class VarsTest(UnitTest.UnitTest):
             self.fail("Global module sys not available (bug #216)")
 
     def testGlobalsBltin(self):
-        try:
-            self.assertEqual(set(globals().keys()), 
-                             set(['changeme', 'foo', 'myfoo_value', '__builtins__',
+        globs = globals()
+        globkeys = globs.keys()
+        globkeys2 = filter(lambda x: not x.startswith('__'), globkeys)
+        if 'sys' in globkeys2:
+            globkeys2.remove('sys') # `global sys` in cpython does not make
+                                    #   it appear in globals()
+        self.assertEqual(set(globkeys2), 
+                         set(['changeme', 'foo', 'myfoo_value', 'data',
                               'UnitTest', 'import_sys', 'VarsTest', 'data_test',
-                              '__package__', 'module_global_x', '__doc__',
-                              '__name__', 'myget_foo_value', 'myfoo',
-                              'data', '__file__']))
-        except:
-            self.fail("globals() not implemented, #590")
-            return False
+                              'module_global_x', 'myget_foo_value', 'myfoo',
+                             ]))
+                              
+        self.assertEqual(globs['__name__'], __name__)
         
         globals()['new_global_via_dict'] = True
         self.assertTrue(globals()['new_global_via_dict'])
