@@ -333,6 +333,7 @@ PYJSLIB_BUILTIN_FUNCTIONS=frozenset((
     "op_mod",
     "__op_add",
     "__op_sub",
+    "__getslice",
     "__setslice",
     "slice",
     "__delslice",
@@ -376,6 +377,7 @@ PYJSLIB_BUILTIN_CLASSES=[
     "set",
     "tuple",
     "complex",
+    "slice",
     
     "Ellipsis", # atom
     ]
@@ -4064,7 +4066,7 @@ function(){
         if node.upper != None:
             upper = self.expr(node.upper, current_klass)
         if node.flags == "OP_APPLY":
-            return  "@{{slice}}(" + self.expr(node.expr, current_klass) + ", " + lower + ", " + upper + ")"
+            return  "@{{__getslice}}(" + self.expr(node.expr, current_klass) + ", " + lower + ", " + upper + ")"
         elif node.flags == "OP_DELETE":
             return  "@{{__delslice}}(" + self.expr(node.expr, current_klass) + ", " + lower + ", " + upper + ");"
         else:

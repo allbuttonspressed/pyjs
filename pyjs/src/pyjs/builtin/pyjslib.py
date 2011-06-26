@@ -5482,7 +5482,7 @@ def range(start, stop = None, step = 1):
     JS('}')
     return list(items)
 
-def slice(object, lower, upper):
+def __getslice(object, lower, upper):
     JS("""
     if (@{{object}}=== null) {
         return null;
@@ -5495,8 +5495,6 @@ def slice(object, lower, upper):
 
     return null;
     """)
-    
-__getslice = slice
 
 def __delslice(object, lower, upper):
     JS("""
