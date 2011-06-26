@@ -73,6 +73,13 @@ class PyjamasTester(object):
         help="Do not run any LibTest tests"
         )
     parser.add_option(
+        "--only-libtest",
+        dest="libtest_only",
+        action="store_true",
+        default=False,
+        help="Run only LibTest tests"
+        )
+    parser.add_option(
         "--no-pyv8",
         dest="pyv8_run",
         action="store_false",
@@ -145,6 +152,10 @@ class PyjamasTester(object):
             
         self.testsresults = []
         self.testsknown = []
+        
+        if self.options.libtest_only:
+            self.options.utils_run = False
+            self.options.examples_run = False
         
         if self.options.libtest_run:
             self._test(self.test_libtest_cpython)
