@@ -23,6 +23,19 @@ class FileWrapper(object):
 
 # Create a python class to be used in the context
 class Global(PyV8.JSClass):
+    def __init__(self, argv=None, path=None):
+        PyV8.JSClass.__init__(self)
+        
+        if argv is None:
+            self.argv = sys.argv
+        else:
+            self.argv = argv
+            
+        if path is None:
+            self.path = sys.path
+        else:
+            self.path = path
+            
     # Funcs to initialize sys
     def pyv8_sys_get_stdin(self):
         return sys.stdin
@@ -34,12 +47,10 @@ class Global(PyV8.JSClass):
         return sys.stderr
     
     def pyv8_sys_get_argv(self):
-        # Should trim compiler args
-        return sys.argv
+        return self.argv[:]
     
     def pyv8_sys_get_path(self):
-        # Should provide some kind of paths
-        return []
+        return self.path[:]
     
     def pyv8_open(self, fname, mode):
         return FileWrapper(fname, mode)

@@ -82,16 +82,24 @@ def main():
         dest="command",
         help="Python command to run")
     
+    args = sys.argv[1:]
+    app_args = []
+    if '--' in args:
+        idx = args.index('--')
+        app_args = args[idx+1:]
+        args = args[0:idx]
     # override the default because we want print
     parser.set_defaults(print_statements=True)
     add_linker_options(parser)
-    options, args = parser.parse_args()
+    options, args = parser.parse_args(args)
     IS_REPL = False
     if len(args) == 0 or args[0] == '-':
         IS_REPL = True
         modules = ['main']
     else:
         modules = args
+    
+    app_args[0:0] = [modules[0]]
     
     _modules = []
     for mod in modules:
@@ -124,7 +132,7 @@ def main():
     #PyV8.debugger.enabled = True
     
     # create a context with an explicit global
-    g = Global()
+    g = Global(app_args, pyjs.path)
     ctxt = PyV8.JSContext(g)
     g.__context__ = ctxt
     # enter the context
