@@ -2344,21 +2344,11 @@ var %s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[argu
                 call_name = self._callfunc(v.node.expr, current_klass)
                 method_name = attrname
                 call_args = []
-            elif isinstance(v.node.expr, self.ast.Subscript):
-                call_name = self._subscript(v.node.expr, current_klass)
-                method_name = attrname
-                call_args = []
-            elif isinstance(v.node.expr, self.ast.Const):
+            else:
                 call_name = self.expr(v.node.expr, current_klass)
                 method_name = attrname
                 call_args = []
-            elif isinstance(v.node.expr, self.ast.Slice):
-                call_name = self._slice(v.node.expr, current_klass)
-                method_name = attrname
-                call_args = []
-            else:
-                raise TranslationError(
-                    "unsupported type (in _callfunc)", v.node.expr, self.module_name)
+
         elif isinstance(v.node, self.ast.CallFunc):
             call_name = self._callfunc(v.node, current_klass)
             call_args = []
