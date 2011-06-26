@@ -115,7 +115,7 @@ def main():
     linker = DepsExport([mod], output=out,
                         platforms=[PLATFORM],
                         path=pyjs.path,
-                        compiler=compiler,
+                        compiler=translator.compiler,
                         translator_arguments=translator_arguments)
     linker() 
     
@@ -145,7 +145,7 @@ def main():
         linker = DepsTestLinker([m], output=out,
                                 platforms=[PLATFORM],
                                 path=pyjs.path,
-                                compiler=compiler,
+                                compiler=translator.compiler,
                                 translator_arguments=translator_arguments)
         mods[m].set_result(test_dependency(linker))
     

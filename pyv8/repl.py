@@ -34,7 +34,7 @@ class REPL(object):
         
     def translate(self, src):
         output = StringIO()
-        tree = self.compiler.parse(src)
+        tree = self.compiler.parse(src + "\n")
         t = InteractiveTranslator(self.compiler,
                        'main', 'main', src, tree, output,
                        **self.translator_arguments)

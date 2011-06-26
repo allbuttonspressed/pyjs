@@ -4,7 +4,6 @@ import PyV8
 
 import os
 import sys
-import compiler
 
 from os.path import join, dirname, basename, abspath
 from optparse import OptionParser
@@ -121,7 +120,7 @@ def main():
     linker = PyV8Linker(modules, output=options.output,
                         platforms=[PLATFORM],
                         path=pyjs.path,
-                        compiler=compiler,
+                        compiler=translator.compiler,
                         translator_arguments=translator_arguments)
     linker()
     
@@ -144,7 +143,7 @@ def main():
     
     if IS_REPL:
         from repl import REPL
-        REPL(compiler, linker, translator_arguments, g, ctxt)()
+        REPL(translator.compiler, linker, translator_arguments, g, ctxt)()
 
 
 if __name__ == '__main__':
