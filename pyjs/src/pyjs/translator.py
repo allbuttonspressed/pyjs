@@ -3565,34 +3565,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             rhs = "%s.$nextval" % nextval
         assigns = self._assigns_list(node.assign, current_klass, rhs)
 
-        # XXX: This should be moved in generic method
         if isinstance(node.list, self.ast.Name):
             list_expr = self._name(node.list, current_klass)
         elif isinstance(node.list, self.ast.Getattr):
             list_expr = self.attrib_join(self._getattr(node.list, current_klass))
         elif isinstance(node.list, self.ast.CallFunc):
             list_expr = self._callfunc(node.list, current_klass)
-        elif isinstance(node.list, self.ast.Subscript):
-            list_expr = self._subscript(node.list, current_klass)
-        elif isinstance(node.list, self.ast.Const):
-            list_expr = self._const(node.list)
-        elif isinstance(node.list, self.ast.List):
-            list_expr = self._list(node.list, current_klass)
-        elif isinstance(node.list, self.ast.Slice):
-            list_expr = self._slice(node.list, current_klass)
-        elif isinstance(node.list, self.ast.ListComp):
-            list_expr = self._listcomp(node.list, current_klass)
-        elif isinstance(node.list, self.ast.Tuple):
-            list_expr = self._tuple(node.list, current_klass)
-        elif isinstance(node.list, self.ast.Add):
-            list_expr = self._add(node.list, current_klass)
-        elif isinstance(node.list, self.ast.Mul):
-            list_expr = self._mul(node.list, current_klass)
-        elif isinstance(node.list, self.ast.Sub):
-            list_expr = self._sub(node.list, current_klass)            
         else:
-            raise TranslationError(
-                "unsupported type (in _for)", node.list, self.module_name)
+            list_expr = self.expr(node.list, current_klass)
 
         if self.source_tracking:
             self.stacksize_depth += 1
