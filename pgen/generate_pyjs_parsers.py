@@ -19,7 +19,7 @@ print "Generating grammar2x.py"
 
 opmap = grammar_module.opmap
 g = load_grammar('grammar2x.txt', force=True)
-
+#g3 = load_grammar('grammar3x.txt', force=True)
 g_templ = Template(open('grammar2x.py.templ').read())
 attrs_assign = []
 attrs = ['symbol2number', 'number2symbol', 'states', 'dfas', 'labels', 'keywords', 'tokens', 'symbol2label', 'start']
