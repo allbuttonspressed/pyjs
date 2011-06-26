@@ -5495,6 +5495,8 @@ def slice(object, lower, upper):
 
     return null;
     """)
+    
+__getslice = slice
 
 def __delslice(object, lower, upper):
     JS("""

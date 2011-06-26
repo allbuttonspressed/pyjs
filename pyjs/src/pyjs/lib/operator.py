@@ -1,11 +1,14 @@
 import pyjslib as p
 
-lt = None
-le = None
+def _noimpl(*args):
+    raise Exception("This operator is not implemented")
+
+lt = _noimpl
+le = _noimpl
 eq = p.op_eq
-ne = None
-ge = None
-gt = None
+ne = _noimpl
+ge = _noimpl
+gt = _noimpl
 __lt__ = lt
 __le__ = le
 __eq__ = eq
@@ -13,7 +16,7 @@ __ne__ = ne
 __ge__ = ge
 __gt__ = gt
 
-not_ = None
+not_ = _noimpl
 __not__ = not_
 
 truth = p.bool
@@ -23,19 +26,19 @@ is_ = p.op_is
 def is_not(a, b):
     return not is_(a, b)
 
-abs = None
+abs = _noimpl
 __abs__ = abs
 
-and_ = None
+and_ = _noimpl
 __and__ = and_
 
 floordiv = p.op_floordiv
 __floordiv__ = floordiv
 
-index = None
+index = _noimpl
 __index__ = index
 
-inv = None
+inv = _noimpl
 invert = p.op_invert
 __inv__ = inv
 __invert__ = invert
@@ -52,8 +55,8 @@ __mul__ = mul
 neg = p.op_usub
 __neg__ = neg
 
-or_ = None
-oper__ = None
+or_ = _noimpl
+oper__ = _noimpl
 
 pos = p.op_uadd
 __pos__ = pos
@@ -61,7 +64,7 @@ __pos__ = pos
 pow = p.op_pow
 __pow__ = pow
 
-rshift = p.bitshiftright
+rshift = p.op_bitshiftright
 __rshift__ = rshift
 
 add = p.__op_add
@@ -73,67 +76,78 @@ __sub__ = sub
 truediv = p.op_truediv
 __truediv__ = truediv
 
-xor = None
+xor = _noimpl
 __xor__ = xor
 
-concat = None
+concat = _noimpl
 __concat__ = concat
 
-contains = None
+contains = _noimpl
 __contains__ = contains
 
-countOf = None
+countOf = _noimpl
 
-delitem = None
+delitem = _noimpl
 __delitem__ = delitem
 
-getitem = None
+getitem = _noimpl
 __getitem__ = getitem
 
-indexOf = None
+indexOf = _noimpl
 
-setitem = None
+setitem = _noimpl
 __setitem__ = setitem
 
-attrgetter = None
-itemgetter = None
-methodcaller = None
+attrgetter = _noimpl
+itemgetter = _noimpl
+methodcaller = _noimpl
 
-iadd = None
+iadd = _noimpl
 __iadd__ = iadd
 
-iand = None
+iand = _noimpl
 __iand__ = iand
 
-iconcat = None
+iconcat = _noimpl
 __iconcat__ = iconcat
 
-ifloordiv = None
+ifloordiv = _noimpl
 __ifloordiv__ = ifloordiv
 
-ilshift = None
+ilshift = _noimpl
 __ilshift__ = ilshift
 
-imod = None
+imod = _noimpl
 __imod__ = imod
 
-imul = None
+imul = _noimpl
 __imul__ = imul
 
-ior = None
+ior = _noimpl
 __ior__ = ior
 
-ipow = None
+ipow = _noimpl
 __ipow__ = ipow
 
-irshift = None
+irshift = _noimpl
 __irshift__ = irshift
 
-isub = None
+isub = _noimpl
 __isub__ = isub
 
-itruediv = None
+itruediv = _noimpl
 __itruediv__ = itruediv
 
-ixor = None
+ixor = _noimpl
 __ixor__ = ixor
+
+# Removed in 3.x
+delslice = p.__delslice
+getslice = p.__getslice
+setslice = p.__setslice
+div = p.op_div
+isCallable = p.isFunction
+isMappingType = p.isIteratable
+isNumberType = p.isNumber
+isSequenceType = p.isIteratable
+repeat = _noimpl
