@@ -3939,6 +3939,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
     def _tuple(self, node, current_klass):
         return self.track_call("$p['tuple']([" + ", ".join([self.expr(x, current_klass) for x in node.nodes]) + "])", node.lineno)
+    
+    def _sliceobj(self, node, current_klass):
+        args = ", ".join([self.expr(x, current_klass) for x in node.nodes])
+        return self.track_call("@{{slice}}(%s)" % args, node.lineno)
 
     def _lambda(self, node, current_klass):
         save_local_prefix, self.local_prefix = self.local_prefix, None
@@ -4215,6 +4219,8 @@ function(){
             return self._dict(node, current_klass)
         elif isinstance(node, self.ast.Tuple):
             return self._tuple(node, current_klass)
+        elif isinstance(node, self.ast.Sliceobj):
+            return self._sliceobj(node, current_klass)
         elif isinstance(node, self.ast.Slice):
             return self._slice(node, current_klass)
         elif isinstance(node, self.ast.Lambda):

@@ -586,11 +586,7 @@ class BuiltinTest(UnitTest):
         self.assertEqual(s1, s2)
         self.assertNotEqual(s1, s3, "slice() is mis-used, issue #582")
         # members
-        try:
-            s = slice(1)
-        except Exception, e:
-            self.fail("slice() is mis-used, issue #582")
-            return False
+        s = slice(1)
         self.assertEqual(s.start, None)
         self.assertEqual(s.stop, 1)
         self.assertEqual(s.step, None)

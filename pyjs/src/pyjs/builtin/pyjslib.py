@@ -4283,6 +4283,100 @@ class list:
 JS("@{{list}}.__str__ = @{{list}}.__repr__;")
 JS("@{{list}}.toString = @{{list}}.__str__;")
 
+class slice:
+    def __init__(self, a1, *args):
+        if args:
+            self.start = a1
+            self.stop = args[0]
+            if len(args) > 1:
+                self.step = args[1]
+            else:
+                self.step = None
+        else:
+            self.stop = a1
+            self.start = None
+            self.step = None
+            
+    def __cmp__(self, x):
+        r = cmp(self.start, x.start)
+        if r != 0:
+            return r
+        r = cmp(self.stop, x.stop)
+        if r != 0:
+            return r
+        r = cmp(self.step, x.step)
+        return r        
+            
+    def indices(self, length):
+        """
+        PySlice_GetIndicesEx at ./Objects/sliceobject.c
+        """
+        step = 0
+        start = 0
+        stop = 0
+        if self.step is None:
+            step = 1
+        else:
+            step = self.step
+            if step == 0:
+                raise ValueError("slice step cannot be zero")
+            
+        if step < 0:
+            defstart = length - 1
+            defstop = -1
+        else:
+            defstart = 0
+            defstop = length
+            
+        if self.start is None:
+            start = defstart
+        else:
+            start = self.start
+            if start < 0:
+                start += length
+            if start < 0:
+                if step < 0:
+                    start = -1
+                else:
+                    start = 0
+            if start >= length:
+                if step < 0:
+                    start = length - 1
+                else:
+                    start = length
+    
+        if self.stop is None:
+            stop = defstop
+        else:
+            stop = self.stop
+            if stop < 0:
+                stop += length
+            if stop < 0:
+                if step < 0:
+                    stop = -1
+                else:
+                    stop = 0
+            if stop >= length:
+                if step < 0:
+                    stop = length - 1
+                else:
+                    stop = length
+
+        if ((step < 0 and stop >= start)
+            or (step > 0 and start >= stop)):
+            slicelength = 0
+        elif step < 0:
+            slicelength = (stop - start + 1)/step + 1;
+        else:
+            slicelength = (stop - start - 1)/step + 1;
+            
+        return (start, stop, step)
+
+    def __repr__(self):
+        return "slice(%s, %s, %s)" % (self.start, self.stop, self.step)            
+
+JS("@{{slice}}.__str__ = @{{slice}}.__repr__;")
+JS("@{{slice}}.toString = @{{slice}}.__str__;")
 
 class tuple:
     def __init__(self, data=JS("[]")):
