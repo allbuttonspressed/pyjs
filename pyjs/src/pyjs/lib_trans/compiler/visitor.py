@@ -36,8 +36,9 @@ class ASTVisitor:
         self._cache = {}
 
     def default(self, node, *args):
-        for child in node.getChildNodes():
-            self.dispatch(child, *args)
+        if isinstance(node, ast.Node):
+            for child in node.getChildNodes():
+                self.dispatch(child, *args)
 
     def dispatch(self, node, *args):
         self.node = node
