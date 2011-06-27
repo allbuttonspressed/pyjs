@@ -1124,11 +1124,17 @@ class Transformer:
         return List(values, lineno=values[0].lineno)
 
     def com_list_comprehension(self, expr, node):
+        return self.com_comprehension(expr, None, node, 'list')
+
+    def com_comprehension(self, expr1, expr2, node, type):
         # list_iter: list_for | list_if
         # list_for: 'for' exprlist 'in' testlist [list_iter]
         # list_if: 'if' test [list_iter]
 
         # XXX should raise SyntaxError for assignment
+        # XXX(avassalotti) Set and dict comprehensions should have generator
+        #                  semantics. In other words, they shouldn't leak
+        #                  variables outside of the comprehension's scope.
 
         lineno = node.children[0].context
         fors = []
@@ -1155,7 +1161,14 @@ class Transformer:
             else:
                 raise SyntaxError("unexpected list comprehension element: %s %d"
                        % (node, lineno))
-        return ListComp(expr, fors, lineno=lineno)
+        if type == 'list':
+            return ListComp(expr1, fors, lineno=lineno)
+        elif type == 'set':
+            return SetComp(expr1, fors, lineno=lineno)
+        elif type == 'dict':
+            return DictComp(expr1, expr2, fors, lineno=lineno)
+        else:
+            raise ValueError("unexpected comprehension type: " + repr(type))
 
     def com_list_iter(self, node):
         assert node.type == symbol.comp_iter
