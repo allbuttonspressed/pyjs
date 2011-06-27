@@ -1,4 +1,5 @@
 from UnitTest import UnitTest
+import sys 
 
 class LetterNode(list):
 
@@ -489,6 +490,9 @@ class ListTest(UnitTest):
         a[::2] = tuple(range(5))
         self.assertEqual(a, list([0, 1, 1, 3, 2, 5, 3, 7, 4, 9]))
         
+        # causes segfault in older versions
+        if sys.version_info < (2,5,5):
+            return
         # test issue7788
         a = list(range(10))
         del a[9::1<<333]        

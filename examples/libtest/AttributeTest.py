@@ -1,4 +1,5 @@
 from UnitTest import UnitTest
+import sys
 
 name = 'Name'
 prototype = 'Prototype'
@@ -34,6 +35,9 @@ class AttributeTest(UnitTest):
         self.assertEqual(hasattr(self, "getName"), True, "AttrTest should have method 'getName'")
         self.assertEqual(hasattr(self, "blah"), False, "AttrTest has no method 'getName'")
         self.assertEqual(hasattr("", "find"), True, "str should have method 'find', bug #483")
+        
+        if sys.version_info < (2, 6):
+            return 
         self.assertEqual(hasattr(1.0, "real"), True, "float should have attribute 'real', bug #483")
         self.assertEqual(hasattr(1, "real"), True, "int should have attribute 'real', bug #483") 
 
@@ -151,7 +155,8 @@ class AttributeTest(UnitTest):
         try:
             x = [].append
             x = {}.get
-            x = (1,2,3).count
+            if sys.version_info >= (2, 6):
+                x = (1,2,3).count
             x = (lambda x:z).__name__
             x = [1,2,3,4][1:2].append
         except Exception, e:
