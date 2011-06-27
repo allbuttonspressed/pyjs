@@ -1311,6 +1311,9 @@ class Transformer:
                             isinstance(sub, Sliceobj))]
             if len(tulplesub) == len(subscripts):
                 subscripts = [Tuple(subscripts)]
+        elif (len(nodelist.children) == 2 and 
+              nodelist.children[1].type == token.COMMA):
+            subscripts = [Tuple(subscripts)]
         return Subscript(primary, assigning, subscripts,
                          lineno=extractLineNo(nodelist))
 
