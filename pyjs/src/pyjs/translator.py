@@ -1033,12 +1033,16 @@ class Translator(object):
                     code = add_callfunc(code, d, generic=False)
                 else:
                     code = add_callfunc(code, d)
+            elif isinstance(d, self.ast.CallFunc):
+                code = add_callfunc(code, d)
             else:
                 raise TranslationError(
                     "Unsupported decorator '%s'" % d, node, self.module_name)
 
         self.pop_lookup()
         if code != '%s':
+            # XXX: Why is it here? It adds staticmethod to ANY decorated func, 
+            #      Even if its not method!
             code = code % "@{{staticmethod}}(%s)"
             if staticmethod:
                 code = "@{{staticmethod}}(%s)" % code
