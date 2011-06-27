@@ -761,7 +761,7 @@ class Transformer:
     def atom_lbrace(self, nodelist):
         if nodelist[1].type == token.RBRACE:
             return Dict((), lineno=nodelist[0].context)
-        return self.com_dictmaker(nodelist[1])
+        return self.com_dictorsetmaker(nodelist[1])
 
     def atom_backquote(self, nodelist):
         return Backquote(self.com_node(nodelist[1]))
@@ -1211,13 +1211,33 @@ class Transformer:
         assert node.type == symbol.gen_iter
         return node.children[0]
 
-    def com_dictmaker(self, nodelist):
-        # dictmaker: test ':' test (',' test ':' value)* [',']
-        items = []
-        for i in range(0, len(nodelist.children), 4):
-            items.append((self.com_node(nodelist.children[i]),
-                          self.com_node(nodelist.children[i+2])))
-        return Dict(items, lineno=items[0][0].lineno)
+    def com_dictorsetmaker(self, nodelist):
+        # dictorsetmaker: ( (test ':' test (comp_for | (',' test ':' test)* [','])) |
+        #                   (test (comp_for | (',' test)* [','])) )
+        children = nodelist.children
+        if len(children) == 1 or children[1].type == token.COMMA:
+            # set literal
+            items = []
+            for i in range(0, len(children), 2):
+                items.append(self.com_node(children[i]))
+            return Set(items, lineno=items[0].lineno)
+        elif children[1].type == symbol.comp_for:
+            # set comprehension
+            expr = self.com_node(children[0])
+            return self.com_comprehension(expr, None, children[1], 'set')
+        elif len(children) > 3 and children[3].type == symbol.comp_for:
+            # dict comprehension
+            assert children[1].type == token.COLON
+            key = self.com_node(children[0])
+            value = self.com_node(children[2])
+            return self.com_comprehension(key, value, children[3], 'dict')
+        else:
+            # dict literal
+            items = []
+            for i in range(0, len(children), 4):
+                items.append((self.com_node(children[i]),
+                              self.com_node(children[i+2])))
+            return Dict(items, lineno=items[0][0].lineno)
 
     def com_apply_trailer(self, primaryNode, nodelist):
         t = nodelist.children[0].type
