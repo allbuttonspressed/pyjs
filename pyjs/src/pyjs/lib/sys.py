@@ -10,7 +10,7 @@ stacktrace = None
 
 appname = None
 
-version_info = (2, 5, 0, 'pyjamas', 0)
+version_info = (2, 7, 2, 'pyjamas', 0)
 subversion = ('Pyjamas', '', '')
 
 path = []
