@@ -39,18 +39,3 @@ class TupleTest(UnitTest):
                 break
             self.assertEqual(item, t[i])
             i += 1
-
-    def test_tuple_unpacking_args(self):
-        def func(a, (b, c), d):
-            return a + b + c + d
-        try:
-            self.assertEqual(func(1, (2, 3), 4), 10, 'Tuple unpacking for args not supported')
-        except:
-            self.fail('Bug #527 Tuple unpacking not supported for more than one level')
-
-    # XXX: This does not even compile
-    #def test_deep_tuple_unpacking_args(self):
-    #    self.fail('Tuple unpacking in function args not supported for more than one level')
-    #    def func(a, (b, (c, d)), e):
-    #        return a + b + c + d + e
-    #    self.assertEqual(func(1, (2, (3, 4)), 5), 15, 'Tuple unpacking for args not supported')
