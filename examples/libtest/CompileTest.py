@@ -70,4 +70,14 @@ class CompileTest(UnitTest.UnitTest):
         except: pass
         """
         self.fail("try: import badcode/except does not catch TranslationError, #592")
+
+    def testClassScopeExceptions(self):
+        """
+        class X:
+            try:
+                z = somethingtocausenameerror
+            except NameError:
+                pass
+        """
+        self.fail("try/catch in class definition scope, issue #593")
             

@@ -132,8 +132,11 @@ class VarsTest(UnitTest.UnitTest):
                               
         self.assertEqual(globs['__name__'], __name__)
         
-        globals()['new_global_via_dict'] = True
-        self.assertTrue(globals()['new_global_via_dict'])
+        try:
+            globals()['new_global_via_dict'] = 1
+            self.assertEqual(globals()['new_global_via_dict'], 1)
+        except:
+            self.fail("Assigning to globals() does not work, #590")
 
     def testDiscardNames(self):
         try:

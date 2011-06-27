@@ -375,14 +375,9 @@ class ListTest(UnitTest):
             self.assertEqual(l.index(2), 0)
         except ValueError:
             self.fail("ValueError raised when not expected")
-
-        try:
-            l.index(200000)
-        except ValueError, e:
-            self.assertTrue(str(e) == "list.index(x): x not in list",
-                            "ValueError exception has incorrect message")
-        else:
-            self.fail("ValueError not raised")
+            
+            
+        self.assertRaises(ValueError, l.index, 200000)
 
         l = [[1],[2],[3]]
         self.assertEqual(l.index([2]), 1)
