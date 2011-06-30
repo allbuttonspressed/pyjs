@@ -16,6 +16,11 @@ subversion = ('Pyjamas', '', '')
 path = []
 argv = []
 
+platform = JS('$pyjs.platform')
+byteorder = 'little' # Needed in struct.py, assume all systems are little endian and not big endian
+maxint = 2147483647  # javascript bit operations are on 32 bit signed numbers
+
+
 def setloadpath(lp):
     global loadpath
     loadpath = lp
@@ -128,9 +133,8 @@ def _get_traceback_list(err, tb=None, limit=None):
 def _get_traceback(err, tb=None, limit=None):
     return ''.join(_get_traceback_list(err, tb, limit=limit))
 
-platform = JS('$pyjs.platform')
-byteorder = 'little' # Needed in struct.py, assume all systems are little endian and not big endian
-maxint = 2147483647  # javascript bit operations are on 32 bit signed numbers
+def exit(val=None):
+    raise SystemExit(val)
 
 class _StdStream(object):
     def __init__(self):
