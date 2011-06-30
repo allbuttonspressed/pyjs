@@ -1025,16 +1025,23 @@ class BaseException:
 class KeyboardInterrupt(BaseException):
     pass
 
+class GeneratorExit(BaseException):
+    pass
+
+class SystemExit(BaseException):
+    pass
+
+
 class Exception(BaseException):
     pass
 
 class StandardError(Exception):
     pass
 
-class AssertionError(StandardError):
+class ArithmeticError(StandardError):
     pass
 
-class GeneratorExit(Exception):
+class AssertionError(StandardError):
     pass
 
 class TypeError(StandardError):
@@ -1058,7 +1065,7 @@ class LookupError(StandardError):
 class RuntimeError(StandardError):
     pass
 
-class ArithmeticError(StandardError):
+class SystemError(StandardError):
     pass
 
 class KeyError(LookupError):

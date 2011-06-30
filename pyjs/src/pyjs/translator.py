@@ -365,6 +365,8 @@ PYJSLIB_BUILTIN_CLASSES=[
     "RuntimeError",
     "StandardError",
     "StopIteration",
+    "SystemExit",
+    "SystemError",
     "TypeError",
     "ValueError",
     "ZeroDivisionError",
