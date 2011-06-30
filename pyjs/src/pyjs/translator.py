@@ -859,6 +859,8 @@ class Translator(object):
                 self._tryFinally(child, None)
             elif isinstance(child, self.ast.Raise):
                 self._raise(child, None)
+            elif isinstance(child, self.ast.Assert):
+                self._assert(child, None)
             elif isinstance(child, self.ast.Stmt):
                 self._stmt(child, None, True)
             elif isinstance(child, self.ast.AssAttr):
