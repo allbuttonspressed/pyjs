@@ -857,6 +857,8 @@ class Translator(object):
                 self._tryExcept(child, None)
             elif isinstance(child, self.ast.TryFinally):
                 self._tryFinally(child, None)
+            elif isinstance(child, self.ast.With):
+                self._with(child, None)
             elif isinstance(child, self.ast.Raise):
                 self._raise(child, None)
             elif isinstance(child, self.ast.Assert):
@@ -2617,6 +2619,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.stacksize_depth -= 1
         self.generator_switch_case(increment=True)
         self.is_generator = save_is_generator
+        
+    def _with(self, v, current_klass):
+        pass
 
     def _getattr(self, v, current_klass, use_getattr=None):
         if use_getattr is None:
@@ -3024,6 +3029,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self._tryExcept(node, current_klass)
         elif isinstance(node, self.ast.TryFinally):
             self._tryFinally(node, current_klass)
+        elif isinstance(node, self.ast.With):
+            self._with(node, current_klass)
         elif isinstance(node, self.ast.Raise):
             self._raise(node, current_klass)
         elif isinstance(node, self.ast.Import):
