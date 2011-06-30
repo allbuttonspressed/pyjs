@@ -838,7 +838,10 @@ class List(Node):
     def __repr__(self):
         return "List(%s)" % (repr(self.nodes),)
 
-class ListComp(Node):
+class CollComp(Node):
+    pass
+
+class ListComp(CollComp):
     def __init__(self, expr, quals, lineno=None):
         self.expr = expr
         self.quals = quals
@@ -897,7 +900,7 @@ class ListCompIf(Node):
     def __repr__(self):
         return "ListCompIf(%s)" % (repr(self.test),)
 
-class SetComp(Node):
+class SetComp(CollComp):
     def __init__(self, expr, quals, lineno=None):
         self.expr = expr
         self.quals = quals
@@ -918,7 +921,7 @@ class SetComp(Node):
     def __repr__(self):
         return "SetComp(%s, %s)" % (repr(self.expr), repr(self.quals))
 
-class DictComp(Node):
+class DictComp(CollComp):
     def __init__(self, key, value, quals, lineno=None):
         self.key = key
         self.value = value
