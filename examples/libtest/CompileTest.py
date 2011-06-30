@@ -45,12 +45,6 @@ class CompileTest(UnitTest.UnitTest):
         x = d[1,2]
         d[3,4] = 5
         #self.fail("Tuple subscripts issue #496")
-        
-    def test_set_literal(self):
-        """
-        s = {1,2,3}
-        """
-        self.fail("Set literals syntax, bug #621")
 
     def test_bad_import(self):
         try: import _nonexistentmodule
