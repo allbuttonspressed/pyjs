@@ -72,6 +72,9 @@ JavaScript_Reserved_Words = frozenset((
     'void',
     'while',
     'with',
+    'true',
+    'false',
+    'native', # V8 reserved word
 ))
 
 ECMAScipt_Reserved_Words = frozenset((
