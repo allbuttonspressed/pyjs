@@ -299,6 +299,7 @@ PYJSLIB_BUILTIN_FUNCTIONS=frozenset((
     "__iter_prepare",
     "__wrapped_next",
     "__ass_unpack",
+    "__with",
     "printFunc",
     "debugReport",
     "_isinstance",
@@ -2446,10 +2447,7 @@ var %s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[argu
         body = node.body
         if not isinstance(node.body, self.ast.TryExcept):
             body = node
-        try: # python2.N
-            node.body.final = node.final
-        except: # lib2to3
-            node.body.final_ = node.final_
+        node.body.final_ = node.final_
         self._tryExcept(body, current_klass)
 
     def _tryExcept(self, node, current_klass):
@@ -2626,7 +2624,35 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.is_generator = save_is_generator
         
     def _with(self, v, current_klass):
-        pass
+        """
+        http://www.python.org/dev/peps/pep-0343/
+        """
+        expr = self.expr(v.expr, current_klass)
+        withvar = self.uniqid("$withval")
+        # self.push_lookup()
+        if isinstance(v.body, self.ast.Stmt):
+            body_nodes = list(v.body.nodes)
+        else:
+            body_nodes = [v.body]
+        if v.vars:
+            body_nodes[0:0] = [self.ast.Assign([v.vars],
+                                               self.ast.Name(withvar))]
+        save_output = self.output
+        self.output = StringIO()
+        self.indent()
+        
+        for node in body_nodes:
+            self._stmt(node, current_klass)
+            
+        self.dedent()
+        captured_output = self.output
+        self.output = save_output
+        
+        self.w(self.spacing() + "@{{__with}}(%(expr)s, function(%(withvar)s){"%
+               dict(expr=expr,
+                    withvar=withvar))
+        self.w(captured_output.getvalue().rstrip())
+        self.w(self.spacing() + "});")
 
     def _getattr(self, v, current_klass, use_getattr=None):
         if use_getattr is None:

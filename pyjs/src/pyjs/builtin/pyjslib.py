@@ -6950,6 +6950,27 @@ __ass_unpack = JS("""function (data, count, extended) {
     }
 }""")
 
+def __with(mgr, func):
+    """
+    Copied verbatim from http://www.python.org/dev/peps/pep-0343/
+    """
+    exit = type(mgr).__exit__  # Not calling it yet
+    value = type(mgr).__enter__(mgr)
+    exc = True
+    try:
+        try:
+            func(value)
+        except:
+            # The exceptional case is handled here
+            exc = False
+            if not exit(mgr, *sys.exc_info()):
+                raise
+            # The exception is swallowed if exit() returns true
+    finally:
+        # The normal and non-local-goto cases are handled here
+        if exc:
+            exit(mgr, None, None, None)
+            
 init()
 
 Ellipsis = EllipsisType()
