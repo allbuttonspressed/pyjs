@@ -1152,7 +1152,12 @@ String.prototype.find = function(sub, start, end) {
     if (pos + sub.length>end) return -1;
     return pos;
 };
-
+String.prototype.index = function(sub, start, end) {
+    var pos = this.find(sub, start, end);
+    if (pos < 0)
+        throw @{{ValueError}}('substring not found');
+    return pos;
+}
 String.prototype.count = function(sub, start, end) {
     var pos, count = 0, n = sub.length;
     if (typeof start == 'undefined') start = 0;
