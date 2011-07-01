@@ -41,6 +41,10 @@ class ListTest(UnitTest):
         self.assertTrue(value[1] is 1)
         self.assertTrue(value[4] is 4)
         self.assertTrue(value[-3] is 2)
+        
+        l = [1, 2]
+        self.assertEqual(l[True], 2)
+        self.assertEqual(l[False], 1)
 
     def testSliceRange(self):
         value = [0, 1, 2, 3, 4]

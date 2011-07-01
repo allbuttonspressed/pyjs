@@ -1,6 +1,10 @@
 from UnitTest import UnitTest
 
 class TupleTest(UnitTest):
+    def testGetItem(self):
+        t = (1, 2)
+        self.assertEqual(t[True], 2)
+        self.assertEqual(t[False], 1)
 
     def testContains(self):
         value = (0, 1, 2, 3, 4)
