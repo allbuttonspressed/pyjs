@@ -4195,6 +4195,7 @@ class list:
     def __getitem__(self, _index):
         JS("""
         var index = @{{_index}}.valueOf();
+        if (typeof index == 'boolean') index = @{{int}}(index);
         if (index < 0) index += @{{self}}.__array.length;
         if (index < 0 || index >= @{{self}}.__array.length) {
             throw @{{IndexError}}("list index out of range");
@@ -4472,6 +4473,7 @@ class tuple:
     def __getitem__(self, _index):
         JS("""
         var index = @{{_index}}.valueOf();
+        if (typeof index == 'boolean') index = @{{int}}(index);
         if (index < 0) index += @{{self}}.__array.length;
         if (index < 0 || index >= @{{self}}.__array.length) {
             throw @{{IndexError}}("tuple index out of range");
