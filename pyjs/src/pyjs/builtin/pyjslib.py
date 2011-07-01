@@ -1319,7 +1319,17 @@ String.prototype.rsplit = function(sep, maxsplit) {
 
     return items;
 };
-
+String.prototype.splitlines = function(keepends) {
+    var items = this.$$split("\\n");
+    if (typeof keepends != 'undefined' && keepends)
+    {
+        for (var i=0; i<items.__array.length; i++)
+        {
+            items.__array[i] = items.__array[i] + "\\n";
+        }
+    }
+    return items;
+}
 if (typeof "a"[0] == 'undefined' ) {
     // IE: cannot do "abc"[idx]
     String.prototype.__iter__ = function() {
