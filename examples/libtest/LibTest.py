@@ -95,6 +95,9 @@ def main():
     if sys.version_info >= (2, 7):
         from Syntax27Test import Syntax27Test
         t.add(Syntax27Test)
+        
+        from WithTest import WithTest
+        t.add(WithTest)
 
     t.start_test()
 

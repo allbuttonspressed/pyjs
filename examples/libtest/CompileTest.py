@@ -74,4 +74,40 @@ class CompileTest(UnitTest.UnitTest):
                 pass
         """
         self.fail("try/catch in class definition scope, issue #593")
+    
+    def testWithFlowControl(self):
+        # Hard to make work correctly!
+        # Should walk ast and track them
+        """
+        def return_stmt():
+            for i in range(10):
+                with self.Dummy():
+                    if i == 2:
+                        return i
+        
+        self.assertEqual(return_stmt(), 2)
+        
+        def break_stmt():
+            x = 0
+            for i in range(10):
+                with self.Dummy():
+                    x = i
+                    if i == 2:
+                        break
+            return x
+        
+        self.assertEqual(break_stmt(), 2)
+
+        def continue_stmt():
+            x = 0
+            for i in range(10):
+                x += 1
+                with self.Dummy():
+                    continue
+                x += 100
+            return x
+        
+        self.assertEqual(continue_stmt(), 10)
+        """
+        self.fail("Flow control statements inside with, issue #625")
             
