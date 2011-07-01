@@ -307,6 +307,8 @@ class InteractiveTranslator(translator.Translator):
                 self._raise(child, None)
             elif isinstance(child, self.ast.Stmt):
                 self._stmt(child, None, True)
+            elif isinstance(child, self.ast.With):
+                self._with(child, None)
             elif isinstance(child, self.ast.AssAttr):
                 self._assattr(child, None)
             elif isinstance(child, self.ast.AssName):
@@ -317,7 +319,7 @@ class InteractiveTranslator(translator.Translator):
             elif isinstance(child, self.ast.Slice):
                 self.w( self.spacing() + self._slice(child, None))
             else:
-                raise TranslationError(
+                raise translator.TranslationError(
                     "unsupported type (in __init__)",
                     child, self.module_name)
 
