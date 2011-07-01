@@ -188,6 +188,10 @@ class SRE_Match:
         # group defaults to zero (meaning the whole matched substring). Returns -1
         # if group exists but did not contribute to the match.
         if group != 0:
+            substr = self.group(group)
+            if substr:
+                idx = self.string.index(substr, self._start)
+                return idx
             raise NotImplementedError("group argument not supported")
         return self._start
 
@@ -196,13 +200,15 @@ class SRE_Match:
         # group defaults to zero (meaning the whole matched substring). Returns -1
         # if group exists but did not contribute to the match.
         if group != 0:
+            substr = self.group(group)
+            if substr:
+                idx = self.string.index(substr, self._start)
+                return idx + len(substr)
             raise NotImplementedError("group argument not supported")
         return self._end
 
     def span(self, group=0):
         # Returns the 2-tuple (m.start(group), m.end(group)).
-        if group != 0:
-            raise NotImplementedError("group argument not supported")
         return self.start(group), self.end(group)
 
     def expand(self, template):
