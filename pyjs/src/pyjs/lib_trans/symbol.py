@@ -1,5 +1,5 @@
 # This module is automatically generated from symbol.py.templ,
-#      at 2011-06-12 18:06:45.049667, with python 2.7.1 (r271:86832, May 17 2011, 19:31:41) .
+#      at 2011-07-01 13:23:21.288018, with python 2.7.2 (default, Jun 27 2011, 21:15:33) .
 #
 # Modified by Daniel Kluev, Pyjamas project, 2011
 #
@@ -30,7 +30,6 @@ break_stmt = 265
 except_clause = 283
 comp_if = 268
 import_stmt = 301
-with_var = 337
 parameters = 308
 continue_stmt = 273
 shift_expr = 314
@@ -46,9 +45,9 @@ vfpdef = 332
 decorators = 276
 compound_stmt = 272
 and_expr = 257
-yield_stmt = 340
+yield_stmt = 339
 dotted_name = 281
-yield_expr = 339
+yield_expr = 338
 dictsetmaker = 278
 flow_stmt = 289
 power = 310
@@ -90,12 +89,12 @@ comp_for = 267
 eval_input = 282
 simple_stmt = 315
 with_stmt = 336
-xor_expr = 338
+xor_expr = 337
 comp_iter = 269
 trailer = 329
 
 sym_name = {}
-for _name, _value in list(globals().items()):
+for _name, _value in globals().items():
     if type(_value) is type(0):
             sym_name[_value] = _name
 

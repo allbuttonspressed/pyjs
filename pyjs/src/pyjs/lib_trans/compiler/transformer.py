@@ -8,8 +8,8 @@ parse(buf) -> AST
 parseFile(path) -> AST
 """
 
-from compiler.astpprint import printAst
-from pprint import pprint
+#from compiler.astpprint import printAst
+#from pprint import pprint
 
 # Original version written by Greg Stein (gstein@lyra.org)
 #                         and Bill Tutt (rassilon@lima.mudlib.org)
@@ -33,7 +33,7 @@ import parser
 import symbol
 import token
 
-class WalkerError(Exception):
+class WalkerError(StandardError):
     pass
 
 from compiler.consts import CO_VARARGS, CO_VARKEYWORDS
@@ -980,18 +980,22 @@ class Transformer:
             return try_except
 
     def com_with(self, nodelist):
-        # with_stmt: 'with' expr [with_var] ':' suite
-        expr = self.com_node(nodelist[1])
+        # with_stmt: 'with' with_item (',' with_item)* ':' suite
         body = self.com_node(nodelist[-1])
-        if nodelist[2].type == token.COLON:
-            var = None
-        else:
-            var = self.com_assign(nodelist[2].children[1], OP_ASSIGN)
-        return With(expr, var, body, lineno=nodelist[0].context)
+        for i in range(len(nodelist) - 3, 0, -2):
+            ret = self.com_with_item(nodelist[i], body, nodelist[0].context)
+            if i == 1:
+                return ret
+            body = ret
 
-    def com_with_var(self, nodelist):
-        # with_var: 'as' expr
-        return self.com_node(nodelist[1])
+    def com_with_item(self, node, body, lineno):
+        # with_item: test ['as' expr]
+        if len(node.children) == 3:
+            var = self.com_assign(node.children[2], OP_ASSIGN)
+        else:
+            var = None
+        expr = self.com_node(node.children[0])
+        return With(expr, var, body, lineno=lineno)
 
     def com_augassign_op(self, node):
         assert node.type == symbol.augassign
@@ -1285,7 +1289,7 @@ class Transformer:
 
             if len_nodelist != 2 and isinstance(result, GenExpr) \
                and len(node.children) == 3 and node.children[2].type == symbol.gen_for:
-                printAst(result)
+                # printAst(result)
                 # allow f(x for x in y), but reject f(x for x in y, 1)
                 # should use f((x for x in y), 1) instead of f(x for x in y, 1)
                 raise SyntaxError('generator expression needs parenthesis')
