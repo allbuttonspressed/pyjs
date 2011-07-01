@@ -389,6 +389,10 @@ class BuiltinTest(UnitTest):
         self.assertEqual(r, [])
         r = range(-6, -2, -1)
         self.assertEqual(r, [])
+        r = range(2, 1, 2)
+        self.assertEqual(r, [])
+        r = range(0, 2, 2)
+        self.assertEqual(r, [0])
 
     def testXRange(self):
         r = [i for i in xrange(3)]
