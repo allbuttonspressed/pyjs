@@ -4483,9 +4483,39 @@ class tuple:
 
     def __len__(self):
         return INT(JS("""@{{self}}.__array.length"""))
+    
+    def index(self, value, _start=0):
+        JS("""
+        var start = @{{_start}}.valueOf();
+        /* if (typeof valueXXX == 'number' || typeof valueXXX == 'string') {
+            start = selfXXX.__array.indexOf(valueXXX, start);
+            if (start >= 0)
+                return start;
+        } else */ {
+            var len = @{{self}}.__array.length >>> 0;
+
+            start = (start < 0)
+                    ? Math.ceil(start)
+                    : Math.floor(start);
+            if (start < 0)
+                start += len;
+
+            for (; start < len; start++) {
+                if ( /*start in selfXXX.__array && */
+                    @{{cmp}}(@{{self}}.__array[start], @{{value}}) == 0)
+                    return start;
+            }
+        }
+        """)
+        raise ValueError("list.index(x): x not in list")    
 
     def __contains__(self, value):
-        return JS('@{{self}}.__array.indexOf(@{{value}})>=0')
+        try:
+            self.index(value)
+        except ValueError:
+            return False
+        return True
+        #return JS('@{{self}}.__array.indexOf(@{{value}})>=0')
 
     def __iter__(self):
         return JS("new $iter_array(@{{self}}.__array)")
