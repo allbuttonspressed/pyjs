@@ -75,6 +75,7 @@ JavaScript_Reserved_Words = frozenset((
     'true',
     'false',
     'native', # V8 reserved word
+    'Function', # V8 global
 ))
 
 ECMAScipt_Reserved_Words = frozenset((
