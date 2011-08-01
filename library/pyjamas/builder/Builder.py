@@ -93,6 +93,8 @@ class Builder(object):
                 if not wprops.has_key(name):
                     continue
                 fname = n[ui.PROP_FNAM]
+                if wprops[name] == '':
+                    continue
                 args[fname] = wprops[name]
 
             # create item with properties including weird ones
@@ -143,7 +145,7 @@ class Builder(object):
                 added_already = []
                 #print props["events"]
                 for listener_name, listener_fn in props["events"].items():
-                    if  listener_name in added_already:
+                    if listener_name in added_already or not listener_fn:
                         continue
                     args = {}
                     args[listener_name] = listener_fn
