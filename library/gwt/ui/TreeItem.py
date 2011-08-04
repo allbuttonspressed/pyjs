@@ -1,5 +1,6 @@
 # Copyright 2006 James Tauber and contributors
 # Copyright (C) 2009 Luke Kenneth Casson Leighton <lkcl@lkcl.net>
+# Copyright (C) 2011 Vsevolod Fedorov <vsevolod.fedorov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -127,10 +128,18 @@ class TreeItem(UIObject):
         return item
 
     def onAttach(self):
-        pass
+        for item in self.children:
+            item.onAttach()
+        w = self.getWidget()
+        if w:
+           w.onAttach() 
 
     def onDetach(self):
-        pass
+        for item in self.children:
+            item.onDetach()
+        w = self.getWidget()
+        if w:
+           w.onDetach() 
 
     def getChild(self, index):
         if (index < 0) or (index >= len(self.children)):
