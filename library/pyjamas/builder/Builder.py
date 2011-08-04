@@ -1,3 +1,6 @@
+# Copyright (C) 2010 Luke Kenneth Casson Leighton <lkcl@lkcl.net>
+# Copyright (C) 2011 Janjaap Bos <janjaapbos@gmail.com>
+
 from pyjamas.builder.XMLFile import XMLFile
 from pyjamas import Factory
 from pyjamas import ui
