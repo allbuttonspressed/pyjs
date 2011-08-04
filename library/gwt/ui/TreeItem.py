@@ -128,6 +128,7 @@ class TreeItem(UIObject):
         return item
 
     def onAttach(self):
+        pass
         for item in self.children:
             item.onAttach()
         w = self.getWidget()
@@ -135,6 +136,7 @@ class TreeItem(UIObject):
            w.onAttach() 
 
     def onDetach(self):
+        pass
         for item in self.children:
             item.onDetach()
         w = self.getWidget()
