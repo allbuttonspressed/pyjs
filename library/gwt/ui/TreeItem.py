@@ -24,6 +24,7 @@ class TreeItem(UIObject):
     # also callable as TreeItem(widget)
     def __init__(self, html=None, **ka):
         self.children = []
+        self.attached = False
         self.contentPanel = None
         self.itemTable = None
         self.contentElem = None
@@ -128,7 +129,9 @@ class TreeItem(UIObject):
         return item
 
     def onAttach(self):
-        pass
+        if self.attached:
+            return
+        self.attached = True
         for item in self.children:
             item.onAttach()
         w = self.getWidget()
@@ -136,7 +139,7 @@ class TreeItem(UIObject):
            w.onAttach() 
 
     def onDetach(self):
-        pass
+        self.attached = False
         for item in self.children:
             item.onDetach()
         w = self.getWidget()
