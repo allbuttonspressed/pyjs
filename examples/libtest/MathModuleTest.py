@@ -20,8 +20,14 @@ class MathModuleTest(UnitTest):
 
     def testLog(self):
         self.assertEqual(math.log(math.e), 1)
-        self.assertEqual(math.log(100, 10), 2)
-        self.assertEqual(math.log10(100), 2)
+        self.assertTrue(
+            math.log(100, 10) - 2 < 1e-12,
+            "math.log(100, 10): %s" % math.log(100, 10),
+        )
+        self.assertTrue(
+            math.log10(1000) - 3 < 1e-12,
+            "math.log10(1000): %s" % math.log10(1000),
+        )
 
     def testPow(self):
         self.assertEqual(math.pow(2, 3), 8.0)
