@@ -84,19 +84,33 @@ class VarsTest(UnitTest.UnitTest):
 
     def testGlobalsBltin(self):
         try:
-            self.assertEqual(set(sorted(globals().keys())), 
-                             set(sorted(['changeme', 'foo', 'myfoo_value', '__builtins__',
-                              'UnitTest', 'import_sys', 'VarsTest', 'data_test',
-                              '__package__', 'module_global_x', '__doc__',
-                              '__name__', 'myget_foo_value', 'myfoo',
-                              'data', '__file__'])))
+            set1 = set(globals().keys())
+            set2 = set([
+                'changeme', 'foo', 'myfoo_value', '__builtins__',
+                'UnitTest', 'import_sys', 'VarsTest', 'data_test',
+                '__package__', 'module_global_x', '__doc__',
+                '__name__', 'myget_foo_value', 'myfoo',
+                'data', '__file__',
+            ])
+            setdiff = set1.symmetric_difference(set2)
+            # __package__ is not available in python 2.5
+            self.assertTrue(
+                len(setdiff) <= 1,
+                "partial/imperfect implementation of globals(), #590 : %r" % setdiff,
+            )
         except:
             self.fail("globals() not implemented, #590")
             return False
         
         globals()['new_global_via_dict'] = True
-        self.assertTrue(globals()['new_global_via_dict'])
-        self.assertTrue(new_global_via_dict)
+        try:
+            self.assertTrue(globals()['new_global_via_dict'])
+        except:
+            self.fail("globals() partially implemented, #590 (adding to dictionary fails)")
+        try:
+            self.assertTrue(new_global_via_dict)
+        except:
+            self.fail("globals() partially implemented, #590 (globals dict does not really reflect globals)")
    
     def testAugmentedAssignments(self):
         a = a0 = 100
