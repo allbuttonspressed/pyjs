@@ -39,7 +39,7 @@ class struct_time(object):
     tm_yday = None
     tm_isdst = None
 
-    def __init__(self, ttuple = None):
+    def __init__(self, ttuple=None):
         if not ttuple is None:
             self.tm_year = ttuple[0]
             self.tm_mon = ttuple[1]
@@ -65,6 +65,9 @@ class struct_time(object):
         )
         return t.__str__()
 
+    def __repr__(self):
+        return self.__str__()
+
     def __getitem__(self, idx):
         return [self.tm_year, self.tm_mon, self.tm_mday, 
                 self.tm_hour, self.tm_min, self.tm_sec, 
@@ -75,8 +78,8 @@ class struct_time(object):
                 self.tm_hour, self.tm_min, self.tm_sec, 
                 self.tm_wday, self.tm_yday, self.tm_isdst][lower:upper]
 
-def gmtime(t = None):
-    if t == None:
+def gmtime(t=None):
+    if t is None:
         t = time()
     date = JS("new Date(@{{t}}*1000)")
     tm = struct_time()
@@ -92,8 +95,8 @@ def gmtime(t = None):
     tm.tm_yday = 1 + int((t - startOfYear.getTime()/1000)/86400)
     return tm
 
-def localtime(t = None):
-    if t == None:
+def localtime(t=None):
+    if t is None:
         t = time()
     date = JS("new Date(@{{t}}*1000)")
     dateOffset = date.getTimezoneOffset()
@@ -132,7 +135,7 @@ def mktime(t):
         return ts + _dst
     return ts
 
-def strftime(fmt, t = None):
+def strftime(fmt, t=None):
     if t is None:
         t = localtime()
     else:
@@ -225,14 +228,13 @@ def strftime(fmt, t = None):
         """)
     return str(result)
 
-def asctime(t = None):
-    if t == None:
+def asctime(t=None):
+    if t is None:
         t = localtime()
     return "%s %s %02d %02d:%02d:%02d %04d" % (__c__days[(t[6]+1)%7][:3], __c__months[t[1]-1], t[2], t[3], t[4], t[5], t[0])
 
-def ctime(t = None):
-    t = localtime()
-    return asctime(t)
+def ctime(t=None):
+    return asctime(localtime(t))
 
 # This is an incomplete implementation and comes from
 # Adrien Di Mascio
@@ -289,32 +291,32 @@ function strptime(datestring, format) {
     // create initial date (!!! year=0 means 1900 !!!)
     var date = new Date(0, 0, 1, 0, 0);
     date.setFullYear(0); // reset to year 0
-    if (parsed.Y) {
+    if (typeof parsed.Y != "undefined") {
         date.setFullYear(parsed.Y);
     }
-    if (parsed.y) {
+    if (typeof parsed.y != "undefined") {
         date.setFullYear(2000+parsed.y);
     }
-    if (parsed.m) {
+    if (typeof parsed.m != "undefined") {
         if (parsed.m < 1 || parsed.m > 12) {
             return null;
         }
         // !!! month indexes start at 0 in javascript !!!
         date.setMonth(parsed.m - 1);
     }
-    if (parsed.d) {
+    if (typeof parsed.d != "undefined") {
         if (parsed.m < 1 || parsed.m > 31) {
             return null;
         }
         date.setDate(parsed.d);
     }
-    if (parsed.H) {
+    if (typeof parsed.H != "undefined") {
         if (parsed.H < 0 || parsed.H > 23) {
             return null;
         }
         date.setHours(parsed.H);
     }
-    if (parsed.M) {
+    if (typeof parsed.M != "undefined") {
         if (parsed.M < 0 || parsed.M > 59) {
             return null;
         }
@@ -326,6 +328,8 @@ function strptime(datestring, format) {
 
 def strptime(datestring, format):
     try:
-        return str(JS("strptime(@{{datestring}}, @{{format}}).getTime() / 1000.0"))
+        tt = localtime(float(JS("strptime(@{{datestring}}.valueOf(), @{{format}}.valueOf()).getTime() / 1000.0")))
+        tt.tm_isdst = -1
+        return tt
     except:
         raise ValueError("Invalid or unsupported values for strptime: '%s', '%s'" % (datestring, format))
