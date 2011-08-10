@@ -326,6 +326,14 @@ function strptime(datestring, format) {
 };
 """)
 
+# For use in datetime.datetime.strptime()
+# There's a timestamp required
+def _strptime(datestring, format):
+    try:
+        return float(JS("strptime(@{{datestring}}.valueOf(), @{{format}}.valueOf()).getTime() / 1000.0"))
+    except:
+        raise ValueError("Invalid or unsupported values for strptime: '%s', '%s'" % (datestring, format))
+
 def strptime(datestring, format):
     try:
         tt = localtime(float(JS("strptime(@{{datestring}}.valueOf(), @{{format}}.valueOf()).getTime() / 1000.0")))

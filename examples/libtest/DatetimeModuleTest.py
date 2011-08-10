@@ -81,6 +81,10 @@ class DatetimeModuleTest(UnitTest.UnitTest):
         d = datetime.date(2010, 4, 9)
         self.assertEqual(d.strftime("%d/%m/%y"), "09/04/10")
 
+    def testStrptime(self):
+        d = datetime.datetime.strptime("010100 1234", "%d%m%y %H%M")
+        self.assertEqual(str(d), '2000-01-01 12:34:00')
+
     def testComparision(self):
         d1 = datetime.date(2010, 6, 8)
         d2 = datetime.date(2010, 6, 8)
