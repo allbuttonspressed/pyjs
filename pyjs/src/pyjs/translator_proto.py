@@ -2096,14 +2096,15 @@ var %s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[argu
         modname = node.modname
         if hasattr(node, 'level') and node.level > 0:
             absPath = True
-            modname = self.relative_import_context.split('.')
-            level = node.level - 1
-            if len(modname) <= level:
+            if self.relative_import_context is not None:
+                modname = self.relative_import_context.split('.')
+                level = node.level - 1
+            if self.relative_import_context is None or len(modname) <= level:
                 raise TranslationError(
                     "Attempted relative import beyond toplevel package",
                     node, self.module_name)
             if level:
-                modname = '.'.join(modname[:-node.level])
+                modname = '.'.join(modname[:-level])
             else:
                 modname = self.relative_import_context
             if node.modname:
