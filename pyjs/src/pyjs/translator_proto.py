@@ -3605,6 +3605,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             op = "="
             i = 0
             for child in node.assign:
+                if not isinstance(child, self.ast.AssName):
+                    raise TranslationError(
+                        "deep unpacking not supported (in _for)", child, self.module_name)
                 child_name = child.name
                 self.add_lookup('variable', child_name, child_name)
                 child_name = self.add_lookup('variable', child_name, child_name)
