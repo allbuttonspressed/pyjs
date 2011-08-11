@@ -5496,6 +5496,9 @@ class str(basestring):
             if (@{{text}}) return 'True';
             return 'False';
         }
+        if (@{{text}}.__is_instance__ === false) {
+            return @{{object}}.__str__(@{{text}});
+        }
         if (@{{hasattr}}(@{{text}},'__str__')) {
             return @{{text}}.__str__();
         }
