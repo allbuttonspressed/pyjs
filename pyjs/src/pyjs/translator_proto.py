@@ -2776,6 +2776,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.is_class_definition = True
             self.local_prefix = local_prefix
             self._stmt(child, current_klass)
+
+        self.track_lineno(node, False)
+
         create_class = """\
 %(s)svar $bases = new Array(%(bases)s);"""
         if self.module_name == 'pyjslib':
