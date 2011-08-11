@@ -114,7 +114,8 @@ def trackstackstr(stack=None, limit=None):
     return ''.join(stackstrings)
 
 def _get_traceback_list(err, tb=None, limit=None):
-    msg = [str(err) + '\n', 'Traceback:\n']
+    name = getattr(getattr(err, '__class__', None), '__name__', 'Unknown exception')
+    msg = ['%s: %s\n' % (name, err), 'Traceback:\n']
     try:
         msg.extend(trackstacklist(tb, limit=limit))
     except:
