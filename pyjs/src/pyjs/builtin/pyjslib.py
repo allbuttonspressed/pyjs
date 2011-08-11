@@ -1144,7 +1144,7 @@ String.prototype.join = function(data) {
                 }
             }
             catch (e) {
-                if (e.__name__ != 'StopIteration') throw e;
+                if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
             }
         }
         return data.join(this);
@@ -1283,7 +1283,7 @@ if (typeof "a"[0] == 'undefined' ) {
                     if (noStop === true) {
                         return;
                     }
-                    throw @{{StopIteration}};
+                    throw @{{StopIteration}}();
                 }
                 return s.charAt(i++);
             },
@@ -1303,7 +1303,7 @@ if (typeof "a"[0] == 'undefined' ) {
                     if (noStop === true) {
                         return;
                     }
-                    throw @{{StopIteration}};
+                    throw @{{StopIteration}}();
                 }
                 return s.charAt(i++);
             },
@@ -3884,7 +3884,7 @@ $iter_array.prototype.next = function (noStop) {
         if (noStop === true) {
             return;
         }
-        throw @{{StopIteration}};
+        throw @{{StopIteration}}();
     }
     return this.__array[this.i];
 };
@@ -3900,7 +3900,7 @@ $reversed_iter_array.prototype.next = function (noStop) {
         if (noStop === true) {
             return;
         }
-        throw @{{StopIteration}};
+        throw @{{StopIteration}}();
     }
     return this.___array[this.i];
 };
@@ -3921,7 +3921,7 @@ $enumerate_array.prototype.next = function (noStop, reuseTuple) {
         if (noStop === true) {
             return;
         }
-        throw @{{StopIteration}};
+        throw @{{StopIteration}}();
     }
     this.tl[1] = this.array[this.i];
     if (this.tl[0].__number__ == 0x01) {
@@ -3972,7 +3972,7 @@ class list:
                     }
                 }
                 catch (e) {
-                    if (e.__name__ != 'StopIteration') throw e;
+                    if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
                 }
             }
             @{{self}}.__array = @{{data}};
@@ -4016,7 +4016,7 @@ class list:
                         }
                     }
                     catch (e) {
-                        if (e.__name__ != 'StopIteration') throw e;
+                        if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
                     }
                 }
             }
@@ -4276,7 +4276,7 @@ class tuple:
                     }
                 }
                 catch (e) {
-                    if (e.__name__ != 'StopIteration') throw e;
+                    if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
                 }
             }
             @{{self}}.__array = @{{data}};
@@ -4336,7 +4336,7 @@ class tuple:
         return {
             'next': function() {
                 if (i >= l.length) {
-                    throw @{{StopIteration}};
+                    throw @{{StopIteration}}();
                 }
                 return l[i++];
             },
@@ -4437,7 +4437,7 @@ class dict:
                         }
                     }
                     catch (e) {
-                        if (e.__name__ != 'StopIteration') throw e;
+                        if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
                     }
                 }
             }
@@ -4842,7 +4842,7 @@ class set(object):
                         }
                     }
                     catch (e) {
-                        if (e.__name__ != 'StopIteration') throw e;
+                        if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
                     }
                 }
             }
@@ -5379,7 +5379,7 @@ def xrange(start, stop = None, step = 1):
                 if (noStop === true) {
                     return;
                 }
-                throw @{{StopIteration}};
+                throw @{{StopIteration}}();
             }
             @{{rval}} = @{{nval}};
             @{{nval}} += @{{step}};
@@ -6729,7 +6729,7 @@ wrapped_next = JS("""function (iter) {
     try {
         var res = iter.next();
     } catch (e) {
-        if (e === @{{StopIteration}}) {
+        if (@{{isinstance}}(e, @{{StopIteration}})) {
             return;
         }
         throw e;
