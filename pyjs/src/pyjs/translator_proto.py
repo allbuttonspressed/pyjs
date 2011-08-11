@@ -1456,7 +1456,7 @@ $generator['$$throw'] = function ($exc_type, $exc_value) {
 $generator['close'] = function () {
 %(src1)s
     $yield_value = null;
-    $exc=@{{GeneratorExit}};
+    $exc=@{{GeneratorExit}}();
     try {
         var $res = $generator['$genfunc']();
         $is_executing=false;

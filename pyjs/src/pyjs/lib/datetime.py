@@ -1,6 +1,6 @@
 from __pyjamas__ import JS
 
-from time import __c__days, __c__months, strftime, localtime, gmtime, strptime
+from time import __c__days, __c__months, strftime, localtime, gmtime, _strptime
 
 MINYEAR = 1
 MAXYEAR = 1000000
@@ -220,7 +220,7 @@ class datetime(date, time):
     
     @classmethod
     def strptime(self, datestring, format):
-        return self.fromtimestamp(strptime(datestring, format))
+        return self.fromtimestamp(_strptime(datestring, format))
     
     @classmethod
     def utcfromtimestamp(self, timestamp):

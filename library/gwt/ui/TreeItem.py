@@ -1,5 +1,6 @@
 # Copyright 2006 James Tauber and contributors
 # Copyright (C) 2009 Luke Kenneth Casson Leighton <lkcl@lkcl.net>
+# Copyright (C) 2011 Vsevolod Fedorov <vsevolod.fedorov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +24,7 @@ class TreeItem(UIObject):
     # also callable as TreeItem(widget)
     def __init__(self, html=None, **ka):
         self.children = []
+        self.attached = False
         self.contentPanel = None
         self.itemTable = None
         self.contentElem = None
@@ -127,10 +129,22 @@ class TreeItem(UIObject):
         return item
 
     def onAttach(self):
-        pass
+        if self.attached:
+            return
+        self.attached = True
+        for item in self.children:
+            item.onAttach()
+        w = self.getWidget()
+        if w:
+           w.onAttach() 
 
     def onDetach(self):
-        pass
+        self.attached = False
+        for item in self.children:
+            item.onDetach()
+        w = self.getWidget()
+        if w:
+           w.onDetach() 
 
     def getChild(self, index):
         if (index < 0) or (index >= len(self.children)):

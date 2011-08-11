@@ -45,13 +45,28 @@ class TimeModuleTest(UnitTest.UnitTest):
         self.assertEqual(ttuple[8], 0,    "DST mismatch")
 
     def testStrftime(self):
-        t = 1246446000
+        t = 1246446001
         ttuple = time.gmtime(t)
         s = time.strftime("-%%-%d-%H-%I-%j-%m-%M-%p-%S-%w-%W-%y-%Y-", ttuple)
-        self.assertEqual(s, "-%-01-11-11-182-07-00-AM-00-3-26-09-2009-")
-        s = time.strftime("%c")
-        s = time.strftime("%x")
-        s = time.strftime("%X")
+        self.assertEqual(s, "-%-01-11-11-182-07-00-AM-01-3-26-09-2009-")
+
+        def assertEqual(s, expected):
+            self.assertEqual(
+                s,
+                expected,
+                "bug #640 : %r != %r" % (s, expected)
+            )
+        assertEqual(time.strftime("%c", ttuple), 'Wed Jul  1 11:00:01 2009')
+        assertEqual(time.strftime("%x", ttuple), '07/01/09')
+        assertEqual(time.strftime("%X", ttuple), '11:00:01')
+
+    def testStrptime(self):
+        tm = time.strptime("01012000 1234", "%d%m%Y %H%M")
+        self.assertEqual(tuple(tm[0:9]), (2000, 1, 1, 12, 34, 0, 5, 1, -1))
+        tm = time.strptime("01072000 1234", "%d%m%Y %H%M")
+        self.assertEqual(tuple(tm[0:9]), (2000, 7, 1, 12, 34, 0, 5, 183, -1))
+        tm = time.strptime("010100 1234", "%d%m%y %H%M")
+        self.assertEqual(tuple(tm[0:9]), (2000, 1, 1, 12, 34, 0, 5, 1, -1))
 
     def testAsctime(self):
         t = (2010, 5, 19, 9, 22, 44, 2, 139, 1)

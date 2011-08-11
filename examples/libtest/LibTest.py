@@ -45,6 +45,7 @@ from DatetimeModuleTest import DatetimeModuleTest
 from TypeCompatibilityTest import TypeCompatibilityTest
 from UrllibModuleTest import UrllibModuleTest
 from Base64ModuleTest import Base64ModuleTest
+from MathModuleTest import MathModuleTest
 from RandomModuleTest import RandomModuleTest
 from ReModuleTest import ReModuleTest
 from CsvModuleTest import CsvModuleTest
@@ -84,6 +85,7 @@ def main():
     t.add(StringIOModuleTest)
     t.add(UrllibModuleTest)
     t.add(Base64ModuleTest)
+    t.add(MathModuleTest)
     t.add(ReModuleTest)
     t.add(RandomModuleTest)
     t.add(CsvModuleTest)

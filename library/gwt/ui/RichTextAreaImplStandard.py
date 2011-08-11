@@ -351,10 +351,10 @@ class RichTextAreaImplStandard (RichTextAreaImpl):
 
 
     def execCommand(self, cmd, param):
-        if self.isRichEditingActive(elem):
+        if self.isRichEditingActive(self.elem):
             # When executing a command, focus the iframe first, since some commands
             # don't take properly when it's not focused.
-            setFocus(True)
+            self.setFocus(True)
             self.execCommandAssumingFocus(cmd, param)
 
 
@@ -371,7 +371,7 @@ class RichTextAreaImplStandard (RichTextAreaImpl):
         if isRichEditingActive(elem):
             # When executing a command, focus the iframe first, since some commands
             # don't take properly when it's not focused.
-            setFocus(True)
+            self.setFocus(True)
             return self.queryCommandStateAssumingFocus(cmd)
         else:
             return False

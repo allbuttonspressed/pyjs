@@ -7,7 +7,7 @@ def exp(x): return float(JS("Math.exp(@{{x}}.valueOf())"))
 def log(x, base=None):
     if base is None:
         return float(JS("Math.log(@{{x}}.valueOf())"))
-    return float(JS("Math.log(@{{x}}.valueOf()), @{{base}}.valueOf()"))
+    return float(JS("Math.log(@{{x}}.valueOf()) / Math.log(@{{base}}.valueOf())"))
 def pow(x, y): return float(JS("Math.pow(@{{x}}.valueOf(), @{{y}}.valueOf())"))
 def sqrt(x): return float(JS("Math.sqrt(@{{x}}.valueOf())"))
 def cos(x): return float(JS("Math.cos(@{{x}}.valueOf())"))
@@ -16,7 +16,7 @@ def tan(x): return float(JS("Math.tan(@{{x}}.valueOf())"))
 def acos(x): return float(JS("Math.acos(@{{x}}.valueOf())"))
 def asin(x): return float(JS("Math.asin(@{{x}}.valueOf())"))
 def atan(x): return float(JS("Math.atan(@{{x}}.valueOf())"))
-def atan2(x): return float(JS("Math.atan2(@{{x}}.valueOf())"))
+def atan2(x, y): return float(JS("Math.atan2(@{{x}}.valueOf(), @{{y}}.valueOf())"))
 
 pi = float(JS("Math.PI"))
 e = float(JS("Math.E"))
