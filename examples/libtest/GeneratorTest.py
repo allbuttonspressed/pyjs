@@ -349,7 +349,7 @@ class GeneratorTest(UnitTest):
             r = g.close()
             self.assertEqual(r, None)
         except:
-            self.fail("No exception expected (1)")
+            self.fail("No exception expected (1a)")
         try:
             r = g.next()
             self.fail("StopIteration expected (1)")
@@ -359,7 +359,7 @@ class GeneratorTest(UnitTest):
             r = g.close()
             self.assertEqual(r, None)
         except StopIteration:
-            self.fail("No exception expected (1)")
+            self.fail("No exception expected (1b)")
 
         g = fn()
         self.assertEqual(g.next(), 1)
