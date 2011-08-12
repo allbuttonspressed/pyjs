@@ -4244,24 +4244,25 @@ JS("@{{list}}.toString = @{{list}}.__str__;")
 
 
 class tuple:
-    def __init__(self, data=JS("[]")):
+    def __new__(cls, data=JS("[]")):
+        self = object.__new__(cls)       
         JS("""
         if (@{{data}} === null) {
             throw @{{TypeError}}("'NoneType' is not iterable");
         }
         if (@{{data}}.constructor === Array) {
             @{{self}}.__array = @{{data}}.slice();
-            return null;
+            return @{{self}};
         }
         if (typeof @{{data}}.__iter__ == 'function') {
             if (typeof @{{data}}.__array == 'object') {
                 @{{self}}.__array = @{{data}}.__array.slice();
-                return null;
+                return @{{self}};
             }
             var iter = @{{data}}.__iter__();
             if (typeof iter.__array == 'object') {
                 @{{self}}.__array = iter.__array.slice();
-                return null;
+                return @{{self}};
             }
             @{{data}} = [];
             var item, i = 0;
@@ -4280,7 +4281,7 @@ class tuple:
                 }
             }
             @{{self}}.__array = @{{data}};
-            return null;
+            return @{{self}};
         }
         throw @{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable");
         """)
@@ -6521,7 +6522,7 @@ def sprintf(strng, args):
         }
     }
 
-    var constructor = args === null ? 'NoneType' : (args.__md5__ == @{{tuple}}.__md5__ ? 'tuple': (args.__md5__ == @{{dict}}.__md5__ ? 'dict': 'Other'));
+    var constructor = args === null ? 'NoneType' : (@{{isinstance}}(args, @{{tuple}}) ? 'tuple': (@{{isinstance}}(args, @{{dict}}) ? 'dict': 'Other'));
     if (strng.indexOf("%(") >= 0) {
         if (re_dict.exec(strng) !== null) {
             if (constructor != "dict") {
