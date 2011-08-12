@@ -392,7 +392,7 @@ function $pyjs__class_instance(class_name, module_name) {
     cls_fn.__name__ = class_name;
     cls_fn.__module__ = module_name;
     cls_fn.__class__ = pyjslib['type'];
-    cls_fn.toString = function() { return this.__str__();};
+    cls_fn.toString = function() { return '<class ' + this.__module__ + '.' + this.__name__ + '>'; };
     return cls_fn;
 }
 
