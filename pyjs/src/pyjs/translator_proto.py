@@ -231,6 +231,7 @@ Other_JavaScript_Keywords = frozenset((
 
 PYJSLIB_BUILTIN_FUNCTIONS=frozenset((
     "__import__",
+    "_check_name",
     "abs",
     "all",
     "any",
@@ -711,6 +712,8 @@ class Translator(object):
         'noFunctionArgumentChecking': [('function_argument_checking', False)],
         'AttributeChecking': [('attribute_checking', True)],
         'noAttributeChecking': [('attribute_checking', False)],
+        'NameChecking': [('name_checking', True)],
+        'noNameChecking': [('name_checking', False)],
         'GetattrSupport': [('getattr_support', True)],
         'noGetattrSupport': [('getattr_support', False)],
         'BoundMethods': [('bound_methods', True)],
@@ -990,16 +993,16 @@ class Translator(object):
     def push_options(self):
         self.option_stack.append((\
             self.debug, self.print_statements, self.function_argument_checking,
-            self.attribute_checking, self.getattr_support, self.bound_methods, self.descriptors,
-            self.source_tracking, self.line_tracking, self.store_source,
+            self.attribute_checking, self.name_checking, self.getattr_support, self.bound_methods,
+            self.descriptors, self.source_tracking, self.line_tracking, self.store_source,
             self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp, self.inline_getitem,
             self.operator_funcs, self.number_classes,
         ))
     def pop_options(self):
         (\
             self.debug, self.print_statements, self.function_argument_checking,
-            self.attribute_checking, self.getattr_support, self.bound_methods, self.descriptors,
-            self.source_tracking, self.line_tracking, self.store_source,
+            self.attribute_checking, self.name_checking, self.getattr_support, self.bound_methods,
+            self.descriptors, self.source_tracking, self.line_tracking, self.store_source,
             self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp, self.inline_getitem,
             self.operator_funcs, self.number_classes,
         ) = self.option_stack.pop()
@@ -2704,18 +2707,24 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             # What to do with a (yet) unknown name?
             # Just nothing...
             if not optlocal_var:
-                return self.scopeName(name, depth, is_local)
-            return '(typeof %s == "undefined"?%s:%s)' % (
-                name,
-                self.scopeName(name, depth, is_local),
-                name,
-            )
+                result = self.scopeName(name, depth, is_local)
+            else:
+                result = '(typeof %s == "undefined"?%s:%s)' % (
+                    name,
+                    self.scopeName(name, depth, is_local),
+                    name,
+                )
+            if self.name_checking:
+                return '@{{_check_name}}("%s", %s)' % (pyname, result)
+            return result
         return jsname
 
     def _name2(self, v, current_klass, attr_name):
         name_type, pyname, jsname, depth, is_local = self.lookup(v.name)
         if name_type is None:
             jsname = self.scopeName(v.name, depth, is_local)
+            if self.name_checking:
+                jsname = '@{{_check_name}}("%s", %s)' % (pyname, jsname)
         return jsname, attr_name
 
     def _getattr2(self, v, current_klass, attr_name):
@@ -2725,6 +2734,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             name_type, pyname, jsname, depth, is_local = self.lookup(v.expr.name)
             if name_type is None:
                 jsname = self.scopeName(v.expr.name, depth, is_local)
+                if self.name_checking:
+                    jsname = '@{{_check_name}}("%s", %s)' % (pyname, jsname)
             return [jsname, v.attrname, attr_name]
         return [self.expr(v.expr, current_klass), v.attrname, attr_name]
 
@@ -3760,7 +3771,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.w( self.dedent() + "}")
         self.generator_switch_case(increment=True)
         self.is_generator = save_is_generator
-
 
     def _const(self, node):
         if isinstance(node.value, int):

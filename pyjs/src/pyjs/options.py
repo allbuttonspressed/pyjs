@@ -8,6 +8,7 @@ all_compile_options = dict(
     print_statements=True,
     function_argument_checking=False,
     attribute_checking=False,
+    name_checking=True,
     getattr_support=True,
     bound_methods=True,
     descriptors=False,
@@ -85,6 +86,19 @@ def add_compile_options(parser):
                      )
     speed_options['attribute_checking'] = False
     pythonic_options['attribute_checking'] = True
+
+    parser.add_option("--no-name-checking",
+                      dest = "name_checking",
+                      action="store_false",
+                      help = "Do not raise NameError for undefined names",
+                     )
+    parser.add_option("--name-checking",
+                      dest = "name_checking",
+                      action="store_true",
+                      help = "Raise NameError for undefined names",
+                     )
+    speed_options['name_checking'] = False
+    pythonic_options['name_checking'] = True
 
     parser.add_option("--no-getattr-support",
                       dest = "getattr_support",
