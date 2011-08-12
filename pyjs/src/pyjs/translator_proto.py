@@ -1078,19 +1078,10 @@ class Translator(object):
     def attrib_join(self, splitted):
         if not isinstance(splitted, list):
             raise TranslationError("Invalid splitted attr '%s'" % splitted)
-        attr = []
-        if splitted[0][0] in ["'", '"']:
-            attr.append(splitted[0][1:-1])
-        else:
-            attr.append(splitted[0])
+        attr = splitted[:1]
         for word in splitted[1:]:
-            if word[0] in ["'", '"']:
-                word = word[1:-1]
             if word in pyjs_attrib_remap:
                attr.append("'%s'" % pyjs_attrib_remap[word])
-            elif word.find('(') >= 0:
-                print 'attrib_join:', splitted, attr, word
-                attr.append(word)
             else:
                attr.append("'%s'" % word)
         if len(attr) == 1:
@@ -2317,6 +2308,7 @@ var %s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[argu
 
         self.ignore_debug = False
         method_name = None
+        call_args = []
         if isinstance(v.node, self.ast.Name):
             name_type, pyname, jsname, depth, is_local = self.lookup(v.node.name)
             if name_type == '__pyjamas__':
@@ -2356,47 +2348,26 @@ var %s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[argu
                         )
                     else:
                         call_name = self.scopeName(v.node.name, depth, is_local)
+                    if self.name_checking:
+                        call_name = '@{{_check_name}}("%s", %s)' % (pyname, call_name)
                 else:
                     call_name = jsname
-            call_args = []
         elif isinstance(v.node, self.ast.Getattr):
-            attrname = self.attrib_remap(v.node.attrname)
-            if isinstance(v.node.expr, self.ast.Name):
-                call_name, method_name = self._name2(v.node.expr, current_klass, attrname)
-                call_args = []
+            method_name = self.attrib_remap(v.node.attrname)
+            if self.getattr_support:
+                call_name = self._getattr(v.node, current_klass, use_getattr=False)
+                method_name = call_name.pop()
+                call_name = self.attrib_join(call_name)
+            elif isinstance(v.node.expr, self.ast.Name):
+                call_name, method_name = self._name2(v.node.expr, current_klass, method_name)
             elif isinstance(v.node.expr, self.ast.Getattr):
                 call_name = self._getattr2(v.node.expr, current_klass, v.node.attrname)
                 method_name = call_name.pop()
                 call_name = self.attrib_join(call_name)
-                call_args = []
-            elif isinstance(v.node.expr, self.ast.CallFunc):
-                call_name = self._callfunc(v.node.expr, current_klass)
-                method_name = attrname
-                call_args = []
-            elif isinstance(v.node.expr, self.ast.Subscript):
-                call_name = self._subscript(v.node.expr, current_klass)
-                method_name = attrname
-                call_args = []
-            elif isinstance(v.node.expr, self.ast.Const):
-                call_name = self.expr(v.node.expr, current_klass)
-                method_name = attrname
-                call_args = []
-            elif isinstance(v.node.expr, self.ast.Slice):
-                call_name = self._slice(v.node.expr, current_klass)
-                method_name = attrname
-                call_args = []
             else:
-                raise TranslationError(
-                    "unsupported type (in _callfunc)", v.node.expr, self.module_name)
-        elif isinstance(v.node, self.ast.CallFunc):
-            call_name = self._callfunc(v.node, current_klass)
-            call_args = []
-        elif isinstance(v.node, self.ast.Subscript):
-            call_name = self._subscript(v.node, current_klass)
-            call_args = []
+                call_name = self.expr(v.node.expr, current_klass)
         else:
-            raise TranslationError(
-                "unsupported type (in _callfunc)", v.node, self.module_name)
+            call_name = self.expr(v.node, current_klass)
 
         if method_name in pyjs_attrib_remap:
             method_name = pyjs_attrib_remap[method_name]
@@ -2431,19 +2402,17 @@ var %s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[argu
             if not dstar_arg_name:
                 dstar_arg_name = 'null'
             if method_name is None:
-                call_code = ("$pyjs_kwargs_call(null, "+call_name+", "
-                                  + star_arg_name
-                                  + ", " + dstar_arg_name
-                                  + ", ["+fn_args+"]"
-                                  + ")")
+                method_name = call_name
+                call_name = 'null'
             else:
-                call_code = ("$pyjs_kwargs_call("+call_name+", '"+method_name+"', "
-                                  + star_arg_name
-                                  + ", " + dstar_arg_name
-                                  + ", ["+fn_args+"]"
-                                  + ")")
+                method_name = repr(method_name)
+            call_code = "$pyjs_kwargs_call(%s, %s, %s, %s, [%s])" % (
+                call_name, method_name, star_arg_name, dstar_arg_name, fn_args)
+        elif self.getattr_support and method_name is not None:
+            call_code = '$pyjs_kwargs_call(%s, %s, null, null, [%s])' % (
+                call_name, repr(method_name), fn_args)
         else:
-            if not method_name is None:
+            if method_name is not None:
                 call_name = "%s['%s']" % (call_name, method_name)
             call_code = call_name + "(" + ", ".join(call_args) + ")"
         return call_code
@@ -2668,26 +2637,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return ["@{{getattr}}(%s, '%s')" % (obj, attr_name)]
         elif isinstance(v.expr, self.ast.Getattr):
             return self._getattr(v.expr, current_klass) + [attr_name]
-        elif isinstance(v.expr, self.ast.Subscript):
-            return [self._subscript(v.expr, self.modpfx()), attr_name]
-        elif isinstance(v.expr, self.ast.CallFunc):
-            return [self._callfunc(v.expr, self.modpfx()), attr_name]
-        elif isinstance(v.expr, self.ast.Const):
-            return [self._const(v.expr), attr_name]
-        elif isinstance(v.expr, self.ast.List):
-            return [self._list(v.expr, current_klass), attr_name]
-        elif isinstance(v.expr, self.ast.Dict):
-            return [self._dict(v.expr, current_klass), attr_name]
-        elif isinstance(v.expr, self.ast.Tuple):
-            return [self._tuple(v.expr, current_klass), attr_name]
-        elif isinstance(v.expr, self.ast.Lambda):
-            return [self._lambda(v.expr, current_klass), attr_name]
-        elif isinstance(v.expr, self.ast.Slice):
-            return [self._slice(v.expr, current_klass), attr_name]
         else:
-            raise TranslationError(
-                "unsupported type (in _getattr)", v.expr, self.module_name)
-
+            return [self.expr(v.expr, current_klass), attr_name]
 
     def modpfx(self):
         return strip_py(self.module_prefix)
