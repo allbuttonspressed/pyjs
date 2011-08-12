@@ -18,7 +18,7 @@
 
 from __pyjamas__ import INT, JS, setCompilerOptions, debugger
 
-setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noGetattrSupport", "noAttributeChecking", "noSourceTracking", "noLineTracking", "noStoreSource")
+setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noNameChecking", "noGetattrSupport", "noAttributeChecking", "noSourceTracking", "noLineTracking", "noStoreSource")
 
 platform = JS("$pyjs.platform")
 sys = None
@@ -44,6 +44,13 @@ _handle_exception = JS("""function(err) {
         @{{debugReport}}($pyjs_msg);
     }
     throw err;
+};
+""")
+
+_check_name = JS("""function(name, value) {
+    if (typeof value == 'undefined')
+        throw @{{NameError}}("name '" + name + "' is not defined");
+    return value;
 };
 """)
 
