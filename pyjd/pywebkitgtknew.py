@@ -261,15 +261,24 @@ class Browser:
         setattr(element, "on%s" % event_name, cb._callback)
 
 
+def destroy(window):
+    window.destroy()
+    while gtk.events_pending():
+        gtk.main_iteration(False)
+
 
 def setup(application, appdir=None, width=800, height=600):
 
     gobject.threads_init()
 
-    global wv
+    global wv, window
 
     wv = Browser(application, appdir, width, height)
     wv.load_app()
+    for window in gtk.window_list_toplevels():
+        if window.get_window_type() is gtk.WINDOW_TOPLEVEL:
+            break
+    window.connect('destroy', destroy)
 
     while 1:
         if is_loaded():
@@ -286,7 +295,7 @@ def run(one_event=False, block=True):
             sys.stdout.flush()
         return gtk.events_pending()
     else:
-        while 1:
+        while window.flags() & gtk.REALIZED:
             gtk.main_iteration()
             sys.stdout.flush()
 
