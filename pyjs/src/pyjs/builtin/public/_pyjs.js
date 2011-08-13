@@ -1,13 +1,22 @@
 
 var $pyjs_array_slice = Array.prototype.slice;
 
-function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args)
+function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
 {
     if (obj !== null) {
-        func = obj[func];
+        if (obj.__is_instance__ === true && obj.hasOwnProperty(func)) {
+            func = obj[func];
+            obj = null;
+        } else {
+            func = obj[func];
+        }
     }
 
-    // Merge dstar_args into args[0]
+    if (typeof func != 'function') {
+        throw (pyjslib.TypeError(func + ' object is not callable'));
+    }
+
+    // Merge dstar_args into kwargs
     if (dstar_args) {
         if (pyjslib.get_pyjs_classtype(dstar_args) != 'dict') {
             throw (pyjslib.TypeError(func.__name__ + "() arguments after ** must be a dictionary " + pyjslib.repr(dstar_args)));
@@ -23,11 +32,14 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args)
             if (pyjslib.var_remap.indexOf(k) >= 0) {
                 k = '$$' + k;
             }
-            if ($pyjs.options.arg_kwarg_multiple_values && typeof args[0][k] !=
+            if (kwargs == null) {
+                kwargs = {};
+            }
+            if ($pyjs.options.arg_kwarg_multiple_values && typeof kwargs[k] !=
  'undefined') {
                 $pyjs__exception_func_multiple_values(func.__name__, k);
              }
-            args[0][k] = v; 
+            kwargs[k] = v; 
         }
 
     }
@@ -82,10 +94,23 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args)
         }
     }
 
-    // Now convert args to call_args
-    // args = __kwargs, arg1, arg2, ...
-    // _args = arg1, arg2, arg3, ... [*args, [**kwargs]]
-    var _args = [];
+    if ($pyjs.options.arg_instance_type && obj !== null) {
+        var first_arg = null;
+        if (args.length >= 1)
+            first_arg = args[0];
+        $pyjs_check_instance_type(obj, func, first_arg);
+    }
+
+    if ($pyjs.options.arg_is_instance && obj !== null && obj.__is_instance__ === false
+            && func.__is_staticmethod__ !== true && func.__is_classmethod !== true
+            && typeof func.__class__ != 'undefined'
+            && args.length >= 1 && args[0] != null && args[0].__is_instance__ === false) {
+        $pyjs__exception_func_instance_expected(func.__name__, func.__class__.__name__, obj);
+    }
+
+    if (kwargs === null) {
+        return func.apply(obj, args);
+    }
 
     // Get function/method arguments
     if (typeof func.__args__ != 'undefined') {
@@ -94,30 +119,24 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args)
         var __args__ = new Array(null, null);
     }
 
+    // Now convert args to call_args
+    var _args = [];
     var a, aname, _idx , idx, res;
-    _idx = idx = 1;
-    if (obj === null) {
-        if (func.__is_instance__ === false) {
-            // Skip first argument in __args__
-            _idx ++;
-        }
-    } else {
-        if (typeof obj.__is_instance__ == 'undefined' && typeof func.__is_instance__ != 'undefined' && func.__is_instance__ === false) {
-            // Skip first argument in __args__
-            _idx ++;
-        } else if (func.__bind_type__ > 0 && func.__bind_type__ < 3) {
-            if (typeof args[1] == 'undefined' || obj.__is_instance__ !== false || args[1].__is_instance__ !== true) {
-                // Skip first argument in __args__
-                _idx ++;
-            }
-        }
+    _idx = 2;
+    idx = 0;
+
+    // Skip first argument in __args__ when calling a method
+    if (func.__is_staticmethod__ !== true && obj !== null
+            && typeof func.__is_instance__ == 'undefined'
+            && (obj.__is_instance__ === true || func.__is_classmethod__ === true)) {
+        _idx++;
     }
-    for (++_idx; _idx < __args__.length; _idx++, idx++) {
+    for (; _idx < __args__.length; _idx++, idx++) {
         aname = __args__[_idx][0];
-        a = args[0][aname];
+        a = kwargs[aname];
         if (typeof args[idx] == 'undefined') {
             _args.push(a);
-            delete args[0][aname];
+            delete kwargs[aname];
         } else {
             if (typeof a != 'undefined') $pyjs__exception_func_multiple_values(func.__name__, aname);
             _args.push(args[idx]);
@@ -137,12 +156,12 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args)
 
     if (__args__[1] === null) {
         // Check for unexpected keyword
-        for (var kwname in args[0]) {
+        for (var kwname in kwargs) {
             $pyjs__exception_func_unexpected_keyword(func.__name__, kwname);
         }
         return func.apply(obj, _args);
     }
-    a = pyjslib.dict(args[0]);
+    a = pyjslib.dict(kwargs);
     if (a.__len__() > 0) {
         a['$pyjs_is_kwarg'] = true;
         _args.push(a);
@@ -207,106 +226,49 @@ function $pyjs__exception_func_class_expected(func_name, class_name, instance) {
         throw pyjslib.TypeError(String("unbound method "+func_name+"() must be called with "+class_name+" class as first argument (got "+instance+" instead)"));
 }
 
-function $pyjs__exception_func_instance_expected(func_name, class_name, instance) {
-        if (typeof instance == 'undefined') {
-            instance = 'nothing';
-        } else if (instance.__is_instance__ == null) {
-            instance = "'"+String(instance)+"'";
+function $pyjs_check_instance_type(instance, func, first_arg) {
+    var klass = func.__class__;
+    if (!$pyjs.options.arg_instance_type || typeof instance.prototype == 'undefined'
+            || typeof klass == 'undefined' || func.__is_staticmethod__) {
+        return;
+    }
+
+    var is_subtype = pyjslib._isinstance;
+    if (instance.__is_instance__ === false) {
+        if (func.__is_classmethod__ === true) {
+            is_subtype = pyjslib.issubclass;
         } else {
-            instance = String(instance);
+            if (typeof first_arg != 'undefined' && first_arg !== null)
+                $pyjs_check_instance_type(first_arg, func);
+            return;
         }
-        //throw "unbound method "+func_name+"() must be called with "+class_name+" instance as first argument (got "+instance+" instead)";
-        throw pyjslib.TypeError(String("unbound method "+func_name+"() must be called with "+class_name+" instance as first argument (got "+instance+" instead)"));
+    }
+
+    if (typeof instance.__is_instance__ != 'undefined'
+            && func.__is_instance__ !== false
+            && typeof klass != 'undefined'
+            && instance.prototype.__md5__ !== klass.__md5__
+            && !is_subtype(instance, klass)) {
+        $pyjs__exception_func_instance_expected(func.__name__, klass.__name__, instance);
+    }
 }
 
-function $pyjs__bind_method(klass, func_name, func, bind_type, args) {
-    func.__class__ = klass;
-    return $pyjs__bind_method2(func_name, func, bind_type, args);
+function $pyjs__exception_func_instance_expected(func_name, class_name, instance) {
+    if (typeof instance == 'undefined') {
+        instance = 'nothing';
+    } else if (instance.__is_instance__ == null) {
+        instance = "'"+String(instance)+"'";
+    } else {
+        instance = String(instance);
+    }
+    //throw "unbound method "+func_name+"() must be called with "+class_name+" instance as first argument (got "+instance+" instead)";
+    throw pyjslib.TypeError(String("unbound method "+func_name+"() must be called with "+class_name+" instance as first argument (got "+instance+" instead)"));
 }
 
-function $pyjs__bind_method2(func_name, func, bind_type, args) {
+function $pyjs__prepare_func(func_name, func, args) {
     func.__name__ = func.func_name = func_name;
-    func.__bind_type__ = bind_type;
     func.__args__ = args;
-    func.prototype = func;
     return func;
-}
-
-function $pyjs__decorated_method(func_name, func, bind_type) {
-    var helper = function (){
-      var args;
-      if (typeof func.__methoddecorator__ == "undefined")
-      {
-        // add explicit "self" into arguments
-        args=[this];
-        for (var i=0;i<arguments.length;i++)
-          { args.push(arguments[i]); } // concat is not working :-S
-      } else {
-        args = arguments;
-      }
-      return func.apply(this, args);
-    };
-
-    helper.__name__ = helper.helper_name = func_name;
-    helper.__bind_type__ = bind_type;
-    helper.__methoddecorator__ = true;
-    helper.prototype = helper;
-    return helper;
-}
-
-function $pyjs__instancemethod(klass, func_name, func, bind_type, args) {
-    var fn = function () {
-        var _this = this;
-        var argstart = 0;
-        if (this.__is_instance__ !== true && arguments.length > 0) {
-            _this = arguments[0];
-            argstart = 1;
-        }
-        var args = [_this].concat($pyjs_array_slice.call(arguments, argstart));
-        if ($pyjs.options.arg_is_instance) {
-            if (_this.__is_instance__ === true) {
-                if ($pyjs.options.arg_instance_type) return func.apply(this, args);
-                for (var c in _this.__mro__) {
-                    var cls = _this.__mro__[c];
-                    if (cls == klass) {
-                        return func.apply(this, args);
-                    }
-                }
-            }
-            $pyjs__exception_func_instance_expected(func_name, klass.__name__, _this);
-        }
-        return func.apply(this, args);
-    };
-    func.__name__ = func.func_name = func_name;
-    func.__bind_type__ = bind_type;
-    func.__args__ = args;
-    func.__class__ = klass;
-    return fn;
-}
-
-function $pyjs__staticmethod(klass, func_name, func, bind_type, args) {
-    func.__name__ = func.func_name = func_name;
-    func.__bind_type__ = bind_type;
-    func.__args__ = args;
-    func.__class__ = klass;
-    return func;
-}
-
-function $pyjs__classmethod(klass, func_name, func, bind_type, args) {
-    var fn = function () {
-        if ($pyjs.options.arg_is_instance && this.__is_instance__ !== true && this.__is_instance__ !== false) $pyjs__exception_func_instance_expected(func_name, klass.__name__);
-        var args = [this.prototype].concat($pyjs_array_slice.call(arguments));
-        return func.apply(this, args);
-    };
-    func.__name__ = func.func_name = func_name;
-    func.__bind_type__ = bind_type;
-    func.__args__ = args;
-    func.__class__ = klass;
-    return fn;
-}
-
-function $pyjs__subclasses__(cls_obj) {
-    return cls_obj.__sub_classes__;
 }
 
 function $pyjs__mro_merge(seqs) {
@@ -381,7 +343,7 @@ function $pyjs__class_instance(class_name, module_name) {
                 args = arguments;
             }
         }
-        if (typeof instance.__init__ == 'function' && !instance.__init__.__$pyjs_autogenerated__ /* && pyjslib['isinstance'](instance, cls_fn) */) {
+        if (typeof instance.__init__ == 'function' && !instance.__init__.__$pyjs_autogenerated__) {
             if (instance.__init__.apply(instance, args) != null) {
                 //throw '__init__() should return None';
                 throw pyjslib.TypeError('__init__() should return None');
@@ -392,7 +354,17 @@ function $pyjs__class_instance(class_name, module_name) {
     cls_fn.__name__ = class_name;
     cls_fn.__module__ = module_name;
     cls_fn.__class__ = pyjslib['type'];
-    cls_fn.toString = function() { return '<class ' + this.__module__ + '.' + this.__name__ + '>'; };
+    cls_fn.toString = function() {
+        if (this.__is_instance__ === true) {
+            if (typeof this.__repr__ == 'function') {
+                return this.__repr__();
+            }
+            if (typeof this.__str__ == 'function') {
+                return this.__str__();
+            }
+        }
+        return '<class ' + this.__module__ + '.' + this.__name__ + '>';
+    };
     return cls_fn;
 }
 
@@ -415,12 +387,14 @@ function $pyjs__class_function(cls_fn, prop, bases) {
 
     for (var b = __mro__.length-1; b >= 0; b--) {
         var base = __mro__[b];
-        for (var p in base) cls_fn[p] = base[p];
+        for (var p in base)
+            cls_fn[p] = base[p];
     }
-    for (var p in prop) cls_fn[p] = prop[p];
+    for (var p in prop)
+        cls_fn[p] = prop[p];
 
     if (cls_fn['__new__'] == null) {
-      cls_fn['__new__'] = $pyjs__bind_method(cls_fn, '__new__', function(cls) {
+      cls_fn['__new__'] = $pyjs__prepare_func('__new__', function(cls) {
         if (cls.__init__.__$pyjs_autogenerated__ && $pyjs.options.arg_count && arguments.length != 1) $pyjs__exception_func_param(arguments.callee.__name__, 1, 1, arguments.length);
         var instance = function () {};
         instance.prototype = arguments[0].prototype;
@@ -429,10 +403,11 @@ function $pyjs__class_function(cls_fn, prop, bases) {
         instance.__dict__ = instance;
         instance.__is_instance__ = true;
         return instance;
-      }, 1, ['cls']);
+      }, ['cls']);
+      cls_fn['__new__'].__is_staticmethod__ = true;
     }
     if (cls_fn['__init__'] == null) {
-      cls_fn['__init__'] = $pyjs__bind_method(cls_fn, '__init__', function () {
+      cls_fn['__init__'] = $pyjs__prepare_func('__init__', function () {
         if (this.__is_instance__ === true) {
             var self = this;
             if ($pyjs.options.arg_count && arguments.length != 0) $pyjs__exception_func_param(arguments.callee.__name__, 1, 1, arguments.length+1);
@@ -441,15 +416,9 @@ function $pyjs__class_function(cls_fn, prop, bases) {
             if ($pyjs.options.arg_is_instance && self.__is_instance__ !== true) $pyjs__exception_func_instance_expected(arguments.callee.__name__, arguments.callee.__class__.__name__, self);
             if ($pyjs.options.arg_count && arguments.length != 1) $pyjs__exception_func_param(arguments.callee.__name__, 1, 1, arguments.length);
         }
-        if ($pyjs.options.arg_instance_type) {
-            if (arguments.callee !== arguments.callee.__class__[arguments.callee.__name__]) {
-                if (!pyjslib._isinstance(self, arguments.callee.__class__.slice(1))) {
-                    $pyjs__exception_func_instance_expected(arguments.callee.__name__, arguments.callee.__class__.__name__, self);
-                }
-            }
-        }
-      }, 1, ['self']);
+      }, ['self']);
       cls_fn['__init__'].__$pyjs_autogenerated__ = true;
+      cls_fn['__init__'].__class__ = cls_fn;
     }
     cls_fn.__name__ = class_name;
     cls_fn.__module__ = class_module;
@@ -468,7 +437,12 @@ function $pyjs__class_function(cls_fn, prop, bases) {
             bases[i].__sub_classes__.push(cls_fn);
         }
     }
-    cls_fn.__args__ = cls_fn.__init__.__args__;
+
+    if (cls_fn.__init__.__args__ == null) {
+        cls_fn.__args__ = cls_fn.__init__.__args__;
+    } else {
+        cls_fn.__args__ = cls_fn.__init__.__args__.slice(1);
+    }
     return cls_fn;
 }
 
@@ -479,12 +453,11 @@ function $pyjs_type(clsname, bases, methods)
     var obj = new Object;
     for (var i in methods) {
         if (typeof methods[i] == 'function' && typeof methods[i].__class__ == 'undefined') {
-            if (methods[i].__bind_type__ > 0) {
-                methods[i].__class__ = cls_instance;
-                obj[i] = methods[i];
-            } else {
-                obj[i] = $pyjs__instancemethod(cls_instance, i, methods[i], methods[i].__bind_type__, methods[i].__args__);
+            if (i == '__new__') {
+                methods[i].__is_staticmethod__ = true;
             }
+            methods[i].__class__ = cls_instance;
+            obj[i] = methods[i];
         } else {
             obj[i] = methods[i];
         }

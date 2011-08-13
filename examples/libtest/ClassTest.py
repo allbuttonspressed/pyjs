@@ -155,15 +155,7 @@ class ClassTest(UnitTest):
         except:
             self.fail("Failed to raise NameError or AttributeError on ExampleClass().fail_a()")
 
-        # for we just make sure the result is undefined and not the value of
-        # ExampleClass.a
-        if IN_BROWSER:
-            from __pyjamas__ import JS
-            try:
-                x = ExampleClass().fail_a()
-                self.assertTrue(JS('pyjslib.isUndefined(@{{x}})'))
-            except ValueError:
-                self.assertTrue(True)
+        self.assertRaises(NameError, ExampleClass().fail_a)
 
     def test_iops(self):
         class X(object):
@@ -439,7 +431,7 @@ class ClassTest(UnitTest):
         self.assertEqual(ExampleClass.sampleStaticMethod("a"), "a", "Expected static method to take the parameter I give as its first parameter")
         try:
             m = ExampleClass.oldIdiomStaticMethod("middle")
-            self.assertEqual(m,"beforemiddleafter")
+            self.assertEqual(m, "beforemiddleafter")
         except TypeError:
             self.fail("Issue #415 - Old idiom for static methods improperly checks first argument type")
         except:

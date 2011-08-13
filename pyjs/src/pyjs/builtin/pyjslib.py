@@ -49,18 +49,48 @@ _handle_exception = JS("""function(err) {
 
 _check_name = JS("""function(name, value) {
     if (typeof value == 'undefined')
-        throw @{{NameError}}("name '" + name + "' is not defined");
+        throw (@{{NameError}}("name '" + name + "' is not defined"));
     return value;
 };
 """)
 
+def staticmethod(func):
+    JS("""
+    var fnwrap = function() {
+        return @{{func}}.apply(null, $pyjs_array_slice.call(arguments));
+    };
+    fnwrap.__name__ = @{{func}}.__name__;
+    fnwrap.__args__ = @{{func}}.__args__;
+    fnwrap.__is_staticmethod__ = true;
+    return fnwrap;
+    """)
+
+def classmethod(func):
+    JS("""
+    var fnwrap = function() {
+        var cls = this.__is_instance__ === true ? this.__class__ : this;
+        return @{{func}}.apply(null, [cls].concat($pyjs_array_slice.call(arguments)));
+    };
+    fnwrap.__name__ = @{{func}}.__name__;
+    fnwrap.__args__ = @{{func}}.__args__;
+    fnwrap.__is_classmethod__ = true;
+    return fnwrap;
+    """)
+
 def _create_class(clsname, bases=None, methods=None):
     # Creates a new class, emulating parts of Python's new-style classes
-    # TODO: We should look at __metaclass__, but for now we only
-    # handle the fallback to __class__
-    if bases and hasattr(bases[0], '__class__') and hasattr(bases[0], '__new__'):
-        main_base = bases[0]
-        return main_base.__class__(clsname, bases, methods)
+    if methods and '__metaclass__' in methods:
+        return mthods['__metaclass__'](clsname, bases, methods)
+
+    if bases:
+        for base in bases:
+            if hasattr(base, '__metaclass__'):
+                return base.__metaclass__(clsname, bases, methods)
+
+        if hasattr(bases[0], '__class__') and hasattr(bases[0], '__new__'):
+            main_base = bases[0]
+            return main_base.__class__(clsname, bases, methods)
+
     return type(clsname, bases, methods)
 
 def type(clsname, bases=None, methods=None):
@@ -969,15 +999,11 @@ def __import_all__(path, context, namespace, module_name=None, get_base=True):
             JS("""@{{namespace}}[@{{name}}] = @{{module}}[@{{name}}];""")
 
 class BaseException:
-
     def __init__(self, *args):
         self.args = args
 
     def __getitem__(self, index):
         return self.args.__getitem__(index)
-
-    def toString(self):
-        return self.__name__ + ': ' + self.__str__()
 
     def __str__(self):
         if len(self.args) is 0:
@@ -4247,7 +4273,7 @@ class list:
     def __rmul__(self, n):
         return self.__mul__(n)
 JS("@{{list}}.__str__ = @{{list}}.__repr__;")
-JS("@{{list}}.toString = @{{list}}.__str__;")
+JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__str__() : '<type list>'; };")
 
 
 class tuple:
@@ -4400,8 +4426,7 @@ class tuple:
     def __rmul__(self, n):
         return self.__mul__(n)
 JS("@{{tuple}}.__str__ = @{{tuple}}.__repr__;")
-JS("@{{tuple}}.toString = @{{tuple}}.__str__;")
-
+JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__str__() : '<type tuple>'; };")
 
 class dict:
     def __init__(self, seq=JS("[]"), **kwargs):
@@ -5293,17 +5318,20 @@ class property(object):
             return self
         if self.fget is None:
             raise AttributeError, "unreadable attribute"
-        return self.fget(obj)
+        fget = self.fget
+        return fget(obj)
 
     def __set__(self, obj, value):
         if self.fset is None:
             raise AttributeError, "can't set attribute"
-        self.fset(obj, value)
+        fset = self.fset
+        fset(obj, value)
 
     def __delete__(self, obj):
         if self.fdel is None:
             raise AttributeError, "can't delete attribute"
-        self.fdel(obj)
+        fdel = self.fdel
+        fdel(obj)
 
     def setter(self, fset):
         self.fset = fset
@@ -5313,17 +5341,6 @@ class property(object):
         self.fdel = fdel
         return self
 
-
-def staticmethod(func):
-    JS("""
-    var fnwrap = function() {
-        return @{{func}}.apply(null,$pyjs_array_slice.call(arguments));
-    };
-    fnwrap.__name__ = @{{func}}.__name__;
-    fnwrap.__args__ = @{{func}}.__args__;
-    fnwrap.__bind_type__ = 3;
-    return fnwrap;
-    """)
 
 def super(typ, object_or_type = None):
     # This is a partial implementation: only super(type, object)
@@ -5341,7 +5358,9 @@ def super(typ, object_or_type = None):
     if (@{{object_or_type}}.__is_instance__ === false) {
         return fn;
     }
-    var obj = new Object();
+    var obj = {};
+    var cls = function() {};
+    cls.prototype = obj;
     function wrapper(obj, name) {
         var fnwrap = function() {
             return obj[name].apply(@{{object_or_type}},
@@ -5349,14 +5368,16 @@ def super(typ, object_or_type = None):
         };
         fnwrap.__name__ = name;
         fnwrap.__args__ = obj[name].__args__;
-        fnwrap.__bind_type__ = obj[name].__bind_type__;
         return fnwrap;
     }
     for (var m in fn) {
         if (typeof fn[m] == 'function') {
             obj[m] = wrapper(fn, m);
+        } else {
+            obj[m] = fn[m];
         }
     }
+    obj = new cls();
     obj.__is_instance__ = @{{object_or_type}}.__is_instance__;
     return obj;
     """)
@@ -5627,10 +5648,14 @@ def len(object):
 
 def isinstance(object_, classinfo):
     JS("""
+    if (@{{object_}}.__is_instance__ == false && @{{classinfo}} === @{{type}}) {
+        return true;
+    }
+
     if (typeof @{{object_}}== 'undefined') {
         return false;
     }
-    if (@{{object_}}== null) {
+    if (@{{object_}} == null) {
         if (@{{classinfo}}== null) {
             return true;
         }
@@ -5660,7 +5685,7 @@ def isinstance(object_, classinfo):
         case 'long':
             return @{{object_}}.__number__ == 0x04;
     }
-    if (typeof @{{object_}}!= 'object' && typeof @{{object_}}!= 'function') {
+    if (typeof @{{object_}} != 'object' && typeof @{{object_}} != 'function') {
         return false;
     }
 """)
@@ -5791,26 +5816,28 @@ def getattr(obj, name, default_value=None):
         }
         return method.__get__(null, @{{obj}}.__class__);
     }
+
     if (   typeof method != 'function'
         || typeof method.__is_instance__ != 'undefined'
         || @{{obj}}.__is_instance__ !== true
-        || @{{name}}== '__class__') {
-        return @{{obj}}[mapped_name];
+        || @{{obj}}.hasOwnProperty(mapped_name)
+        || @{{name}} == '__class__') {
+        return method;
     }
 
     var fnwrap = function() {
-        return method.apply(@{{obj}},$pyjs_array_slice.call(arguments));
+        return method.apply(@{{obj}}, $pyjs_array_slice.call(arguments));
     };
     fnwrap.__name__ = @{{name}};
-    fnwrap.__args__ = @{{obj}}[mapped_name].__args__;
+    fnwrap.__args__ = method.__args__;
+    if (fnwrap.__args__ != null) {
+        // Remove the bound instance from the args list
+        fnwrap.__args__ = $pyjs_array_slice.call(fnwrap.__args__, 0, 2).concat($pyjs_array_slice.call(fnwrap.__args__, 3));
+    }
+    fnwrap.__is_staticmethod__ = true;
     fnwrap.__class__ = @{{obj}}.__class__;
     fnwrap.__doc__ = method.__doc__ || '';
-    fnwrap.__bind_type__ = @{{obj}}[mapped_name].__bind_type__;
-    if (typeof @{{obj}}[mapped_name].__is_instance__ != 'undefined') {
-        fnwrap.__is_instance__ = @{{obj}}[mapped_name].__is_instance__;
-    } else {
-        fnwrap.__is_instance__ = false;
-    }
+    fnwrap.__is_instance__ = method.__is_instance__;
     return fnwrap;
     """)
 
