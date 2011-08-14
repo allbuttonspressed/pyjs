@@ -80,7 +80,7 @@ def classmethod(func):
 def _create_class(clsname, bases=None, methods=None):
     # Creates a new class, emulating parts of Python's new-style classes
     if methods and '__metaclass__' in methods:
-        return mthods['__metaclass__'](clsname, bases, methods)
+        return methods['__metaclass__'](clsname, bases, methods)
 
     if bases:
         for base in bases:
@@ -123,8 +123,33 @@ def type(clsname, bases=None, methods=None):
         JS("@{{!bss}} = @{{bases}}.__array;")
     JS(" return $pyjs_type(@{{clsname}}, @{{!bss}}, @{{!mths}}); ")
 
+def type__new__(cls, name, bases, data):
+    JS("""
+    var value;
+    for (var name in @{{cls}}) {
+        if (name in @{{object}} || name == 'func_name' || @{{data}}.__contains__(name))
+            continue;
+        value = @{{cls}}[name];
+        if (typeof value == 'function') {
+            value = @{{classmethod}}(value);
+        }
+        @{{data}}.__setitem__(name, value);
+    }
+    """)
+    new_type = type(name, bases, data)
+    JS("@{{new_type}}.__class__ = @{{cls}};")
+    return new_type
+
+JS("@{{type__new__}}.__name__ = '__new__';")
+JS("@{{type__new__}}.__is_staticmethod__ = true;")
+JS("@{{type__new__}}.toString = function() { return '<method type.__new__>'; };")
+
+JS("@{{type}}.__new__ = @{{type__new__}};")
+JS("@{{type}}.__class__ = @{{type}}.prototype = @{{type}};")
+JS("@{{type}}.__is_instance__ = false;")
+# type.__mro__ is set below the definition of object since it depends on object
+
 class object:
-    
     def __setattr__(self, name, value):
         JS("""
         if (typeof @{{name}} != 'string') {
@@ -142,6 +167,8 @@ class object:
             @{{self}}[@{{name}}] = @{{value}};
         }
         """)
+
+JS("@{{type}}.__mro__ = [@{{type}}, @{{object}}];")
 
 # The __str__ method is not defined as 'def __str__(self):', since
 # we might get all kind of weird invocations. The __str__ is sometimes
@@ -4273,7 +4300,7 @@ class list:
     def __rmul__(self, n):
         return self.__mul__(n)
 JS("@{{list}}.__str__ = @{{list}}.__repr__;")
-JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__str__() : '<type list>'; };")
+JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type list>'; };")
 
 
 class tuple:
@@ -4426,7 +4453,7 @@ class tuple:
     def __rmul__(self, n):
         return self.__mul__(n)
 JS("@{{tuple}}.__str__ = @{{tuple}}.__repr__;")
-JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__str__() : '<type tuple>'; };")
+JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type tuple>'; };")
 
 class dict:
     def __init__(self, seq=JS("[]"), **kwargs):
@@ -4782,12 +4809,10 @@ class dict:
         return s;
         """)
 
-    def toString(self):
-        return self.__repr__()
-
 JS("@{{dict}}.has_key = @{{dict}}.__contains__;")
 JS("@{{dict}}.iterkeys = @{{dict}}.__iter__;")
 JS("@{{dict}}.__str__ = @{{dict}}.__repr__;")
+JS("@{{dict}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type dict>'; };")
 
 # __empty_dict is used in kwargs initialization
 # There must me a temporary __init__ function used to prevent infinite 
@@ -5345,7 +5370,6 @@ class property(object):
 def super(typ, object_or_type = None):
     # This is a partial implementation: only super(type, object)
     if not _issubtype(object_or_type, typ):
-        i = _issubtype(object_or_type, typ)
         raise TypeError("super(type, obj): obj must be an instance or subtype of type")
     JS("""
     var type_ = @{{typ}}
@@ -5648,10 +5672,6 @@ def len(object):
 
 def isinstance(object_, classinfo):
     JS("""
-    if (@{{object_}}.__is_instance__ == false && @{{classinfo}} === @{{type}}) {
-        return true;
-    }
-
     if (typeof @{{object_}}== 'undefined') {
         return false;
     }
@@ -5701,7 +5721,9 @@ def isinstance(object_, classinfo):
 
 def _isinstance(object_, classinfo):
     JS("""
-    if (   @{{object_}}.__is_instance__ !== true 
+    if (@{{object_}}.__is_instance__ === false && @{{classinfo}}.__is_instance__ === false) {
+        @{{object_}} = @{{object_}}.__class__;
+    } else if (   @{{object_}}.__is_instance__ !== true 
         || @{{classinfo}}.__is_instance__ === null) {
         return false;
     }
@@ -5734,7 +5756,7 @@ def issubclass(class_, classinfo):
         if JS(""" typeof @{{classinfo}} == 'undefined' || @{{classinfo}}.__is_instance__ !== false """):
             raise TypeError("arg 2 must be a class or tuple of classes")
         return _issubtype(class_, classinfo)
-    
+
 def _issubtype(object_, classinfo):
     JS("""
     if (   @{{object_}}.__is_instance__ === null 

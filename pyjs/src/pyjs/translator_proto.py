@@ -372,13 +372,6 @@ PYJSLIB_BUILTIN_MAPPING = {\
 
 SCOPE_KEY = 0
 
-BIND_TYPES_NUMERIC = {
-    "func": 0,
-    "bound": 1,
-    "class": 2,
-    "static": 3,
-  }
-
 # Variable names that should be remapped in functions/methods
 # arguments -> arguments_
 # arguments_ -> arguments__
