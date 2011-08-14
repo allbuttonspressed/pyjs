@@ -819,6 +819,7 @@ class Translator(object):
             self.w( self.spacing() + 'var %s = $pyjs.loaded_modules["%s"];' % (self.module_prefix[:-1], module_name,))
 
         self.w( self.spacing() + self.module_prefix + '__repr__ = ' + self.module_prefix + 'toString = function() { return "<module: %s>"; };' % (module_name))
+        self.w( self.spacing() + self.module_prefix + '__class__ = ' + '$pyjs_module_type;')
         self.w( self.spacing() + self.module_prefix + "__was_initialized__ = true;")
         self.w( self.spacing() + "if ((__mod_name__ === null) || (typeof __mod_name__ == 'undefined')) __mod_name__ = '%s';" % (module_name))
         lhs = self.scopeName('__name__', 0, False)
@@ -2221,13 +2222,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                         call_name = '@{{_check_name}}("%s", %s)' % (pyname, call_name)
                 else:
                     call_name = jsname
-        elif isinstance(v.node, self.ast.Getattr):
+        elif not self.getattr_support and isinstance(v.node, self.ast.Getattr):
             method_name = self.attrib_remap(v.node.attrname)
-            if self.getattr_support:
-                call_name = self._getattr(v.node, current_klass, use_getattr=False)
-                method_name = call_name.pop()
-                call_name = self.attrib_join(call_name)
-            elif isinstance(v.node.expr, self.ast.Name):
+            if isinstance(v.node.expr, self.ast.Name):
                 call_name, method_name = self._name2(v.node.expr, current_klass, method_name)
             elif isinstance(v.node.expr, self.ast.Getattr):
                 call_name = self._getattr2(v.node.expr, current_klass, v.node.attrname)
@@ -2278,9 +2275,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 method_name = repr(method_name)
             call_code = "$pyjs_kwargs_call(%s, %s, %s, %s, [%s], %s)" % (
                 call_name, method_name, star_arg_name, dstar_arg_name, fn_args, fn_kwargs)
-        elif self.getattr_support and method_name is not None:
-            call_code = '$pyjs_kwargs_call(%s, %s, null, null, [%s], null)' % (
-                call_name, repr(method_name), fn_args)
         else:
             if method_name is not None:
                 call_name = "%s['%s']" % (call_name, method_name)

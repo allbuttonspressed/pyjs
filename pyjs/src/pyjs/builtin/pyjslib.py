@@ -169,6 +169,8 @@ class object:
         """)
 
 JS("@{{type}}.__mro__ = [@{{type}}, @{{object}}];")
+JS("$pyjs_module_type.__class__ = @{{type}};")
+JS("$pyjs_module_type.__mro__ = [$pyjs_module_type, @{{object}}];")
 
 # The __str__ method is not defined as 'def __str__(self):', since
 # we might get all kind of weird invocations. The __str__ is sometimes
@@ -5807,9 +5809,32 @@ def __getattr_check(attr, attr_left, attr_right, attrstr,
     """
     pass
 
+_wrap_unbound_method = JS("""function(method) {
+    var fnwrap = function() {
+        if ($pyjs.options.arg_instance_type && arguments.length >= 1) {
+            $pyjs_check_instance_type(arguments[0], method, null);
+        }
+
+        if ($pyjs.options.arg_is_instance && arguments.length >= 1
+                && (arguments[0] == null || arguments[0].__is_instance__ !== true)) {
+            $pyjs__exception_func_instance_expected(method.__name__, method.__class__.__name__, arguments[0]);
+        }
+
+        return method.apply(null, $pyjs_array_slice.call(arguments));
+    };
+    fnwrap.__name__ = method.__name__;
+    fnwrap.__args__ = method.__args__;
+    fnwrap.__is_staticmethod__ = true;
+    fnwrap.__class__ = method.__class__;
+    fnwrap.__doc__ = method.__doc__ || '';
+    fnwrap.__is_instance__ = method.__is_instance__;
+    return fnwrap;
+};
+""")
+
 def getattr(obj, name, default_value=None):
     JS("""
-    if (@{{obj}}=== null || typeof @{{obj}}== 'undefined') {
+    if (@{{obj}} === null || typeof @{{obj}} == 'undefined') {
         if (arguments.length != 3 || typeof @{{obj}}== 'undefined') {
             throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
         }
@@ -5829,8 +5854,11 @@ def getattr(obj, name, default_value=None):
             return @{{default_value}};
         }
     }
+
     var method = @{{obj}}[mapped_name];
-    if (method === null) return method;
+
+    if (method === null)
+        return method;
 
     if (typeof method.__get__ == 'function') {
         if (@{{obj}}.__is_instance__) {
@@ -5841,13 +5869,36 @@ def getattr(obj, name, default_value=None):
 
     if (   typeof method != 'function'
         || typeof method.__is_instance__ != 'undefined'
-        || @{{obj}}.__is_instance__ !== true
-        || @{{obj}}.hasOwnProperty(mapped_name)
+        || (method.__is_classmethod__ !== true
+            && (@{{obj}}.__is_instance__ === false
+                || (typeof @{{obj}}.__class__ != 'undefined'
+                    && @{{obj}}.hasOwnProperty(mapped_name))))
         || @{{name}} == '__class__') {
+
+        if (($pyjs.options.arg_instance_type || $pyjs.options.arg_is_instance)
+                && typeof method == 'function'
+                && typeof method.__is_instance__ == 'undefined'
+                && method.__is_classmethod__ !== true
+                && method.__is_staticmethod__ !== true
+                && @{{obj}}.__is_instance__ === false) {
+            return @{{_wrap_unbound_method}}(method);
+        }
+
         return method;
     }
 
     var fnwrap = function() {
+        if ($pyjs.options.arg_instance_type) {
+            var first_arg = null;
+            if (arguments.length >= 1)
+                first_arg = arguments[0];
+            $pyjs_check_instance_type(@{{obj}}, method, first_arg);
+        }
+
+        if ($pyjs.options.arg_is_instance) {
+            $pyjs_check_if_instance(@{{obj}}, method, arguments);
+        }
+
         return method.apply(@{{obj}}, $pyjs_array_slice.call(arguments));
     };
     fnwrap.__name__ = @{{name}};

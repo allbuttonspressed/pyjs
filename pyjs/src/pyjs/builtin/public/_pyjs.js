@@ -1,6 +1,13 @@
 
 var $pyjs_array_slice = Array.prototype.slice;
 
+var $pyjs_module_type = {
+    toString: function() { return "<type 'module'>"; },
+    __class__: null, // will be set by pyjslib once type is defined
+    __mro__: null, // will be set by pyjslib once type is defined
+    __name__: 'module'
+};
+
 function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
 {
     if (obj !== null) {
@@ -101,11 +108,8 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
         $pyjs_check_instance_type(obj, func, first_arg);
     }
 
-    if ($pyjs.options.arg_is_instance && obj !== null && obj.__is_instance__ === false
-            && func.__is_staticmethod__ !== true && func.__is_classmethod !== true
-            && typeof func.__class__ != 'undefined'
-            && args.length >= 1 && args[0] != null && args[0].__is_instance__ === false) {
-        $pyjs__exception_func_instance_expected(func.__name__, func.__class__.__name__, obj);
+    if ($pyjs.options.arg_is_instance && obj !== null) {
+        $pyjs_check_if_instance(obj, func, args)
     }
 
     if (kwargs === null) {
@@ -250,6 +254,15 @@ function $pyjs_check_instance_type(instance, func, first_arg) {
             && instance.prototype.__md5__ !== klass.__md5__
             && !is_subtype(instance, klass)) {
         $pyjs__exception_func_instance_expected(func.__name__, klass.__name__, instance);
+    }
+}
+
+function $pyjs_check_if_instance(obj, func, args) {
+    if ($pyjs.options.arg_is_instance && obj.__is_instance__ === false
+            && func.__is_staticmethod__ !== true && func.__is_classmethod__ !== true
+            && typeof func.__class__ != 'undefined'
+            && args.length >= 1 && args[0] != null && args[0].__is_instance__ === false) {
+        $pyjs__exception_func_instance_expected(func.__name__, func.__class__.__name__, obj);
     }
 }
 
