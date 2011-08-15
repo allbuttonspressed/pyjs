@@ -410,7 +410,7 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     cls_fn.__number__ = null;
     var base_mro_list = new Array();
     for (var i = 0; i < bases.length; i++) {
-        if (bases[i].__mro__.__array != null) {
+        if (bases[i].__mro__ != null) {
             base_mro_list.push(new Array().concat(bases[i].__mro__.__array));
         } else if (typeof bases[i].__class__ == 'function') {
             base_mro_list.push(new Array().concat([bases[i].__class__]));

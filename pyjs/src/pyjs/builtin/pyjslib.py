@@ -5380,7 +5380,7 @@ def super(typ, object_or_type = None):
         raise TypeError("super(type, obj): obj must be an instance or subtype of type")
     JS("""
     var type_ = @{{typ}}
-    if (typeof type_.__mro__.__array == 'undefined') {
+    if (typeof type_.__mro__ == 'undefined') {
         type_ = type_.__class__;
     }
     var fn = $pyjs_type('super', type_.__mro__.__array.slice(1), {});
