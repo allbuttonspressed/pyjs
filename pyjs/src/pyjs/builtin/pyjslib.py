@@ -5738,14 +5738,14 @@ def _isinstance(object_, classinfo):
     var n = __mro__.length;
     if (@{{classinfo}}.__is_instance__ === false) {
         while (--n >= 0) {
-            if (@{{object_}}.__mro__[n] === @{{classinfo}}.prototype) {
+            if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}.prototype) {
                 return true;
             }
         }
         return false;
     }
     while (--n >= 0) {
-        if (@{{object_}}.__mro__[n] === @{{classinfo}}.__class__) return true;
+        if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}.__class__) return true;
     }
     return false;
     """)
@@ -5774,14 +5774,14 @@ def _issubtype(object_, classinfo):
     var n = __mro__.length;
     if (@{{classinfo}}.__is_instance__ === false) {
         while (--n >= 0) {
-            if (@{{object_}}.__mro__[n] === @{{classinfo}}.prototype) {
+            if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}.prototype) {
                 return true;
             }
         }
         return false;
     }
     while (--n >= 0) {
-        if (@{{object_}}.__mro__[n] === @{{classinfo}}.__class__) return true;
+        if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}.__class__) return true;
     }
     return false;
     """)
