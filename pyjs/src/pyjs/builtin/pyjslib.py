@@ -18,7 +18,9 @@
 
 from __pyjamas__ import INT, JS, setCompilerOptions, debugger
 
-setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noNameChecking", "noGetattrSupport", "noAttributeChecking", "noSourceTracking", "noLineTracking", "noStoreSource")
+setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noNameChecking",
+                   "noGetattrSupport", "noCallSupport", "noAttributeChecking",
+                   "noSourceTracking", "noLineTracking", "noStoreSource")
 
 platform = JS("$pyjs.platform")
 sys = None
@@ -5852,6 +5854,10 @@ def getattr(obj, name, default_value=None):
     }
     var mapped_name = @{{name}};
     if (typeof @{{obj}}[@{{name}}] == 'undefined') {
+        if (typeof @{{obj}} == 'function' && @{{name}} == '__call__') {
+            return @{{obj}};
+        }
+
         mapped_name = '$$' + @{{name}};
         if (typeof @{{obj}}[mapped_name] == 'undefined' || attrib_remap.indexOf(@{{name}}) < 0) {
             if (arguments.length != 3) {
@@ -5998,17 +6004,24 @@ def setattr(obj, name, value):
 
 def hasattr(obj, name):
     JS("""
-    if (typeof @{{obj}}== 'undefined') {
+    if (typeof @{{obj}} == 'undefined') {
         throw @{{UndefinedValueError}}("obj");
     }
     if (typeof @{{name}} != 'string') {
         throw @{{TypeError}}("attribute name must be string");
     }
-    if (@{{obj}}=== null) return false;
-    if (typeof @{{obj}}[@{{name}}] == 'undefined' && (
-            typeof @{{obj}}['$$'+@{{name}}] == 'undefined' ||
-            attrib_remap.indexOf(@{{name}}) < 0)
-      ) {
+
+    if (@{{obj}} === null) {
+        return false;
+    }
+
+    if (typeof @{{obj}} == 'function' && @{{name}} === '__call__') {
+        return true;
+    }
+
+    if (typeof @{{obj}}[@{{name}}] == 'undefined'
+            && (typeof @{{obj}}['$$'+@{{name}}] == 'undefined' ||
+                attrib_remap.indexOf(@{{name}}) < 0)) {
         return false;
     }
     //if (@{{obj}}!= 'object' && typeof @{{obj}}!= 'function')

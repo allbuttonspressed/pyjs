@@ -710,6 +710,8 @@ class Translator(object):
         'noNameChecking': [('name_checking', False)],
         'GetattrSupport': [('getattr_support', True)],
         'noGetattrSupport': [('getattr_support', False)],
+        'CallSupport': [('call_support', True)],
+        'noCallSupport': [('call_support', False)],
         'BoundMethods': [('bound_methods', True)],
         'noBoundMethods': [('bound_methods', False)],
         'Descriptors': [('descriptors', True)],
@@ -988,18 +990,20 @@ class Translator(object):
     def push_options(self):
         self.option_stack.append((\
             self.debug, self.print_statements, self.function_argument_checking,
-            self.attribute_checking, self.name_checking, self.getattr_support, self.bound_methods,
-            self.descriptors, self.source_tracking, self.line_tracking, self.store_source,
-            self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp, self.inline_getitem,
-            self.operator_funcs, self.number_classes,
+            self.attribute_checking, self.name_checking, self.getattr_support,
+            self.call_support, self.bound_methods, self.descriptors,
+            self.source_tracking, self.line_tracking, self.store_source,
+            self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp,
+            self.inline_getitem, self.operator_funcs, self.number_classes,
         ))
     def pop_options(self):
         (\
             self.debug, self.print_statements, self.function_argument_checking,
-            self.attribute_checking, self.name_checking, self.getattr_support, self.bound_methods,
-            self.descriptors, self.source_tracking, self.line_tracking, self.store_source,
-            self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp, self.inline_getitem,
-            self.operator_funcs, self.number_classes,
+            self.attribute_checking, self.name_checking, self.getattr_support,
+            self.call_support, self.bound_methods, self.descriptors,
+            self.source_tracking, self.line_tracking, self.store_source,
+            self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp,
+            self.inline_getitem, self.operator_funcs, self.number_classes,
         ) = self.option_stack.pop()
 
     def parse_decorators(self, node, funcname, current_class=None,
@@ -2263,7 +2267,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         else:
             fn_kwargs = 'null'
 
-        if kwargs or star_arg_name or dstar_arg_name:
+        if kwargs or star_arg_name or dstar_arg_name or self.call_support:
             if not star_arg_name:
                 star_arg_name = 'null'
             if not dstar_arg_name:

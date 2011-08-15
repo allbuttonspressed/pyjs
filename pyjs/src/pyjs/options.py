@@ -10,6 +10,7 @@ all_compile_options = dict(
     attribute_checking=False,
     name_checking=True,
     getattr_support=True,
+    call_support=True,
     bound_methods=True,
     descriptors=False,
     source_tracking=False,
@@ -112,6 +113,19 @@ def add_compile_options(parser):
                      )
     speed_options['getattr_support'] = False
     pythonic_options['getattr_support'] = True
+
+    parser.add_option("--no-call-support",
+                      dest = "call_support",
+                      action="store_false",
+                      help = "Do not support __call__()",
+                     )
+    parser.add_option("--call-support",
+                      dest = "call_support",
+                      action="store_true",
+                      help = "Support __call__()",
+                     )
+    speed_options['call_support'] = False
+    pythonic_options['call_support'] = True
 
     parser.add_option("--no-bound-methods",
                       dest = "bound_methods",
