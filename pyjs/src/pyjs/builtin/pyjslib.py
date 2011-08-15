@@ -6316,24 +6316,27 @@ else:
 # type functions from Douglas Crockford's Remedial Javascript: http://www.crockford.com/javascript/remedial.html
 def isObject(a):
     JS("""
-    return (@{{a}}!== null && (typeof @{{a}}== 'object')) || typeof @{{a}}== 'function';
+    return (@{{a}} !== null && (typeof @{{a}} == 'object')) || typeof @{{a}} == 'function';
     """)
 
 def isFunction(a):
     JS("""
-    return typeof @{{a}}== 'function';
+    return typeof @{{a}} == 'function';
     """)
 
-callable = isFunction
+def callable(func):
+    JS("""
+    return typeof @{{a}} == 'function' || @{{hasattr}}(func, '__call__');
+    """)
 
 def isString(a):
     JS("""
-    return typeof @{{a}}== 'string';
+    return typeof @{{a}} == 'string';
     """)
 
 def isNull(a):
     JS("""
-    return typeof @{{a}}== 'object' && !@{{a}};
+    return typeof @{{a}} == 'object' && !@{{a}};
     """)
 
 def isArray(a):
@@ -6343,7 +6346,7 @@ def isArray(a):
 
 def isUndefined(a):
     JS("""
-    return typeof @{{a}}== 'undefined';
+    return typeof @{{a}} == 'undefined';
     """)
 
 def isIteratable(a):
