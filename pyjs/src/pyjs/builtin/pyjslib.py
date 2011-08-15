@@ -171,10 +171,168 @@ class object:
             @{{self}}[@{{name}}] = @{{value}};
         }
         """)
+# fake __mro__ to look like an instance of type `tuple`
+JS("@{{object}}.__mro__ = {__array: [@{{object}}]};")
 
-JS("@{{type}}.__mro__ = [@{{type}}, @{{object}}];")
+class tuple:
+    def __new__(cls, data=JS("[]")):
+        self = object.__new__(cls)       
+        JS("""
+        if (@{{data}} === null) {
+            throw @{{TypeError}}("'NoneType' is not iterable");
+        }
+        if (@{{data}}.constructor === Array) {
+            @{{self}}.__array = @{{data}}.slice();
+            return @{{self}};
+        }
+        if (typeof @{{data}}.__iter__ == 'function') {
+            if (typeof @{{data}}.__array == 'object') {
+                @{{self}}.__array = @{{data}}.__array.slice();
+                return @{{self}};
+            }
+            var iter = @{{data}}.__iter__();
+            if (typeof iter.__array == 'object') {
+                @{{self}}.__array = iter.__array.slice();
+                return @{{self}};
+            }
+            @{{data}} = [];
+            var item, i = 0;
+            if (typeof iter.$genfunc == 'function') {
+                while (typeof (item=iter.next(true)) != 'undefined') {
+                    @{{data}}[i++] = item;
+                }
+            } else {
+                try {
+                    while (true) {
+                        @{{data}}[i++] = iter.next();
+                    }
+                }
+                catch (e) {
+                    if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
+                }
+            }
+            @{{self}}.__array = @{{data}};
+            return @{{self}};
+        }
+        throw @{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable");
+        """)
+
+    def __hash__(self):
+        return '$tuple$' + str(self.__array)
+
+    def __cmp__(self, l):
+        if not isinstance(l, tuple):
+            return 1
+        JS("""
+        var n1 = @{{self}}.__array.length,
+            n2 = @{{l}}.__array.length,
+            a1 = @{{self}}.__array,
+            a2 = @{{l}}.__array,
+            n, c;
+        n = (n1 < n2 ? n1 : n2);
+        for (var i = 0; i < n; i++) {
+            c = @{{cmp}}(a1[i], a2[i]);
+            if (c) return c;
+        }
+        if (n1 < n2) return -1;
+        if (n1 > n2) return 1;
+        return 0;""")
+
+    def __getslice__(self, lower, upper):
+        JS("""
+        if (@{{upper}}==null) return @{{tuple}}(@{{self}}.__array.slice(@{{lower}}));
+        return @{{tuple}}(@{{self}}.__array.slice(@{{lower}}, @{{upper}}));
+        """)
+
+    def __getitem__(self, _index):
+        JS("""
+        var index = @{{_index}}.valueOf();
+        if (index < 0) index += @{{self}}.__array.length;
+        if (index < 0 || index >= @{{self}}.__array.length) {
+            throw @{{IndexError}}("tuple index out of range");
+        }
+        return @{{self}}.__array[index];
+        """)
+
+    def __len__(self):
+        return INT(JS("""@{{self}}.__array.length"""))
+
+    def __contains__(self, value):
+        return JS('@{{self}}.__array.indexOf(@{{value}})>=0')
+
+    def __iter__(self):
+        return JS("new $iter_array(@{{self}}.__array)")
+        JS("""
+        var i = 0;
+        var l = @{{self}}.__array;
+        return {
+            'next': function() {
+                if (i >= l.length) {
+                    throw @{{StopIteration}}();
+                }
+                return l[i++];
+            },
+            '__iter__': function() {
+                return this;
+            }
+        };
+        """)
+
+    def __enumerate__(self):
+        return JS("new $enumerate_array(@{{self}}.__array)")
+
+    def getArray(self):
+        """
+        Access the javascript Array that is used internally by this list
+        """
+        return self.__array
+
+    #def __str__(self):
+    #    return self.__repr__()
+    #See monkey patch at the end of the tuple class definition
+
+    def __repr__(self):
+        if callable(self):
+            return "<type '%s'>" % self.__name__
+        JS("""
+        var s = "(";
+        for (var i=0; i < @{{self}}.__array.length; i++) {
+            s += @{{repr}}(@{{self}}.__array[i]);
+            if (i < @{{self}}.__array.length - 1)
+                s += ", ";
+        }
+        if (@{{self}}.__array.length == 1)
+            s += ",";
+        s += ")";
+        return s;
+        """)
+
+    def __add__(self, y):
+        if not isinstance(y, self):
+            raise TypeError("can only concatenate tuple to tuple")
+        return tuple(self.__array.concat(y.__array))
+
+    def __mul__(self, n):
+        if not JS("@{{n}} !== null && @{{n}}.__number__ && (@{{n}}.__number__ != 0x01 || isFinite(@{{n}}))"):
+            raise TypeError("can't multiply sequence by non-int")
+        a = []
+        while n:
+            n -= 1
+            a.extend(self.__array)
+        return a
+
+    def __rmul__(self, n):
+        return self.__mul__(n)
+
+JS("@{{object}}.__mro__ = @{{tuple}}([@{{object}}]);")
+JS("@{{type}}.__mro__ = @{{tuple}}([@{{type}}, @{{object}}]);")
+JS("@{{tuple}}.__mro__ = @{{tuple}}([@{{tuple}}, @{{object}}]);")
+
 JS("$pyjs_module_type.__class__ = @{{type}};")
-JS("$pyjs_module_type.__mro__ = [$pyjs_module_type, @{{object}}];")
+JS("$pyjs_module_type.__mro__ = @{{tuple}}([$pyjs_module_type, @{{object}}]);")
+
+JS("@{{tuple}}.__str__ = @{{tuple}}.__repr__;")
+JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type tuple>'; };")
 
 # The __str__ method is not defined as 'def __str__(self):', since
 # we might get all kind of weird invocations. The __str__ is sometimes
@@ -362,7 +520,7 @@ def op_add(x, y):
         if (!@{{x}}.__number__) {
             if (typeof @{{x}}== 'string' && typeof @{{y}}== 'string') return @{{x}}+ @{{y}};
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.length > @{{y}}.__mro__.length
+                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
                 && @{{isinstance}}(@{{x}}, @{{y}})
                 && typeof @{{x}}['__add__'] == 'function')
                 return @{{y}}.__add__(@{{x}});
@@ -404,7 +562,7 @@ def op_sub(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.length > @{{y}}.__mro__.length
+                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
                 && @{{isinstance}}(@{{x}}, @{{y}})
                 && typeof @{{x}}['__sub__'] == 'function')
                 return @{{y}}.__sub__(@{{x}});
@@ -442,7 +600,7 @@ def op_floordiv(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.length > @{{y}}.__mro__.length
+                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
                 && @{{isinstance}}(@{{x}}, @{{y}})
                 && typeof @{{x}}['__floordiv__'] == 'function')
                 return @{{y}}.__floordiv__(@{{x}});
@@ -480,7 +638,7 @@ def op_div(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.length > @{{y}}.__mro__.length
+                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
                 && @{{isinstance}}(@{{x}}, @{{y}})
                 && typeof @{{x}}['__div__'] == 'function')
                 return @{{y}}.__div__(@{{x}});
@@ -515,7 +673,7 @@ def op_truediv(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.length > @{{y}}.__mro__.length
+                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
                 && @{{isinstance}}(@{{x}}, @{{y}})
                 && typeof @{{x}}['__truediv__'] == 'function')
                 return @{{y}}.__truediv__(@{{x}});
@@ -549,7 +707,7 @@ def op_mul(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.length > @{{y}}.__mro__.length
+                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
                 && @{{isinstance}}(@{{x}}, @{{y}})
                 && typeof @{{x}}['__mul__'] == 'function')
                 return @{{y}}.__mul__(@{{x}});
@@ -594,7 +752,7 @@ def op_mod(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.length > @{{y}}.__mro__.length
+                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
                 && @{{isinstance}}(@{{x}}, @{{y}})
                 && typeof @{{x}}['__mod__'] == 'function')
                 return @{{y}}.__mod__(@{{x}});
@@ -631,7 +789,7 @@ def op_pow(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.length > @{{y}}.__mro__.length
+                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
                 && @{{isinstance}}(@{{x}}, @{{y}})
                 && typeof @{{x}}['__pow__'] == 'function')
                 return @{{y}}.__pow__(@{{x}});
@@ -1553,7 +1711,7 @@ String.prototype.__repr__ = function () {
     if (typeof this == 'function') return "<type '" + this.__name__ + "'>";
     return "'" + this.toString() + "'";
 };
-String.prototype.__mro__ = [@{{basestring}}];
+String.prototype.__mro__ = @{{tuple}}([@{{basestring}}, @{{object}}]);
 """)
 
     # Patching of the standard javascript Boolean object
@@ -4308,159 +4466,6 @@ class list:
 JS("@{{list}}.__str__ = @{{list}}.__repr__;")
 JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type list>'; };")
 
-
-class tuple:
-    def __new__(cls, data=JS("[]")):
-        self = object.__new__(cls)       
-        JS("""
-        if (@{{data}} === null) {
-            throw @{{TypeError}}("'NoneType' is not iterable");
-        }
-        if (@{{data}}.constructor === Array) {
-            @{{self}}.__array = @{{data}}.slice();
-            return @{{self}};
-        }
-        if (typeof @{{data}}.__iter__ == 'function') {
-            if (typeof @{{data}}.__array == 'object') {
-                @{{self}}.__array = @{{data}}.__array.slice();
-                return @{{self}};
-            }
-            var iter = @{{data}}.__iter__();
-            if (typeof iter.__array == 'object') {
-                @{{self}}.__array = iter.__array.slice();
-                return @{{self}};
-            }
-            @{{data}} = [];
-            var item, i = 0;
-            if (typeof iter.$genfunc == 'function') {
-                while (typeof (item=iter.next(true)) != 'undefined') {
-                    @{{data}}[i++] = item;
-                }
-            } else {
-                try {
-                    while (true) {
-                        @{{data}}[i++] = iter.next();
-                    }
-                }
-                catch (e) {
-                    if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
-                }
-            }
-            @{{self}}.__array = @{{data}};
-            return @{{self}};
-        }
-        throw @{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable");
-        """)
-
-    def __hash__(self):
-        return '$tuple$' + str(self.__array)
-
-    def __cmp__(self, l):
-        if not isinstance(l, tuple):
-            return 1
-        JS("""
-        var n1 = @{{self}}.__array.length,
-            n2 = @{{l}}.__array.length,
-            a1 = @{{self}}.__array,
-            a2 = @{{l}}.__array,
-            n, c;
-        n = (n1 < n2 ? n1 : n2);
-        for (var i = 0; i < n; i++) {
-            c = @{{cmp}}(a1[i], a2[i]);
-            if (c) return c;
-        }
-        if (n1 < n2) return -1;
-        if (n1 > n2) return 1;
-        return 0;""")
-
-    def __getslice__(self, lower, upper):
-        JS("""
-        if (@{{upper}}==null) return @{{tuple}}(@{{self}}.__array.slice(@{{lower}}));
-        return @{{tuple}}(@{{self}}.__array.slice(@{{lower}}, @{{upper}}));
-        """)
-
-    def __getitem__(self, _index):
-        JS("""
-        var index = @{{_index}}.valueOf();
-        if (index < 0) index += @{{self}}.__array.length;
-        if (index < 0 || index >= @{{self}}.__array.length) {
-            throw @{{IndexError}}("tuple index out of range");
-        }
-        return @{{self}}.__array[index];
-        """)
-
-    def __len__(self):
-        return INT(JS("""@{{self}}.__array.length"""))
-
-    def __contains__(self, value):
-        return JS('@{{self}}.__array.indexOf(@{{value}})>=0')
-
-    def __iter__(self):
-        return JS("new $iter_array(@{{self}}.__array)")
-        JS("""
-        var i = 0;
-        var l = @{{self}}.__array;
-        return {
-            'next': function() {
-                if (i >= l.length) {
-                    throw @{{StopIteration}}();
-                }
-                return l[i++];
-            },
-            '__iter__': function() {
-                return this;
-            }
-        };
-        """)
-
-    def __enumerate__(self):
-        return JS("new $enumerate_array(@{{self}}.__array)")
-
-    def getArray(self):
-        """
-        Access the javascript Array that is used internally by this list
-        """
-        return self.__array
-
-    #def __str__(self):
-    #    return self.__repr__()
-    #See monkey patch at the end of the tuple class definition
-
-    def __repr__(self):
-        if callable(self):
-            return "<type '%s'>" % self.__name__
-        JS("""
-        var s = "(";
-        for (var i=0; i < @{{self}}.__array.length; i++) {
-            s += @{{repr}}(@{{self}}.__array[i]);
-            if (i < @{{self}}.__array.length - 1)
-                s += ", ";
-        }
-        if (@{{self}}.__array.length == 1)
-            s += ",";
-        s += ")";
-        return s;
-        """)
-
-    def __add__(self, y):
-        if not isinstance(y, self):
-            raise TypeError("can only concatenate tuple to tuple")
-        return tuple(self.__array.concat(y.__array))
-
-    def __mul__(self, n):
-        if not JS("@{{n}} !== null && @{{n}}.__number__ && (@{{n}}.__number__ != 0x01 || isFinite(@{{n}}))"):
-            raise TypeError("can't multiply sequence by non-int")
-        a = []
-        while n:
-            n -= 1
-            a.extend(self.__array)
-        return a
-
-    def __rmul__(self, n):
-        return self.__mul__(n)
-JS("@{{tuple}}.__str__ = @{{tuple}}.__repr__;")
-JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type tuple>'; };")
-
 class dict:
     def __init__(self, seq=JS("[]"), **kwargs):
         self.__object = JS("{}")
@@ -5290,7 +5295,7 @@ class set(object):
         return None
 
 JS("@{{set}}['__str__'] = @{{set}}['__repr__'];")
-JS("@{{set}}['toString'] = @{{set}}['__repr__'];")
+JS("@{{set}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type set>'; };")
 
 class frozenset(set):
     def __init__(self, _data=None):
@@ -5329,7 +5334,7 @@ class frozenset(set):
         raise AttributeError('frozenset is immutable')
 
 JS("@{{frozenset}}['__str__'] = @{{frozenset}}['__repr__'];")
-JS("@{{frozenset}}['toString'] = @{{frozenset}}['__repr__'];")
+JS("@{{frozenset}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type frozenset>'; };")
 
 
 class property(object):
@@ -5379,12 +5384,12 @@ def super(typ, object_or_type = None):
         raise TypeError("super(type, obj): obj must be an instance or subtype of type")
     JS("""
     var type_ = @{{typ}}
-    if (typeof type_.__mro__ == 'undefined') {
+    if (typeof type_.__mro__.__array == 'undefined') {
         type_ = type_.__class__;
     }
-    var fn = $pyjs_type('super', type_.__mro__.slice(1), {});
-    fn.__new__ = fn.__mro__[1].__new__;
-    fn.__init__ = fn.__mro__[1].__init__;
+    var fn = $pyjs_type('super', type_.__mro__.__array.slice(1), {});
+    fn.__new__ = fn.__mro__.__array[1].__new__;
+    fn.__init__ = fn.__mro__.__array[1].__init__;
     if (@{{object_or_type}}.__is_instance__ === false) {
         return fn;
     }
@@ -5733,7 +5738,7 @@ def _isinstance(object_, classinfo):
         || @{{classinfo}}.__is_instance__ === null) {
         return false;
     }
-    var __mro__ = @{{object_}}.__mro__;
+    var __mro__ = @{{object_}}.__mro__.__array;
     var n = __mro__.length;
     if (@{{classinfo}}.__is_instance__ === false) {
         while (--n >= 0) {
@@ -5769,7 +5774,7 @@ def _issubtype(object_, classinfo):
         || @{{classinfo}}.__is_instance__ === null) {
         return false;
     }
-    var __mro__ = @{{object_}}.__mro__;
+    var __mro__ = @{{object_}}.__mro__.__array;
     var n = __mro__.length;
     if (@{{classinfo}}.__is_instance__ === false) {
         while (--n >= 0) {
@@ -6355,7 +6360,7 @@ def isSet(a):
     JS("""
     if (@{{a}}=== null) return false;
     if (typeof @{{a}}.__object == 'undefined') return false;
-    var a_mro = @{{a}}.__mro__;
+    var a_mro = @{{a}}.__mro__.__array;
     switch (a_mro[a_mro.length-2].__md5__) {
         case @{{set}}.__md5__:
             return 1;
@@ -6787,7 +6792,7 @@ def divmod(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.length > @{{y}}.__mro__.length
+                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
                 && @{{isinstance}}(@{{x}}, @{{y}})
                 && typeof @{{x}}['__divmod__'] == 'function')
                 return @{{y}}.__divmod__(@{{x}});
