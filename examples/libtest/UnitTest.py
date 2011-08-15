@@ -1,5 +1,7 @@
+from issues_list import issues
 from write import write, writebr
 import sys
+import re
 
 IN_BROWSER = sys.platform in ['mozilla', 'ie6', 'opera', 'oldmoz', 'safari']
 IN_JS = sys.platform in ['mozilla', 'ie6', 'opera', 'oldmoz',
@@ -7,6 +9,8 @@ IN_JS = sys.platform in ['mozilla', 'ie6', 'opera', 'oldmoz',
 
 if IN_BROWSER:
     from pyjamas.Timer import Timer
+
+issue_re = re.compile(r'#(\d+)', re.DOTALL)
 
 class UnitTest:
 
@@ -109,8 +113,16 @@ class UnitTest:
         else:
             msg = str(msg)
 
-        octothorp = msg.find("#")
-        has_bugreport = octothorp >= 0 and msg[octothorp+1].isdigit()
+        has_bugreport = False
+        for issue in issue_re.findall(msg):
+            # TODO/XXX/HACK: The findall() method in pyjs is buggy and also returns
+            # the leading '#' character, so strip it as a workaround.
+            issue = issue.lstrip('#')
+            print issue, issues.get(issue)
+            if issue in issues and issues[issue] != 'Fixed':
+                has_bugreport = True
+                break
+
         if has_bugreport:
             name_fmt = "Known issue"
             bg_colour="#ffc000"

@@ -1,4 +1,5 @@
 #!/bin/sh
+python ./load_issues.py
 ../../bin/pyjsbuild --no-compile-inplace --strict --dynamic '^I18N[.].*.._..' $@ LibTest `find I18N -name ??_??.py`
 # For --translator=dict
 #  - disable the generator test for now (will hang forever)
