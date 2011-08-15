@@ -32,15 +32,7 @@ class CompileTest(UnitTest.UnitTest):
         "some string"
         """
         self.fail("ast.Discard nodes, #584")
-        
-    def test_callfunc_expressions(self):
-        """
-        s = "123"
-        x = ('a' + 'b').strip()
-        ("    " + s).rstrip()
-        """
-        self.fail("Callfunc over expressions, #591")
-    
+
     def test_deep_tuple_unpacking(self):
         """
         x = ((1, 2), 3, (4, 5))
