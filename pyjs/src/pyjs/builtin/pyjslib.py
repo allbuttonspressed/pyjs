@@ -129,7 +129,8 @@ def type__new__(cls, name, bases, data):
     JS("""
     var value;
     for (var name in @{{cls}}) {
-        if (name in @{{object}} || name == 'func_name' || @{{data}}.__contains__(name))
+        if (name in @{{object}} || name == 'func_name' || name == 'toString'
+                || @{{data}}.__contains__(name))
             continue;
         value = @{{cls}}[name];
         if (typeof value == 'function') {
