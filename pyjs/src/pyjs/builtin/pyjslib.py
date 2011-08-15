@@ -31,8 +31,8 @@ for (var i = 0; i < 1000; i++) {
         break;
     }
 }
-$max_int = 0x7fffffff;
-$min_int = -0x80000000;
+var $max_int = 0x7fffffff;
+var $min_int = -0x80000000;
 """)
 
 _handle_exception = JS("""function(err) {
