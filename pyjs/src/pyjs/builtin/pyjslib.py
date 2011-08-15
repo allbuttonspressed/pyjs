@@ -147,8 +147,10 @@ JS("@{{type__new__}}.__is_staticmethod__ = true;")
 JS("@{{type__new__}}.toString = function() { return '<method type.__new__>'; };")
 
 JS("@{{type}}.__new__ = @{{type__new__}};")
+JS("@{{type}}.__name__ = 'type';")
 JS("@{{type}}.__class__ = @{{type}}.prototype = @{{type}};")
 JS("@{{type}}.__is_instance__ = false;")
+JS("""@{{type}}.toString = function() { return "<type 'type'>"; };""")
 # type.__mro__ is set below the definition of object since it depends on object
 
 class object:
