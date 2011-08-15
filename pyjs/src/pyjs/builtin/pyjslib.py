@@ -5286,7 +5286,7 @@ class set(object):
         return None
 
 JS("@{{set}}['__str__'] = @{{set}}['__repr__'];")
-JS("@{{set}}['toString'] = @{{set}}['__repr__'];")
+JS("@{{set}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type set>'; };")
 
 class frozenset(set):
     def __init__(self, _data=None):
@@ -5325,7 +5325,7 @@ class frozenset(set):
         raise AttributeError('frozenset is immutable')
 
 JS("@{{frozenset}}['__str__'] = @{{frozenset}}['__repr__'];")
-JS("@{{frozenset}}['toString'] = @{{frozenset}}['__repr__'];")
+JS("@{{frozenset}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type frozenset>'; };")
 
 
 class property(object):
