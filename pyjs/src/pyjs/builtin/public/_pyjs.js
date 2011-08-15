@@ -20,7 +20,12 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
     }
 
     if (typeof func != 'function') {
-        throw (pyjslib.TypeError(func + ' object is not callable'));
+        if (func && func.__is_instance__ === true && typeof func.__call__ == 'function') {
+            obj = func;
+            func = func.__call__;
+        } else {
+            throw (pyjslib.TypeError(func + ' object is not callable'));
+        }
     }
 
     // Merge dstar_args into kwargs
