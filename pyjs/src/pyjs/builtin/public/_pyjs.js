@@ -410,8 +410,8 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     cls_fn.__number__ = null;
     var base_mro_list = new Array();
     for (var i = 0; i < bases.length; i++) {
-        if (bases[i].__mro__ != null) {
-            base_mro_list.push(new Array().concat(bases[i].__mro__));
+        if (bases[i].__mro__.__array != null) {
+            base_mro_list.push(new Array().concat(bases[i].__mro__.__array));
         } else if (typeof bases[i].__class__ == 'function') {
             base_mro_list.push(new Array().concat([bases[i].__class__]));
         } else if (typeof bases[i].prototype == 'function') {
@@ -458,8 +458,11 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     }
     cls_fn.__name__ = class_name;
     cls_fn.__module__ = class_module;
-    //cls_fn.__mro__ = pyjslib.tuple(new Array(cls_fn).concat(__mro__));
-    cls_fn.__mro__ = new Array(cls_fn).concat(__mro__);
+    if (typeof pyjslib.tuple != 'undefined') {
+        cls_fn.__mro__ = pyjslib.tuple(new Array(cls_fn).concat(__mro__));
+    }
+//    cls_fn.__mro__ = new Array(cls_fn).concat(__mro__);
+//    cls_fn.__mro__ = pyjslib.tuple(new Array(cls_fn).concat(__mro__));
     cls_fn.prototype = cls_fn;
     cls_fn.__dict__ = cls_fn;
     cls_fn.__is_instance__ = false;
