@@ -41,6 +41,8 @@ _handle_exception = JS("""function(err) {
     if (!$pyjs.in_try_except) {
         var $pyjs_msg = $pyjs.loaded_modules['sys']._get_traceback(err);
         $pyjs.__active_exception_stack__ = null;
+        $pyjs.track = {module:'__main__', lineno: 1};
+        $pyjs.trackstack = [$pyjs.track];
         @{{debugReport}}($pyjs_msg);
     }
     throw err;
