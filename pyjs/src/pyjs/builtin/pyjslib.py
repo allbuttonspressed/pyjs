@@ -302,7 +302,9 @@ class tuple:
         s += ")";
         return s;
         """)
-
+    
+    __str__ = __repr__
+    
     def __add__(self, y):
         if not isinstance(y, self):
             raise TypeError("can only concatenate tuple to tuple")
@@ -317,8 +319,7 @@ class tuple:
             a.extend(self.__array)
         return a
 
-    def __rmul__(self, n):
-        return self.__mul__(n)
+    __rmul__ = __mul__
 
 JS("@{{object}}.__mro__ = @{{tuple}}([@{{object}}]);")
 JS("@{{type}}.__mro__ = @{{tuple}}([@{{type}}, @{{object}}]);")
@@ -327,7 +328,6 @@ JS("@{{tuple}}.__mro__ = @{{tuple}}([@{{tuple}}, @{{object}}]);")
 JS("$pyjs_module_type.__class__ = @{{type}};")
 JS("$pyjs_module_type.__mro__ = @{{tuple}}([$pyjs_module_type, @{{object}}]);")
 
-JS("@{{tuple}}.__str__ = @{{tuple}}.__repr__;")
 JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type tuple>'; };")
 
 # The __str__ method is not defined as 'def __str__(self):', since
@@ -4457,8 +4457,8 @@ class list:
             a.extend(self.__array)
         return a
 
-    def __rmul__(self, n):
-        return self.__mul__(n)
+    __rmul__ = __mul__
+
 JS("@{{list}}.__str__ = @{{list}}.__repr__;")
 JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type list>'; };")
 
@@ -4654,6 +4654,8 @@ class dict:
         var sKey = (@{{key}}===null?null:(typeof @{{key}}.$H != 'undefined'?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         return typeof @{{self}}.__object[sKey] == 'undefined' ? false : true;
         """)
+    
+    has_key = __contains__
 
     def keys(self):
         JS("""
@@ -4704,6 +4706,7 @@ class dict:
         }
         return new $iter_array(keys);
 """)
+    iterkeys = __iter__
 
     def __enumerate__(self):
         JS("""
@@ -4793,10 +4796,6 @@ class dict:
     def clear(self):
         self.__object = JS("{}")
 
-    #def __str__(self):
-    #    return self.__repr__()
-    #See monkey patch at the end of the dict class definition
-
     def __repr__(self):
         if callable(self):
             return "<type '%s'>" % self.__name__
@@ -4815,10 +4814,9 @@ class dict:
         s += "}";
         return s;
         """)
+    
+    __str__ = __repr__
 
-JS("@{{dict}}.has_key = @{{dict}}.__contains__;")
-JS("@{{dict}}.iterkeys = @{{dict}}.__iter__;")
-JS("@{{dict}}.__str__ = @{{dict}}.__repr__;")
 JS("@{{dict}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type dict>'; };")
 
 # __empty_dict is used in kwargs initialization
@@ -5006,10 +5004,6 @@ class set(object):
         """)
         return INT(size)
 
-    #def __str__(self):
-    #    return self.__repr__()
-    #See monkey patch at the end of the set class definition
-
     def __repr__(self):
         if callable(self):
             return "<type '%s'>" % self.__name__
@@ -5025,6 +5019,8 @@ class set(object):
         s += "])";
         return s;
         """)
+    
+    __str__ = __repr__
 
     def __and__(self, other):
         """ Return the intersection of two sets as a new set.
@@ -5290,7 +5286,6 @@ class set(object):
         """)
         return None
 
-JS("@{{set}}['__str__'] = @{{set}}['__repr__'];")
 JS("@{{set}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type set>'; };")
 
 class frozenset(set):
