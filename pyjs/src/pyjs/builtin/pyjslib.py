@@ -176,6 +176,7 @@ class object:
         """)
 # fake __mro__ to look like an instance of type `tuple`
 JS("@{{object}}.__mro__ = {__array: [@{{object}}]};")
+JS("@{{type}}.__module__ = @{{object}}.__module__;")
 
 class tuple:
     def __new__(cls, data=JS("[]")):
@@ -5566,7 +5567,7 @@ class str(basestring):
         if (@{{text}}.__is_instance__ === false) {
             return @{{object}}.__str__(@{{text}});
         }
-        if (@{{hasattr}}(@{{text}},'__str__')) {
+        if (@{{hasattr}}(@{{text}}, '__str__')) {
             return @{{text}}.__str__();
         }
         return String(@{{text}});
@@ -5609,60 +5610,63 @@ def repr(x):
     # First some short cuts for speedup
     # by avoiding function calls
     JS("""
-       if (@{{x}}=== null)
-           return "None";
+    if (@{{x}} === null)
+        return "None";
 
-       var t = typeof(@{{x}});
+    var t = typeof(@{{x}});
 
-       if (t == "undefined")
-           return "undefined";
+    if (t == "undefined")
+        return "undefined";
 
-       if (t == "boolean") {
-           if (@{{x}}) return "True";
-           return "False";
-       }
+    if (t == "boolean") {
+        if (@{{x}}) return "True";
+        return "False";
+    }
 
-       if (t == "number")
-           return @{{x}}.toString();
+    if (t == "number")
+        return @{{x}}.toString();
 
-       if (t == "string") {
-           if (@{{x}}.indexOf("'") == -1)
-               return "'" + @{{x}}+ "'";
-           if (@{{x}}.indexOf('"') == -1)
-               return '"' + @{{x}}+ '"';
-           var s = @{{x}}.$$replace(new RegExp('"', "g"), '\\\\"');
-           return '"' + s + '"';
-       }
+    if (t == "string") {
+        if (@{{x}}.indexOf("'") == -1)
+            return "'" + @{{x}}+ "'";
+        if (@{{x}}.indexOf('"') == -1)
+            return '"' + @{{x}}+ '"';
+        var s = @{{x}}.$$replace(new RegExp('"', "g"), '\\\\"');
+        return '"' + s + '"';
+    }
 
-""")
-    if hasattr(x, '__repr__'):
-        if callable(x):
-            return x.__repr__(x)
-        return x.__repr__()
-    JS("""
-       if (t == "function")
-           return "<function " + @{{x}}.toString() + ">";
+    if (@{{x}}.__is_instance__ && typeof @{{x}}.__repr__ == 'function') {
+        return @{{x}}.__repr__();
+    }
 
-       // If we get here, x is an object.  See if it's a Pyjamas class.
+    if (@{{x}}.__is_instance__ === false) {
+        return @{{x}}.toString();
+    }
 
-       if (!@{{hasattr}}(@{{x}}, "__init__"))
-           return "<" + @{{x}}.toString() + ">";
+    if (t == "function") {
+        return "<function:" + @{{x}}.toString() + ">";
+    }
 
-       // Handle the common Pyjamas data types.
+    // If we get here, x is an object.  See if it's a pyjs class.
 
-       var constructor = "UNKNOWN";
+    if (!@{{hasattr}}(@{{x}}, "__init__"))
+        return "<" + @{{x}}.toString() + ">";
 
-       constructor = @{{get_pyjs_classtype}}(@{{x}});
+    // Handle the common Pyjamas data types.
 
-        //alert("repr constructor: " + constructor);
+    var constructor = "UNKNOWN";
 
-       // If we get here, the class isn't one we know -> return the class name.
-       // Note that we replace underscores with dots so that the name will
-       // (hopefully!) look like the original Python name.
-       // (XXX this was for pyjamas 0.4 but may come back in an optimised mode)
+    constructor = @{{get_pyjs_classtype}}(@{{x}});
 
-       //var s = constructor.$$replace(new RegExp('_', "g"), '.');
-       return "<" + constructor + " object>";
+    //alert("repr constructor: " + constructor);
+
+    // If we get here, the class isn't one we know -> return the class name.
+    // Note that we replace underscores with dots so that the name will
+    // (hopefully!) look like the original Python name.
+    // (XXX this was for pyjamas 0.4 but may come back in an optimised mode)
+
+    //var s = constructor.$$replace(new RegExp('_', "g"), '.');
+    return "<" + constructor + " object>";
     """)
 
 def len(object):
