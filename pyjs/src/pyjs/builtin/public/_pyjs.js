@@ -490,6 +490,12 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     } else {
         cls_fn.__args__ = $pyjs_array_slice.call(cls_fn.__init__.__args__, 0, 2).concat($pyjs_array_slice.call(cls_fn.__init__.__args__, 3));
     }
+    
+    // remove hash for newly created classes so that subclasses will get their
+    // own hash
+    if ('$H' in cls_fn)
+        delete cls_fn.$H
+    
     return cls_fn;
 }
 
