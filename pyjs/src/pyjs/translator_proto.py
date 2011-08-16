@@ -1170,10 +1170,8 @@ class Translator(object):
         # use dict instead of the list of keys because it's more efficient in JS
         # to acces the keys via a hash
         remap = pyjs_attrib_remap
-        remap.sort()
         lines.append("%(s)svar attrib_remap = %(module_prefix)sattrib_remap = %(remap)s;" % locals())
-        remap = pyjs_vars_remap.keys()
-        remap.sort()
+        remap = pyjs_vars_remap
         lines.append("%(s)svar var_remap = %(module_prefix)svar_remap = %(remap)s;" % locals())
         return "\n".join(lines)
 
