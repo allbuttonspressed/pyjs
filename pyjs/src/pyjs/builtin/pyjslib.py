@@ -18,7 +18,9 @@
 
 from __pyjamas__ import INT, JS, setCompilerOptions, debugger
 
-setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noNameChecking", "noGetattrSupport", "noAttributeChecking", "noSourceTracking", "noLineTracking", "noStoreSource")
+setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noNameChecking",
+                   "noGetattrSupport", "noCallSupport", "noAttributeChecking",
+                   "noSourceTracking", "noLineTracking", "noStoreSource")
 
 platform = JS("$pyjs.platform")
 sys = None
@@ -31,8 +33,8 @@ for (var i = 0; i < 1000; i++) {
         break;
     }
 }
-$max_int = 0x7fffffff;
-$min_int = -0x80000000;
+var $max_int = 0x7fffffff;
+var $min_int = -0x80000000;
 """)
 
 _handle_exception = JS("""function(err) {
@@ -41,6 +43,8 @@ _handle_exception = JS("""function(err) {
     if (!$pyjs.in_try_except) {
         var $pyjs_msg = $pyjs.loaded_modules['sys']._get_traceback(err);
         $pyjs.__active_exception_stack__ = null;
+        $pyjs.track = {module:'__main__', lineno: 1};
+        $pyjs.trackstack = [$pyjs.track];
         @{{debugReport}}($pyjs_msg);
     }
     throw err;
@@ -127,7 +131,8 @@ def type__new__(cls, name, bases, data):
     JS("""
     var value;
     for (var name in @{{cls}}) {
-        if (name in @{{object}} || name == 'func_name' || @{{data}}.__contains__(name))
+        if (name in @{{object}} || name == 'func_name' || name == 'toString'
+                || @{{data}}.__contains__(name))
             continue;
         value = @{{cls}}[name];
         if (typeof value == 'function') {
@@ -145,8 +150,10 @@ JS("@{{type__new__}}.__is_staticmethod__ = true;")
 JS("@{{type__new__}}.toString = function() { return '<method type.__new__>'; };")
 
 JS("@{{type}}.__new__ = @{{type__new__}};")
+JS("@{{type}}.__name__ = 'type';")
 JS("@{{type}}.__class__ = @{{type}}.prototype = @{{type}};")
 JS("@{{type}}.__is_instance__ = false;")
+JS("""@{{type}}.toString = function() { return "<type 'type'>"; };""")
 # type.__mro__ is set below the definition of object since it depends on object
 
 class object:
@@ -169,6 +176,7 @@ class object:
         """)
 # fake __mro__ to look like an instance of type `tuple`
 JS("@{{object}}.__mro__ = {__array: [@{{object}}]};")
+JS("@{{type}}.__module__ = @{{object}}.__module__;")
 
 class tuple:
     def __new__(cls, data=JS("[]")):
@@ -5554,7 +5562,7 @@ class str(basestring):
         if (@{{text}}.__is_instance__ === false) {
             return @{{object}}.__str__(@{{text}});
         }
-        if (@{{hasattr}}(@{{text}},'__str__')) {
+        if (@{{hasattr}}(@{{text}}, '__str__')) {
             return @{{text}}.__str__();
         }
         return String(@{{text}});
@@ -5597,60 +5605,63 @@ def repr(x):
     # First some short cuts for speedup
     # by avoiding function calls
     JS("""
-       if (@{{x}}=== null)
-           return "None";
+    if (@{{x}} === null)
+        return "None";
 
-       var t = typeof(@{{x}});
+    var t = typeof(@{{x}});
 
-       if (t == "undefined")
-           return "undefined";
+    if (t == "undefined")
+        return "undefined";
 
-       if (t == "boolean") {
-           if (@{{x}}) return "True";
-           return "False";
-       }
+    if (t == "boolean") {
+        if (@{{x}}) return "True";
+        return "False";
+    }
 
-       if (t == "number")
-           return @{{x}}.toString();
+    if (t == "number")
+        return @{{x}}.toString();
 
-       if (t == "string") {
-           if (@{{x}}.indexOf("'") == -1)
-               return "'" + @{{x}}+ "'";
-           if (@{{x}}.indexOf('"') == -1)
-               return '"' + @{{x}}+ '"';
-           var s = @{{x}}.$$replace(new RegExp('"', "g"), '\\\\"');
-           return '"' + s + '"';
-       }
+    if (t == "string") {
+        if (@{{x}}.indexOf("'") == -1)
+            return "'" + @{{x}}+ "'";
+        if (@{{x}}.indexOf('"') == -1)
+            return '"' + @{{x}}+ '"';
+        var s = @{{x}}.$$replace(new RegExp('"', "g"), '\\\\"');
+        return '"' + s + '"';
+    }
 
-""")
-    if hasattr(x, '__repr__'):
-        if callable(x):
-            return x.__repr__(x)
-        return x.__repr__()
-    JS("""
-       if (t == "function")
-           return "<function " + @{{x}}.toString() + ">";
+    if (@{{x}}.__is_instance__ && typeof @{{x}}.__repr__ == 'function') {
+        return @{{x}}.__repr__();
+    }
 
-       // If we get here, x is an object.  See if it's a Pyjamas class.
+    if (@{{x}}.__is_instance__ === false) {
+        return @{{x}}.toString();
+    }
 
-       if (!@{{hasattr}}(@{{x}}, "__init__"))
-           return "<" + @{{x}}.toString() + ">";
+    if (t == "function") {
+        return "<function:" + @{{x}}.toString() + ">";
+    }
 
-       // Handle the common Pyjamas data types.
+    // If we get here, x is an object.  See if it's a pyjs class.
 
-       var constructor = "UNKNOWN";
+    if (!@{{hasattr}}(@{{x}}, "__init__"))
+        return "<" + @{{x}}.toString() + ">";
 
-       constructor = @{{get_pyjs_classtype}}(@{{x}});
+    // Handle the common Pyjamas data types.
 
-        //alert("repr constructor: " + constructor);
+    var constructor = "UNKNOWN";
 
-       // If we get here, the class isn't one we know -> return the class name.
-       // Note that we replace underscores with dots so that the name will
-       // (hopefully!) look like the original Python name.
-       // (XXX this was for pyjamas 0.4 but may come back in an optimised mode)
+    constructor = @{{get_pyjs_classtype}}(@{{x}});
 
-       //var s = constructor.$$replace(new RegExp('_', "g"), '.');
-       return "<" + constructor + " object>";
+    //alert("repr constructor: " + constructor);
+
+    // If we get here, the class isn't one we know -> return the class name.
+    // Note that we replace underscores with dots so that the name will
+    // (hopefully!) look like the original Python name.
+    // (XXX this was for pyjamas 0.4 but may come back in an optimised mode)
+
+    //var s = constructor.$$replace(new RegExp('_', "g"), '.');
+    return "<" + constructor + " object>";
     """)
 
 def len(object):
@@ -5842,6 +5853,10 @@ def getattr(obj, name, default_value=None):
     }
     var mapped_name = @{{name}};
     if (typeof @{{obj}}[@{{name}}] == 'undefined') {
+        if (typeof @{{obj}} == 'function' && @{{name}} == '__call__') {
+            return @{{obj}};
+        }
+
         mapped_name = '$$' + @{{name}};
         if (typeof @{{obj}}[mapped_name] == 'undefined' || attrib_remap.indexOf(@{{name}}) < 0) {
             if (arguments.length != 3) {
@@ -5988,17 +6003,24 @@ def setattr(obj, name, value):
 
 def hasattr(obj, name):
     JS("""
-    if (typeof @{{obj}}== 'undefined') {
+    if (typeof @{{obj}} == 'undefined') {
         throw @{{UndefinedValueError}}("obj");
     }
     if (typeof @{{name}} != 'string') {
         throw @{{TypeError}}("attribute name must be string");
     }
-    if (@{{obj}}=== null) return false;
-    if (typeof @{{obj}}[@{{name}}] == 'undefined' && (
-            typeof @{{obj}}['$$'+@{{name}}] == 'undefined' ||
-            attrib_remap.indexOf(@{{name}}) < 0)
-      ) {
+
+    if (@{{obj}} === null) {
+        return false;
+    }
+
+    if (typeof @{{obj}} == 'function' && @{{name}} === '__call__') {
+        return true;
+    }
+
+    if (typeof @{{obj}}[@{{name}}] == 'undefined'
+            && (typeof @{{obj}}['$$'+@{{name}}] == 'undefined' ||
+                attrib_remap.indexOf(@{{name}}) < 0)) {
         return false;
     }
     //if (@{{obj}}!= 'object' && typeof @{{obj}}!= 'function')
@@ -6293,24 +6315,27 @@ else:
 # type functions from Douglas Crockford's Remedial Javascript: http://www.crockford.com/javascript/remedial.html
 def isObject(a):
     JS("""
-    return (@{{a}}!== null && (typeof @{{a}}== 'object')) || typeof @{{a}}== 'function';
+    return (@{{a}} !== null && (typeof @{{a}} == 'object')) || typeof @{{a}} == 'function';
     """)
 
 def isFunction(a):
     JS("""
-    return typeof @{{a}}== 'function';
+    return typeof @{{a}} == 'function';
     """)
 
-callable = isFunction
+def callable(func):
+    JS("""
+    return typeof @{{a}} == 'function' || @{{hasattr}}(func, '__call__');
+    """)
 
 def isString(a):
     JS("""
-    return typeof @{{a}}== 'string';
+    return typeof @{{a}} == 'string';
     """)
 
 def isNull(a):
     JS("""
-    return typeof @{{a}}== 'object' && !@{{a}};
+    return typeof @{{a}} == 'object' && !@{{a}};
     """)
 
 def isArray(a):
@@ -6320,7 +6345,7 @@ def isArray(a):
 
 def isUndefined(a):
     JS("""
-    return typeof @{{a}}== 'undefined';
+    return typeof @{{a}} == 'undefined';
     """)
 
 def isIteratable(a):

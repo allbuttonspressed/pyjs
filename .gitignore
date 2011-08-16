@@ -2,6 +2,7 @@ build
 bin
 deb
 pyjd/__init__.py
+examples/libtest/issues_list.py
 examples/showcase/build/
 examples/showcase/src/demoInfo.py
 output
