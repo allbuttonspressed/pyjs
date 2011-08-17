@@ -171,7 +171,7 @@ class object:
         if (typeof @{{name}} != 'string') {
             throw @{{TypeError}}("attribute name must be string");
         }
-        if (attrib_remap.indexOf(@{{name}}) >= 0) {
+        if ('$$' + @{{name}} in attrib_remap) {
             @{{name}} = '$$' + @{{name}};
         }
         if (typeof @{{self}}[@{{name}}] != 'undefined'
@@ -319,7 +319,9 @@ class tuple:
         s += ")";
         return s;
         """)
-
+    
+    __str__ = __repr__
+    
     def __add__(self, y):
         if not isinstance(y, self):
             raise TypeError("can only concatenate tuple to tuple")
@@ -334,8 +336,7 @@ class tuple:
             a.extend(self.__array)
         return a
 
-    def __rmul__(self, n):
-        return self.__mul__(n)
+    __rmul__ = __mul__
 
 JS("@{{object}}.__mro__ = @{{tuple}}([@{{object}}]);")
 JS("@{{type}}.__mro__ = @{{tuple}}([@{{type}}, @{{object}}]);")
@@ -344,7 +345,6 @@ JS("@{{tuple}}.__mro__ = @{{tuple}}([@{{tuple}}, @{{object}}]);")
 JS("$pyjs_module_type.__class__ = @{{type}};")
 JS("$pyjs_module_type.__mro__ = @{{tuple}}([$pyjs_module_type, @{{object}}]);")
 
-JS("@{{tuple}}.__str__ = @{{tuple}}.__repr__;")
 JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type tuple>'; };")
 
 # The __str__ method is not defined as 'def __str__(self):', since
@@ -1053,10 +1053,10 @@ def ___import___(path, context, module_name=None, get_base=True):
     importName = path
     is_module_object = False
     path_parts = path.__split('.') # make a javascript Array
-    depth = path_parts.length
+    depth = JS("@{{path_parts}}.length")
     topName = JS("@{{path_parts}}[0]")
     objName = JS("@{{path_parts}}[@{{path_parts}}.length-1]")
-    parentName = path_parts.slice(0, path_parts.length-1).join('.')
+    parentName = path_parts.slice(0, depth-1).join('.')
     if context is None:
         in_context = False
     else:
@@ -4459,6 +4459,8 @@ class list:
         s += "]";
         return s;
         """)
+    
+    __str__ = __repr__
 
     def __add__(self, y):
         if not isinstance(y, self):
@@ -4474,9 +4476,8 @@ class list:
             a.extend(self.__array)
         return a
 
-    def __rmul__(self, n):
-        return self.__mul__(n)
-JS("@{{list}}.__str__ = @{{list}}.__repr__;")
+    __rmul__ = __mul__
+
 JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type list>'; };")
 
 class dict:
@@ -4533,7 +4534,7 @@ class dict:
                     // d = dict(comment='value')
                     // comment will be in the object as $$comment
                     _key = key.substring(2);
-                    if (var_remap.indexOf(_key) < 0) {
+                    if (!('$$' + _key in var_remap)) {
                         _key = key;
                     }
                 }
@@ -4552,7 +4553,7 @@ class dict:
             while (i < n) {
                 item = data[i++];
                 key = item[0];
-                sKey = (key===null?null:(typeof key.$H != 'undefined'?key.$H:((typeof key=='string'||key.__number__)?'$'+key:@{{__hash}}(key))));
+                sKey = (key===null?null:(key.hasOwnProperty("$H")?key.$H:((typeof key=='string'||key.__number__)?'$'+key:@{{__hash}}(key))));
                 @{{self}}.__object[sKey] = [key, item[1]];
             }
             return null;
@@ -4561,7 +4562,7 @@ class dict:
             while (i < n) {
                 item = data[i++].__array;
                 key = item[0];
-                sKey = (key===null?null:(typeof key.$H != 'undefined'?key.$H:((typeof key=='string'||key.__number__)?'$'+key:@{{__hash}}(key))));
+                sKey = (key===null?null:(key.hasOwnProperty("$H")?key.$H:((typeof key=='string'||key.__number__)?'$'+key:@{{__hash}}(key))));
                 @{{self}}.__object[sKey] = [key, item[1]];
             }
             return null;
@@ -4570,7 +4571,7 @@ class dict:
         var key;
         while (++i < n) {
             key = data[i].__getitem__(0);
-            sKey = (key===null?null:(typeof key.$H != 'undefined'?key.$H:((typeof key=='string'||key.__number__)?'$'+key:@{{__hash}}(key))));
+            sKey = (key===null?null:(key.hasOwnProperty("$H")?key.$H:((typeof key=='string'||key.__number__)?'$'+key:@{{__hash}}(key))));
             @{{self}}.__object[sKey] = [key, data[i].__getitem__(1)];
         }
         return null;
@@ -4587,13 +4588,13 @@ class dict:
         if (typeof @{{value}} == 'undefined') {
             throw @{{ValueError}}("Value for key '" + @{{key}} + "' is undefined");
         }
-        var sKey = (@{{key}}===null?null:(typeof @{{key}}.$H != 'undefined'?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         @{{self}}.__object[sKey] = [@{{key}}, @{{value}}];
         """)
 
     def __getitem__(self, key):
         JS("""
-        var sKey = (@{{key}}===null?null:(typeof @{{key}}.$H != 'undefined'?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         var value=@{{self}}.__object[sKey];
         if (typeof value == 'undefined'){
             throw @{{KeyError}}(@{{key}});
@@ -4662,15 +4663,17 @@ class dict:
 
     def __delitem__(self, key):
         JS("""
-        var sKey = (@{{key}}===null?null:(typeof @{{key}}.$H != 'undefined'?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         delete @{{self}}.__object[sKey];
         """)
 
     def __contains__(self, key):
         JS("""
-        var sKey = (@{{key}}===null?null:(typeof @{{key}}.$H != 'undefined'?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         return typeof @{{self}}.__object[sKey] == 'undefined' ? false : true;
         """)
+    
+    has_key = __contains__
 
     def keys(self):
         JS("""
@@ -4721,6 +4724,7 @@ class dict:
         }
         return new $iter_array(keys);
 """)
+    iterkeys = __iter__
 
     def __enumerate__(self):
         JS("""
@@ -4744,7 +4748,7 @@ class dict:
 
     def setdefault(self, key, default_value):
         JS("""
-        var sKey = (@{{key}}===null?null:(typeof @{{key}}.$H != 'undefined'?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         return typeof @{{self}}.__object[sKey] == 'undefined' ? (@{{self}}.__object[sKey]=[@{{key}}, @{{default_value}}])[1] : @{{self}}.__object[sKey][1];
 """)
 
@@ -4756,7 +4760,7 @@ class dict:
             break;
         }
         if (empty) return @{{default_value}};
-        var sKey = (@{{key}}===null?null:(typeof @{{key}}.$H != 'undefined'?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         return typeof @{{self}}.__object[sKey] == 'undefined' ? @{{default_value}} : @{{self}}.__object[sKey][1];
 """)
 
@@ -4810,10 +4814,6 @@ class dict:
     def clear(self):
         self.__object = JS("{}")
 
-    #def __str__(self):
-    #    return self.__repr__()
-    #See monkey patch at the end of the dict class definition
-
     def __repr__(self):
         if callable(self):
             return "<type '%s'>" % self.__name__
@@ -4832,10 +4832,9 @@ class dict:
         s += "}";
         return s;
         """)
+    
+    __str__ = __repr__
 
-JS("@{{dict}}.has_key = @{{dict}}.__contains__;")
-JS("@{{dict}}.iterkeys = @{{dict}}.__iter__;")
-JS("@{{dict}}.__str__ = @{{dict}}.__repr__;")
 JS("@{{dict}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type dict>'; };")
 
 # __empty_dict is used in kwargs initialization
@@ -5023,10 +5022,6 @@ class set(object):
         """)
         return INT(size)
 
-    #def __str__(self):
-    #    return self.__repr__()
-    #See monkey patch at the end of the set class definition
-
     def __repr__(self):
         if callable(self):
             return "<type '%s'>" % self.__name__
@@ -5042,6 +5037,8 @@ class set(object):
         s += "])";
         return s;
         """)
+    
+    __str__ = __repr__
 
     def __and__(self, other):
         """ Return the intersection of two sets as a new set.
@@ -5307,7 +5304,6 @@ class set(object):
         """)
         return None
 
-JS("@{{set}}['__str__'] = @{{set}}['__repr__'];")
 JS("@{{set}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type set>'; };")
 
 class frozenset(set):
@@ -5650,22 +5646,19 @@ def repr(x):
         return '"' + s + '"';
     }
 
-    if (@{{x}}.__is_instance__ && typeof @{{x}}.__repr__ == 'function') {
+    if ((@{{x}}.__is_instance__ && typeof @{{x}}.__repr__ == 'function')
+            || @{{x}}.__number__ != null) {
         return @{{x}}.__repr__();
     }
-
+    
+    // check for classes
     if (@{{x}}.__is_instance__ === false) {
         return @{{x}}.toString();
     }
-
+    
     if (t == "function") {
         return "<function:" + @{{x}}.toString() + ">";
     }
-
-    // If we get here, x is an object.  See if it's a pyjs class.
-
-    if (!@{{hasattr}}(@{{x}}, "__init__"))
-        return "<" + @{{x}}.toString() + ">";
 
     // Handle the common Pyjamas data types.
 
@@ -5863,34 +5856,56 @@ _wrap_unbound_method = JS("""function(method) {
 };
 """)
 
-def getattr(obj, name, default_value=None):
+_undefined = object()
+def getattr(obj, name, default_value=_undefined):
     JS("""
     if (@{{obj}} === null || typeof @{{obj}} == 'undefined') {
-        if (arguments.length != 3 || typeof @{{obj}}== 'undefined') {
+        if (arguments.length != 3 || typeof @{{obj}} == 'undefined') {
+            throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}} + "'");
+        }
+        return @{{default_value}};
+    }
+    
+    // always remap `name` if in attrib_remap so that manually executing
+    // getattr() with `name` being a string will resolve correctly,
+    // however, note that accessing some attributes on native JS objects won't
+    // work i.e. `native_js_object.length` for example. This has to be accessed via
+    // JS()!
+    var re_mapped = @{{name}};
+    if ('$$' + @{{name}} in attrib_remap) {
+        re_mapped = '$$' + @{{name}};
+    }
+
+    if (typeof @{{obj}}[re_mapped] == 'undefined') {
+        if (typeof @{{obj}} == 'function' && re_mapped == '__call__') {
+            return @{{obj}};
+        }
+        
+        if (@{{obj}}.__is_instance__ === true &&
+                    typeof @{{obj}}.__getattr__ == 'function') {
+            // pass the pure name to __getattr__ not the remapped one! (the user
+            // should not check for remapped names)
+            if (arguments.length != 3) {
+                return @{{obj}}.__getattr__(@{{name}});
+            }
+            else {
+                try {
+                    return @{{obj}}.__getattr__(@{{name}});
+                } catch (e) {
+                    if (@{{isinstance}}(e, @{{AttributeError}})) {
+                        return @{{default_value}}; 
+                    }
+                    throw e;
+                }
+            }
+        }
+        if (@{{default_value}} === @{{_undefined}}) {
             throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
         }
         return @{{default_value}};
     }
-    var mapped_name = @{{name}};
-    if (typeof @{{obj}}[@{{name}}] == 'undefined') {
-        if (typeof @{{obj}} == 'function' && @{{name}} == '__call__') {
-            return @{{obj}};
-        }
 
-        mapped_name = '$$' + @{{name}};
-        if (typeof @{{obj}}[mapped_name] == 'undefined' || attrib_remap.indexOf(@{{name}}) < 0) {
-            if (arguments.length != 3) {
-                if (@{{obj}}.__is_instance__ === true &&
-                        typeof @{{obj}}.__getattr__ == 'function') {
-                    return @{{obj}}.__getattr__(@{{name}});
-                }
-                throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
-            }
-            return @{{default_value}};
-        }
-    }
-
-    var method = @{{obj}}[mapped_name];
+    var method = @{{obj}}[re_mapped];
 
     if (method === null)
         return method;
@@ -5907,8 +5922,8 @@ def getattr(obj, name, default_value=None):
         || (method.__is_classmethod__ !== true
             && (@{{obj}}.__is_instance__ === false
                 || (typeof @{{obj}}.__class__ != 'undefined'
-                    && @{{obj}}.hasOwnProperty(mapped_name))))
-        || @{{name}} == '__class__') {
+                    && @{{obj}}.hasOwnProperty(re_mapped))))
+        || re_mapped == '__class__') {
 
         if (($pyjs.options.arg_instance_type || $pyjs.options.arg_is_instance)
                 && typeof method == 'function'
@@ -5936,7 +5951,7 @@ def getattr(obj, name, default_value=None):
 
         return method.apply(@{{obj}}, $pyjs_array_slice.call(arguments));
     };
-    fnwrap.__name__ = @{{name}};
+    fnwrap.__name__ = re_mapped;
     fnwrap.__args__ = method.__args__;
     if (fnwrap.__args__ != null) {
         // Remove the bound instance from the args list
@@ -5967,11 +5982,13 @@ def delattr(obj, name):
         throw @{{TypeError}}("attribute name must be string");
     }
     if (@{{obj}}.__is_instance__ && typeof @{{obj}}.__delattr__ == 'function') {
+        // pass in the pure name instead of the remapped one (users should not
+        // care about remapping)!
         @{{obj}}.__delattr__(@{{name}});
         return;
     }
-    var mapped_name = attrib_remap.indexOf(@{{name}}) < 0 ? @{{name}}: 
-                        '$$'+@{{name}};
+    var mapped_name = '$$' + @{{name}} in attrib_remap ? '$$' + @{{name}}: 
+                        @{{name}};
     if (   @{{obj}}!== null
         && (typeof @{{obj}}== 'object' || typeof @{{obj}}== 'function')
         && (typeof(@{{obj}}[mapped_name]) != "undefined")
@@ -6008,7 +6025,7 @@ def setattr(obj, name, value):
         @{{obj}}.__setattr__(@{{name}}, @{{value}})
         return;
     }
-    if (attrib_remap.indexOf(@{{name}}) >= 0) {
+    if ('$$' + @{{name}} in attrib_remap) {
         @{{name}}= '$$' + @{{name}};
     }
     if (   typeof @{{obj}}[@{{name}}] != 'undefined'
@@ -6033,14 +6050,16 @@ def hasattr(obj, name):
     if (@{{obj}} === null) {
         return false;
     }
-
+    
+    if ('$$' + @{{name}} in attrib_remap) {
+        @{{name}} = '$$' + @{{name}};
+    }
+    
     if (typeof @{{obj}} == 'function' && @{{name}} === '__call__') {
         return true;
     }
-
-    if (typeof @{{obj}}[@{{name}}] == 'undefined'
-            && (typeof @{{obj}}['$$'+@{{name}}] == 'undefined' ||
-                attrib_remap.indexOf(@{{name}}) < 0)) {
+    
+    if (typeof @{{obj}}[@{{name}}] == 'undefined') {
         return false;
     }
     //if (@{{obj}}!= 'object' && typeof @{{obj}}!= 'function')
@@ -6231,7 +6250,7 @@ def sum(iterable, start=None):
 
 JS("@{{next_hash_id}} = 0;")
 
-# hash(obj) == (obj === null? null : (typeof obj.$H != 'undefined' ? obj.$H : ((typeof obj == 'string' || obj.__number__) ? '$'+obj : @{{__hash}}(obj))))
+# hash(obj) == (obj === null? null : (obj.hasOwnProperty("$H") ? obj.$H : ((typeof obj == 'string' || obj.__number__) ? '$'+obj : @{{__hash}}(obj))))
 if JS("typeof 'a'[0] == 'undefined'"):
     # IE: cannot do "abc"[idx]
     # IE has problems with setting obj.$H on certain DOM objects
@@ -6257,8 +6276,10 @@ if JS("typeof 'a'[0] == 'undefined'"):
             return obj;
         }
         var $H;
-        if ($H = obj.getAttribute('$H')) {
-            return $H;
+        if (obj.hasOwnProperty("$H")) {
+            if ($H = obj.getAttribute('$H')) {
+                return $H;
+            }
         }
         obj.setAttribute('$H', ++@{{next_hash_id}});
         return @{{next_hash_id}};
@@ -6269,7 +6290,7 @@ if JS("typeof 'a'[0] == 'undefined'"):
     JS("""@{{hash}} = function(obj) {
         if (obj === null) return null;
 
-        if (typeof obj.$H != 'undefined') return obj.$H;
+        if (obj.hasOwnProperty("$H")) return obj.$H;
         if (typeof obj == 'string' || obj.__number__) return '$'+obj;
         switch (obj.constructor) {
             case String:
@@ -6291,8 +6312,10 @@ if JS("typeof 'a'[0] == 'undefined'"):
             return obj;
         }
         var $H;
-        if ($H = obj.getAttribute('$H')) {
-            return $H;
+        if (obj.hasOwnProperty("$H")) {
+            if ($H = obj.getAttribute('$H')) {
+                return $H;
+            }
         }
         obj.setAttribute('$H', ++@{{next_hash_id}});
         return @{{next_hash_id}};
@@ -6317,7 +6340,7 @@ else:
     JS("""@{{hash}} = function(obj) {
         if (obj === null) return null;
 
-        if (typeof obj.$H != 'undefined') return obj.$H;
+        if (obj.hasOwnProperty("$H")) return obj.$H;
         if (typeof obj == 'string' || obj.__number__) return '$'+obj;
         switch (obj.constructor) {
             case String:

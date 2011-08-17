@@ -50,6 +50,7 @@ JavaScript_Reserved_Words = frozenset((
     'in',
     'label',
     'new',
+    'null',
     'return',
     'switch',
     'this',
@@ -58,6 +59,9 @@ JavaScript_Reserved_Words = frozenset((
     'void',
     'while',
     'with',
+    'true',
+    'false',
+    'native',
 ))
 
 ECMAScipt_Reserved_Words = frozenset((
@@ -393,7 +397,8 @@ pyjs_attrib_remap_names = [\
     'prototype', 'call', 'apply', 'constructor',
     # Specifically for Chrome, which doesn't set the name attribute of a _function_
     # http://code.google.com/p/chromium/issues/detail?id=12871
-    'name',
+    # functions define length in some browser (see Chrome)
+    'name', 'length',
     # collisions between javascript/python
     'split', 'replace',
 ]
@@ -1095,7 +1100,7 @@ class Translator(object):
         # variable
         name_type = None
         pyname = name
-        jsname = None
+        jsname = self.vars_remap(name)
         max_depth = depth = len(self.lookup_stack) - 1
         while depth >= 0:
             if self.lookup_stack[depth].has_key(name):
@@ -1163,11 +1168,11 @@ class Translator(object):
         s = self.spacing()
         lines = []
         module_prefix = self.module_prefix
-        remap = pyjs_attrib_remap.keys()
-        remap.sort()
+        # use dict instead of the list of keys because it's more efficient in JS
+        # to acces the keys via a hash
+        remap = dict((v, k) for k, v in pyjs_attrib_remap.items())
         lines.append("%(s)svar attrib_remap = %(module_prefix)sattrib_remap = %(remap)s;" % locals())
-        remap = pyjs_vars_remap.keys()
-        remap.sort()
+        remap = dict((v, k) for k, v in pyjs_vars_remap.items())
         lines.append("%(s)svar var_remap = %(module_prefix)svar_remap = %(remap)s;" % locals())
         return "\n".join(lines)
 
@@ -2216,12 +2221,12 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     # Just nothing...
                     if optlocal_var:
                         call_name = '(typeof %s == "undefined"?%s:%s)' % (
-                            v.node.name,
-                            self.scopeName(v.node.name, depth, is_local),
-                            v.node.name,
+                            jsname,
+                            self.scopeName(jsname, depth, is_local),
+                            jsname,
                         )
                     else:
-                        call_name = self.scopeName(v.node.name, depth, is_local)
+                        call_name = self.scopeName(jsname, depth, is_local)
                     if self.name_checking:
                         call_name = '@{{_check_name}}("%s", %s)' % (pyname, call_name)
                 else:
@@ -2535,9 +2540,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 result = self.scopeName(name, depth, is_local)
             else:
                 result = '(typeof %s == "undefined"?%s:%s)' % (
-                    name,
-                    self.scopeName(name, depth, is_local),
-                    name,
+                    jsname,
+                    self.scopeName(jsname, depth, is_local),
+                    jsname,
                 )
             if self.name_checking:
                 return '@{{_check_name}}("%s", %s)' % (pyname, result)
@@ -2547,7 +2552,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
     def _name2(self, v, current_klass, attr_name):
         name_type, pyname, jsname, depth, is_local = self.lookup(v.name)
         if name_type is None:
-            jsname = self.scopeName(v.name, depth, is_local)
+            jsname = self.scopeName(jsname, depth, is_local)
             if self.name_checking:
                 jsname = '@{{_check_name}}("%s", %s)' % (pyname, jsname)
         return jsname, attr_name
@@ -2558,7 +2563,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         if isinstance(v.expr, self.ast.Name):
             name_type, pyname, jsname, depth, is_local = self.lookup(v.expr.name)
             if name_type is None:
-                jsname = self.scopeName(v.expr.name, depth, is_local)
+                jsname = self.scopeName(jsname, depth, is_local)
                 if self.name_checking:
                     jsname = '@{{_check_name}}("%s", %s)' % (pyname, jsname)
             return [jsname, v.attrname, attr_name]
