@@ -5631,22 +5631,19 @@ def repr(x):
         return '"' + s + '"';
     }
 
-    if (@{{x}}.__is_instance__ && typeof @{{x}}.__repr__ == 'function') {
+    if ((@{{x}}.__is_instance__ && typeof @{{x}}.__repr__ == 'function')
+            || @{{x}}.__number__ != null) {
         return @{{x}}.__repr__();
     }
-
+    
+    // check for classes
     if (@{{x}}.__is_instance__ === false) {
         return @{{x}}.toString();
     }
-
+    
     if (t == "function") {
         return "<function:" + @{{x}}.toString() + ">";
     }
-
-    // If we get here, x is an object.  See if it's a pyjs class.
-
-    if (!@{{hasattr}}(@{{x}}, "__init__"))
-        return "<" + @{{x}}.toString() + ">";
 
     // Handle the common Pyjamas data types.
 
