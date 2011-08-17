@@ -59,6 +59,9 @@ JavaScript_Reserved_Words = frozenset((
     'void',
     'while',
     'with',
+    'true',
+    'false',
+    'native',
 ))
 
 ECMAScipt_Reserved_Words = frozenset((
@@ -394,7 +397,8 @@ pyjs_attrib_remap_names = [\
     'prototype', 'call', 'apply', 'constructor',
     # Specifically for Chrome, which doesn't set the name attribute of a _function_
     # http://code.google.com/p/chromium/issues/detail?id=12871
-    'name',
+    # functions define length in some browser (see Chrome)
+    'name', 'length',
     # collisions between javascript/python
     'split', 'replace',
 ]
@@ -1164,7 +1168,9 @@ class Translator(object):
         s = self.spacing()
         lines = []
         module_prefix = self.module_prefix
-        remap = pyjs_attrib_remap.keys()
+        # use dict instead of the list of keys because it's more efficient in JS
+        # to acces the keys via a hash
+        remap = pyjs_attrib_remap
         remap.sort()
         lines.append("%(s)svar attrib_remap = %(module_prefix)sattrib_remap = %(remap)s;" % locals())
         remap = pyjs_vars_remap.keys()

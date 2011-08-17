@@ -5846,31 +5846,46 @@ _wrap_unbound_method = JS("""function(method) {
 def getattr(obj, name, default_value=None):
     JS("""
     if (@{{obj}} === null || typeof @{{obj}} == 'undefined') {
-        if (arguments.length != 3 || typeof @{{obj}}== 'undefined') {
+        if (arguments.length != 3 || typeof @{{obj}} == 'undefined') {
             throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
         }
         return @{{default_value}};
     }
-    var mapped_name = @{{name}};
+    
+    // always remap name if in attrib_remap so that manually executing
+    // getattr() with name being a string will resolve correctly,
+    // however, note that accessing some attributes on native JS objects won't
+    // work i.e. native_js_object.length for example. This has to be accessed via
+    // JS()
+    if (@{{name}} in attrib_remap) {
+        @{{name}} = '$$' + @{{name}};
+    }
+
     if (typeof @{{obj}}[@{{name}}] == 'undefined') {
         if (typeof @{{obj}} == 'function' && @{{name}} == '__call__') {
             return @{{obj}};
         }
-
-        mapped_name = '$$' + @{{name}};
-        if (typeof @{{obj}}[mapped_name] == 'undefined' || attrib_remap.indexOf(@{{name}}) < 0) {
+    }
+    if (typeof @{{obj}}[@{{name}}] == 'undefined') {
+        if (@{{obj}}.__is_instance__ === true &&
+                    typeof @{{obj}}.__getattr__ == 'function') {
             if (arguments.length != 3) {
-                if (@{{obj}}.__is_instance__ === true &&
-                        typeof @{{obj}}.__getattr__ == 'function') {
-                    return @{{obj}}.__getattr__(@{{name}});
-                }
-                throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
+                return @{{obj}}.__getattr__(@{{name}});
             }
-            return @{{default_value}};
+            else {
+                try {
+                    return @{{obj}}.__getattr__(@{{name}});
+                } catch (e) {
+                    if (@{{isinstance}}(e, @{{AttributeError}})) {
+                        return @{{default_value}}; 
+                    }
+                    throw e;
+                }
+            }
         }
     }
 
-    var method = @{{obj}}[mapped_name];
+    var method = @{{obj}}[@{{name}}];
 
     if (method === null)
         return method;
@@ -5887,7 +5902,7 @@ def getattr(obj, name, default_value=None):
         || (method.__is_classmethod__ !== true
             && (@{{obj}}.__is_instance__ === false
                 || (typeof @{{obj}}.__class__ != 'undefined'
-                    && @{{obj}}.hasOwnProperty(mapped_name))))
+                    && @{{obj}}.hasOwnProperty(@{{name}}))))
         || @{{name}} == '__class__') {
 
         if (($pyjs.options.arg_instance_type || $pyjs.options.arg_is_instance)
