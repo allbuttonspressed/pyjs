@@ -162,7 +162,7 @@ class object:
         if (typeof @{{name}} != 'string') {
             throw @{{TypeError}}("attribute name must be string");
         }
-        if (attrib_remap.indexOf(@{{name}}) >= 0) {
+        if ('$$' + @{{name}} in attrib_remap) {
             @{{name}} = '$$' + @{{name}};
         }
         if (typeof @{{self}}[@{{name}}] != 'undefined'
@@ -4450,6 +4450,8 @@ class list:
         s += "]";
         return s;
         """)
+    
+    __str__ = __repr__
 
     def __add__(self, y):
         if not isinstance(y, self):
@@ -4467,7 +4469,6 @@ class list:
 
     __rmul__ = __mul__
 
-JS("@{{list}}.__str__ = @{{list}}.__repr__;")
 JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type list>'; };")
 
 class dict:
@@ -4524,7 +4525,7 @@ class dict:
                     // d = dict(comment='value')
                     // comment will be in the object as $$comment
                     _key = key.substring(2);
-                    if (var_remap.indexOf(_key) < 0) {
+                    if (!('$$' + _key in var_remap)) {
                         _key = key;
                     }
                 }
@@ -5843,32 +5844,35 @@ _wrap_unbound_method = JS("""function(method) {
 };
 """)
 
-def getattr(obj, name, default_value=None):
+_undefined = object()
+def getattr(obj, name, default_value=_undefined):
     JS("""
     if (@{{obj}} === null || typeof @{{obj}} == 'undefined') {
         if (arguments.length != 3 || typeof @{{obj}} == 'undefined') {
-            throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
+            throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}} + "'");
         }
         return @{{default_value}};
     }
     
-    // always remap name if in attrib_remap so that manually executing
-    // getattr() with name being a string will resolve correctly,
+    // always remap `name` if in attrib_remap so that manually executing
+    // getattr() with `name` being a string will resolve correctly,
     // however, note that accessing some attributes on native JS objects won't
-    // work i.e. native_js_object.length for example. This has to be accessed via
-    // JS()
-    if (@{{name}} in attrib_remap) {
-        @{{name}} = '$$' + @{{name}};
+    // work i.e. `native_js_object.length` for example. This has to be accessed via
+    // JS()!
+    var re_mapped = @{{name}};
+    if ('$$' + @{{name}} in attrib_remap) {
+        re_mapped = '$$' + @{{name}};
     }
 
-    if (typeof @{{obj}}[@{{name}}] == 'undefined') {
-        if (typeof @{{obj}} == 'function' && @{{name}} == '__call__') {
+    if (typeof @{{obj}}[re_mapped] == 'undefined') {
+        if (typeof @{{obj}} == 'function' && re_mapped == '__call__') {
             return @{{obj}};
         }
-    }
-    if (typeof @{{obj}}[@{{name}}] == 'undefined') {
+        
         if (@{{obj}}.__is_instance__ === true &&
                     typeof @{{obj}}.__getattr__ == 'function') {
+            // pass the pure name to __getattr__ not the remapped one! (the user
+            // should not check for remapped names)
             if (arguments.length != 3) {
                 return @{{obj}}.__getattr__(@{{name}});
             }
@@ -5883,9 +5887,13 @@ def getattr(obj, name, default_value=None):
                 }
             }
         }
+        if (@{{default_value}} === @{{_undefined}}) {
+            throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
+        }
+        return @{{default_value}};
     }
 
-    var method = @{{obj}}[@{{name}}];
+    var method = @{{obj}}[re_mapped];
 
     if (method === null)
         return method;
@@ -5902,8 +5910,8 @@ def getattr(obj, name, default_value=None):
         || (method.__is_classmethod__ !== true
             && (@{{obj}}.__is_instance__ === false
                 || (typeof @{{obj}}.__class__ != 'undefined'
-                    && @{{obj}}.hasOwnProperty(@{{name}}))))
-        || @{{name}} == '__class__') {
+                    && @{{obj}}.hasOwnProperty(re_mapped))))
+        || re_mapped == '__class__') {
 
         if (($pyjs.options.arg_instance_type || $pyjs.options.arg_is_instance)
                 && typeof method == 'function'
@@ -5931,7 +5939,7 @@ def getattr(obj, name, default_value=None):
 
         return method.apply(@{{obj}}, $pyjs_array_slice.call(arguments));
     };
-    fnwrap.__name__ = @{{name}};
+    fnwrap.__name__ = re_mapped;
     fnwrap.__args__ = method.__args__;
     if (fnwrap.__args__ != null) {
         // Remove the bound instance from the args list
@@ -5962,11 +5970,13 @@ def delattr(obj, name):
         throw @{{TypeError}}("attribute name must be string");
     }
     if (@{{obj}}.__is_instance__ && typeof @{{obj}}.__delattr__ == 'function') {
+        // pass in the pure name instead of the remapped one (users should not
+        // care about remapping)!
         @{{obj}}.__delattr__(@{{name}});
         return;
     }
-    var mapped_name = attrib_remap.indexOf(@{{name}}) < 0 ? @{{name}}: 
-                        '$$'+@{{name}};
+    var mapped_name = '$$' + @{{name}} in attrib_remap ? '$$' + @{{name}}: 
+                        @{{name}};
     if (   @{{obj}}!== null
         && (typeof @{{obj}}== 'object' || typeof @{{obj}}== 'function')
         && (typeof(@{{obj}}[mapped_name]) != "undefined")
@@ -6003,7 +6013,7 @@ def setattr(obj, name, value):
         @{{obj}}.__setattr__(@{{name}}, @{{value}})
         return;
     }
-    if (attrib_remap.indexOf(@{{name}}) >= 0) {
+    if ('$$' + @{{name}} in attrib_remap) {
         @{{name}}= '$$' + @{{name}};
     }
     if (   typeof @{{obj}}[@{{name}}] != 'undefined'
@@ -6028,14 +6038,16 @@ def hasattr(obj, name):
     if (@{{obj}} === null) {
         return false;
     }
-
+    
+    if ('$$' + @{{name}} in attrib_remap) {
+        @{{name}} = '$$' + @{{name}};
+    }
+    
     if (typeof @{{obj}} == 'function' && @{{name}} === '__call__') {
         return true;
     }
-
-    if (typeof @{{obj}}[@{{name}}] == 'undefined'
-            && (typeof @{{obj}}['$$'+@{{name}}] == 'undefined' ||
-                attrib_remap.indexOf(@{{name}}) < 0)) {
+    
+    if (typeof @{{obj}}[@{{name}}] == 'undefined') {
         return false;
     }
     //if (@{{obj}}!= 'object' && typeof @{{obj}}!= 'function')

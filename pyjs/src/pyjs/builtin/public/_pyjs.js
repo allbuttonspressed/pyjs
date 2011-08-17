@@ -41,7 +41,7 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
             var k = dstar_args.__object[keys][0];
             var v = dstar_args.__object[keys][1];
 
-            if (pyjslib.var_remap.indexOf(k) >= 0) {
+            if ('$$' + k in pyjslib.var_remap) {
                 k = '$$' + k;
             }
             if (kwargs == null) {

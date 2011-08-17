@@ -1169,9 +1169,9 @@ class Translator(object):
         module_prefix = self.module_prefix
         # use dict instead of the list of keys because it's more efficient in JS
         # to acces the keys via a hash
-        remap = pyjs_attrib_remap
+        remap = dict((v, k) for k, v in pyjs_attrib_remap.items())
         lines.append("%(s)svar attrib_remap = %(module_prefix)sattrib_remap = %(remap)s;" % locals())
-        remap = pyjs_vars_remap
+        remap = dict((v, k) for k, v in pyjs_vars_remap.items())
         lines.append("%(s)svar var_remap = %(module_prefix)svar_remap = %(remap)s;" % locals())
         return "\n".join(lines)
 
