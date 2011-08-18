@@ -3419,6 +3419,15 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         if self.is_generator:
             self.is_generator = self.compiler.walk(node, GeneratorExitVisitor(), walker=GeneratorExitVisitor()).has_yield
         test = self.expr(node.test, current_klass)
+
+        if node.else_:
+            iterid = self.uniqid('$iter')
+            testvar = "%s_test" % iterid
+            self.add_lookup('variable', testvar, testvar)
+            assTestvar = "%s_test = " % iterid
+        else:
+            assTestvar = ""
+        
         if self.is_generator:
             self.generator_switch_case(increment=True)
             self.generator_reset_state()
@@ -3446,8 +3455,17 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.generator_del_state()
 
         self.w( self.dedent() + "}")
+
+        if node.else_:
+            self.generator_switch_case(increment=True)
+            self.w( self.indent() + "if (!%(testvar)s) {" % locals())
+            for n in node.else_.nodes:
+                self._stmt(n, current_klass)
+            self.w( self.dedent() + "}")
+        
         self.generator_switch_case(increment=True)
         self.is_generator = save_is_generator
+        
 
     def _const(self, node):
         if isinstance(node.value, int):
