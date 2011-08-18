@@ -383,7 +383,7 @@ SCOPE_KEY = 0
 # arguments is one of Other_JavaScript_Keywords, but is used
 # in function/method initialization and therefore forbidden
 pyjs_vars_remap_names = ['arguments',
-                        'final', 'char'] # to pass lint
+                         'final', 'char'] # to pass lint
 pyjs_vars_remap = {}
 for a in pyjs_vars_remap_names:
     pyjs_vars_remap[a] = '$$' + a

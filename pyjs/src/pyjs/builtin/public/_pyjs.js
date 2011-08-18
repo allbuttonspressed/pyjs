@@ -425,13 +425,26 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     }
     var __mro__ = $pyjs__mro_merge(base_mro_list);
 
+    var inherited = {};
     for (var b = __mro__.length-1; b >= 0; b--) {
         var base = __mro__[b];
-        for (var p in base)
+        for (var p in base) {
+            if (typeof base.__inherited_properties__ != 'undefined'
+                    && p in base.__inherited_properties__) {
+                continue;
+            }
+            if (!(p in prop)) {
+              inherited[p] = null;
+            }
             cls_fn[p] = base[p];
+        }
     }
-    for (var p in prop)
+
+    for (var p in prop) {
         cls_fn[p] = prop[p];
+    }
+
+    cls_fn.__inherited_properties__ = inherited;
 
     if (cls_fn['__new__'] == null) {
       cls_fn['__new__'] = $pyjs__prepare_func('__new__', function(cls) {
