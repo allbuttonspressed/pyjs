@@ -3432,15 +3432,15 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.generator_switch_case(increment=True)
             self.generator_reset_state()
             self.generator_switch_case(increment=True)
-            self.w( self.indent() + "for (;($generator_state[%d] > 0)||(" % (\
-                (len(self.generator_states),)) + \
+            self.w( self.indent() + "for (;%s($generator_state[%d] > 0)||(" % (\
+                (assTestvar, len(self.generator_states),)) + \
                 self.track_call(self.inline_bool_code(test), node.lineno) + ");$generator_state[%d] = 0) {" % (len(self.generator_states), ))
 
             self.generator_add_state()
             self.generator_switch_open()
             self.generator_switch_case(increment=False)
         else:
-            self.w( self.indent() + "while (" + self.track_call(self.inline_bool_code(test), node.lineno) + ") {")
+            self.w( self.indent() + "while (" + assTestvar + self.track_call(self.inline_bool_code(test), node.lineno) + ") {")
 
         if isinstance(node.body, self.ast.Stmt):
             for child in node.body.nodes:
