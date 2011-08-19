@@ -70,6 +70,5 @@ class HTTPRequest:
             handler = None
             xmlHttp = None
             localHandler.onError(str(sys.exc_info()[1]), "");
-            return False
-        return True
-
+            return None
+        return xmlHttp

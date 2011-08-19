@@ -26,15 +26,15 @@ class HTTPRequest:
         postData = None
         if not hasattr(handler, 'onCompletion'):
             raise RuntimeError("Invalid call to asyncGet: handler is not a valid request handler")
-        self.asyncImpl('GET', user, pwd, url, postData, handler,
-                       returnxml, content_type, headers)
+        return self.asyncImpl('GET', user, pwd, url, postData, handler,
+                              returnxml, content_type, headers)
 
     def asyncPost(self, url, postData, handler, returnxml=False, 
                   content_type=None, headers=None, user=None, pwd=None):
         if not hasattr(handler, 'onCompletion'):
             raise RuntimeError("Invalid call to asyncPost: handler is not a valid request handler")
         return self.asyncImpl('POST', user, pwd, url, postData, handler,
-                       returnxml, content_type, headers)
+                              returnxml, content_type, headers)
 
     def asyncDelete(self, url, handler, returnxml=False, 
                     content_type=None, headers=None, user=None, pwd=None):
@@ -42,14 +42,14 @@ class HTTPRequest:
         if not hasattr(handler, 'onCompletion'):
             raise RuntimeError("Invalid call to asyncDelete: handler is not a valid request handler")
         return self.asyncImpl('DELETE', user, pwd, url, postData, handler,
-                       returnxml, content_type, headers)
+                              returnxml, content_type, headers)
 
     def asyncPut(self, url, postData, handler, returnxml=False, 
                  content_type=None, headers=None, user=None, pwd=None):
         if not hasattr(handler, 'onCompletion'):
             raise RuntimeError("Invalid call to asyncPut: handler is not a valid request handler")
         return self.asyncImpl('PUT', user, pwd, url, postData, handler,
-                       returnxml, content_type, headers)
+                              returnxml, content_type, headers)
 
     def createXmlHTTPRequest(self):
         return self.doCreateXmlHTTPRequest()
@@ -182,12 +182,12 @@ class HTTPRequest:
         handlers[xmlHttp] = handler
         xmlHttp.send(postData or '')
 
-        return True
+        return xmlHttp
 
         #except:
             #del xmlHttp.onreadystatechange
         handler = None
         xmlHttp = None
         localHandler.onError(str(e))
-        return False
+        return None
 
