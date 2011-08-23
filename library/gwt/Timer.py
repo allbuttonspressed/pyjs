@@ -16,7 +16,7 @@ from pyjamas import Window
 from __pyjamas__ import JS, get_main_frame
 import pyjd
 
-class Timer:
+class Timer(object):
 
     '''
     Timer() a re-implementation of GWT's Timer class.  This class has
@@ -40,7 +40,7 @@ class Timer:
        calls schedule() on itself as its last action.
 
        cancel() -- cancel a timer.
-       
+
     '''
 
     __timers = set()
@@ -76,7 +76,7 @@ class Timer:
         and:
 
             timer = Timer(notify=object_or_func)
-            
+
         is the same as:
 
             timer = Timer()
@@ -126,7 +126,7 @@ class Timer:
         # no-op.  We do it here, so the instance can be init'd before
         # the possible scheduling of the timer.
         self.__impl_init_hook()
-            
+
         # schedule?
         if delayMillis != 0:
             self.schedule(delayMillis)
@@ -147,7 +147,7 @@ class Timer:
 
         self.__tid = None
         Timer.__timers.discard(self)
-    
+
     def run(self):
         'Run when fired...needs to be overridden.'
         raise NotImplementedError, ('''Timer.run() must be overridden or Timer
@@ -161,12 +161,12 @@ class Timer:
 
         if delayMillis <= 0:
             raise ValueError, 'delay must be positive'
-        
+
         self.cancel()
         self.__is_repeating = False
         self.__tid = self.__setTimeout(delayMillis)
         Timer.__timers.add(self)
-        
+
 
     def scheduleRepeating(self, periodMillis):
         '''Schedule this timer to fire forever (or until cancelled)
@@ -175,7 +175,7 @@ class Timer:
 
         if periodMillis <= 0:
             raise ValueError, 'period must be positive'
-        
+
         self.cancel()
         self.__is_repeating = True
         self.__tid = self.__setInterval(periodMillis)
@@ -191,7 +191,7 @@ class Timer:
     ######################################################################
     # Platforms need to implement the following four methods
     ######################################################################
-        
+
     def __setTimeout(self, delayMillis):
         raise NotImplementedError, 'Timer is not fully implemented for your platform'
 
