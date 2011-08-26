@@ -398,19 +398,17 @@ def op_eq(a,b):
     #setCompilerOptions("InlineEq")
     #return a == b
     JS("""
-    if (@{{a}} === null) {
-        if (@{{b}} === null) return true;
-        return false;
+    if (@{{a}} === null || @{{b}} === null || @{{a}} === undefined || @{{b}} === undefined) {
+        return @{{a}} === @{{b}};
     }
-    if (@{{b}} === null) {
-        return false;
-    }
+
     if (@{{a}} === @{{b}}) {
         if (@{{a}}.__is_instance__ === false && 
             @{{b}}.__is_instance__ === false) {
             return true;
         }
     }
+
     switch ((@{{a}}.__number__ << 8) | @{{b}}.__number__) {
         case 0x0101:
         case 0x0401:
