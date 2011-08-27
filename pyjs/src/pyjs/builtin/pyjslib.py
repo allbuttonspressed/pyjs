@@ -5500,12 +5500,18 @@ def super(typ, object_or_type = None):
     }
     var mro = @{{object_or_type}}.__mro__.__array;
     var index = 0;
+    var fn = null;
     for (; index < mro.length; index++) {
         if (mro[index] === @{{typ}}) {
+            if (@{{object_or_type}}.__$super_cache__.length > 0) {
+                fn = @{{object_or_type}}.__$super_cache__[index];
+            }
             break;
         }
     }
-    var fn = $pyjs_type('super', mro.slice(index + 1), {});
+    if (fn === null) {
+        fn = $pyjs_type('super', mro.slice(index + 1), {});
+    }
     fn.__new__ = fn.__mro__.__array[1].__new__;
     fn.__init__ = fn.__mro__.__array[1].__init__;
     if (@{{object_or_type}}.__is_instance__ === false) {
