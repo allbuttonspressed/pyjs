@@ -476,11 +476,10 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     }
     cls_fn.__name__ = class_name;
     cls_fn.__module__ = class_module;
+    __mro__ = new Array(cls_fn).concat(__mro__);
     if (typeof pyjslib.tuple != 'undefined') {
-        cls_fn.__mro__ = pyjslib.tuple(new Array(cls_fn).concat(__mro__));
+        cls_fn.__mro__ = pyjslib.tuple(__mro__);
     }
-//    cls_fn.__mro__ = new Array(cls_fn).concat(__mro__);
-//    cls_fn.__mro__ = pyjslib.tuple(new Array(cls_fn).concat(__mro__));
     cls_fn.prototype = cls_fn;
     cls_fn.__dict__ = cls_fn;
     cls_fn.__is_instance__ = false;
@@ -506,9 +505,18 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     
     // remove hash for newly created classes so that subclasses will get their
     // own hash
-    if ('$H' in cls_fn)
-        delete cls_fn.$H
-    
+    if ('$H' in cls_fn) {
+        delete cls_fn.$H;
+    }
+
+    if (class_name !== 'super') {
+        var super_cache = [];
+        for (var index = 0; index < __mro__.length - 1; index++) {
+            super_cache.push($pyjs_type('super', __mro__.slice(index + 1), {}));
+        }
+        cls_fn.__$super_cache__ = super_cache;
+    }
+
     return cls_fn;
 }
 

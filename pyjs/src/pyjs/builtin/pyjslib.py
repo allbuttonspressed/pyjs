@@ -398,19 +398,17 @@ def op_eq(a,b):
     #setCompilerOptions("InlineEq")
     #return a == b
     JS("""
-    if (@{{a}} === null) {
-        if (@{{b}} === null) return true;
-        return false;
+    if (@{{a}} === null || @{{b}} === null || @{{a}} === undefined || @{{b}} === undefined) {
+        return @{{a}} === @{{b}};
     }
-    if (@{{b}} === null) {
-        return false;
-    }
+
     if (@{{a}} === @{{b}}) {
         if (@{{a}}.__is_instance__ === false && 
             @{{b}}.__is_instance__ === false) {
             return true;
         }
     }
+
     switch ((@{{a}}.__number__ << 8) | @{{b}}.__number__) {
         case 0x0101:
         case 0x0401:
@@ -5502,12 +5500,18 @@ def super(typ, object_or_type = None):
     }
     var mro = @{{object_or_type}}.__mro__.__array;
     var index = 0;
+    var fn = null;
     for (; index < mro.length; index++) {
         if (mro[index] === @{{typ}}) {
+            if (@{{object_or_type}}.__$super_cache__.length > 0) {
+                fn = @{{object_or_type}}.__$super_cache__[index];
+            }
             break;
         }
     }
-    var fn = $pyjs_type('super', mro.slice(index + 1), {});
+    if (fn === null) {
+        fn = $pyjs_type('super', mro.slice(index + 1), {});
+    }
     fn.__new__ = fn.__mro__.__array[1].__new__;
     fn.__init__ = fn.__mro__.__array[1].__init__;
     if (@{{object_or_type}}.__is_instance__ === false) {
