@@ -6056,8 +6056,15 @@ def getattr(obj, name, default_value=_undefined):
 
         return method.apply(@{{obj}}, $pyjs_array_slice.call(arguments));
     };
+    
+    // copy all attribues
+    for (var attr in method) {
+        if (attr !== '__is_staticmethod__' && attr !== '__is_classmethod__') {
+            fnwrap[attr] = method[attr];
+        }
+    }
+     
     fnwrap.__name__ = re_mapped;
-    fnwrap.__args__ = method.__args__;
     if (fnwrap.__args__ != null) {
         // Remove the bound instance from the args list
         fnwrap.__args__ = $pyjs_array_slice.call(fnwrap.__args__, 0, 2).concat($pyjs_array_slice.call(fnwrap.__args__, 3));
@@ -6065,7 +6072,6 @@ def getattr(obj, name, default_value=_undefined):
     fnwrap.__is_staticmethod__ = true;
     fnwrap.__class__ = @{{obj}}.__class__;
     fnwrap.__doc__ = method.__doc__ || '';
-    fnwrap.__is_instance__ = method.__is_instance__;
     return fnwrap;
     """)
 
