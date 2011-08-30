@@ -1863,6 +1863,39 @@ cmp = JS("""function(a, b) {
         }
     }
 
+    // use lt, gt and eq if defined on one of the two objects
+    if ((typeof a == 'object' || typeof a == 'function') && typeof a.__eq__ == 'function' && 
+            typeof a.__lt__ == 'function' && typeof a.__gt__ == 'function') {
+        eq_result = @{{bool}}(a.__eq__(b));
+        if (eq_result) {
+            return 0;
+        }
+        else {
+            lt_result = @{{bool}}(a.__lt__(b));
+            if (lt_result) {
+                return -1;
+            }
+            else {
+                return 1;
+            }
+        }
+    } else if ((typeof b == 'object' || typeof b == 'function') && typeof b.__eq__ == 'function' && 
+            typeof b.__lt__ == 'function' && typeof b.__gt__ == 'function') {
+        eq_result = @{{bool}}(b.__eq__(a));
+        if (eq_result) {
+            return 0;
+        }
+        else {
+            lt_result = @{{bool}}(b.__lt__(a));
+            if (lt_result) {
+                return 1;
+            }
+            else {
+                return -1;
+            }
+        }
+    }
+    
     if ((typeof a == 'object' || typeof a == 'function') && typeof a.__cmp__ == 'function') {
         return a.__cmp__(b);
     } else if ((typeof b == 'object' || typeof b == 'function') && typeof b.__cmp__ == 'function') {
