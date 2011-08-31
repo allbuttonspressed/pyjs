@@ -759,6 +759,7 @@ class Translator(object):
         else:
             self.module_prefix = ""
         self.module_name = module_name
+        self.module_file_name = module_file_name
         src = src.replace("\r\n", "\n")
         src = src.replace("\n\r", "\n")
         src = src.replace("\r",   "\n")
@@ -1325,17 +1326,15 @@ class Translator(object):
     def track_lineno(self, node, module=False):
         if self.source_tracking and node.lineno:
             if module:
-                self.w( self.spacing() + "$pyjs.track.module='%s';" % self.module_name)
+                self.w( self.spacing() + "$pyjs.track.module=%s__name__;" % self.module_prefix)
             if self.line_tracking:
                 self.w( self.spacing() + "$pyjs.track.lineno=%d;" % node.lineno)
-                #self.w( self.spacing() + "if ($pyjs.track.module!='%s') debugger;" % self.module_name)
             if self.store_source:
                 self.track_lines[node.lineno] = self.get_line_trace(node)
 
     def track_call(self, call_code, lineno=None):
         if not self.ignore_debug and self.debug and len(call_code.strip()) > 0:
             dbg = self.uniqid("$pyjs_dbg_")
-            mod = self.module_name
             s = self.spacing()
             call_code = """\
 (function(){try{try{$pyjs.in_try_except += 1;
@@ -1444,7 +1443,7 @@ $generator['$genfunc'] = function () {
 %(s)s\t$pyjs.trackstack = $pyjs.trackstack.slice(0,$pyjs__trackstack_size_%(d)d);
 %(s)s\t$pyjs.track = $pyjs.trackstack.slice(-1)[0];
 %(s)s}
-%(s)s$pyjs.track.module='%(m)s';""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'm': self.module_name}
+%(s)s$pyjs.track.module=%(mp)s__name__;""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'mp': self.module_prefix}
             else:
                 src1 = src2 = ""
 
@@ -2049,7 +2048,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         save_output = self.output
         self.output = StringIO()
         if self.source_tracking:
-            self.w( self.spacing() + "$pyjs.track={module:'%s',lineno:%d};$pyjs.trackstack.push($pyjs.track);" % (self.module_name, node.lineno))
+            self.w( self.spacing() + "$pyjs.track={module:%s__name__,lineno:%d};$pyjs.trackstack.push($pyjs.track);" % (self.module_prefix, node.lineno))
         self.track_lineno(node, True)
         for child in node.code:
             self._stmt(child, current_klass)
@@ -2066,7 +2065,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self.output = StringIO()
             self.indent()
             if self.source_tracking:
-                self.w( self.spacing() + "$pyjs.track={module:'%s',lineno:%d};$pyjs.trackstack.push($pyjs.track);" % (self.module_name, node.lineno))
+                self.w( self.spacing() + "$pyjs.track={module:%s__name__,lineno:%d};$pyjs.trackstack.push($pyjs.track);" % (self.module_prefix, node.lineno))
             self.track_lineno(node, True)
             self.generator_switch_open()
             self.generator_switch_case(increment=False)
@@ -2405,7 +2404,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
     %(s)s\t$pyjs.trackstack = $pyjs.trackstack.slice(0,$pyjs__trackstack_size_%(d)d);
     %(s)s\t$pyjs.track = $pyjs.trackstack.slice(-1)[0];
     %(s)s}
-    %(s)s$pyjs.track.module='%(m)s';""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'm': self.module_name})
+    %(s)s$pyjs.track.module=%(mp)s__name__;""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'mp': self.module_prefix})
 
             pyjs_try_err = self.add_lookup('variable', pyjs_try_err, pyjs_try_err)
             if hasattr(node, 'handlers'):
@@ -2607,7 +2606,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.w( self.indent() + class_name + """ = (function(){
 %(s)svar %(p)s = new Object();
 %(s)svar $method;
-%(s)s%(p)s.__module__ = '%(module)s';""" % {'s': self.spacing(), 'p': local_prefix, 'module': self.module_name})
+%(s)s%(p)s.__module__ = %(mp)s__name__;""" % {'s': self.spacing(), 'p': local_prefix, 'mp': self.module_prefix})
 
         if self.function_argument_checking or self.module_name == 'pyjslib':
             self.w( self.spacing() + "%(p)s.__md5__ = '%(m)s';" % {'p': local_prefix, 'm': current_klass.__md5__})
@@ -2804,9 +2803,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 srcLine = srcLine.replace('"', '\\"')
                 srcLine = srcLine.replace("'", "\\'")
 
-        return self.module_name + ".py, line " \
-               + str(lineNum1) + ":"\
-               + "\\n" \
+        return self.module_file_name.replace('\\', '\\\\') + ", line " + str(lineNum1) + ":\\n" \
                + "    " + srcLine
 
     def _augassign(self, node, current_klass):
@@ -3409,7 +3406,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 %(s)s\t$pyjs.trackstack = $pyjs.trackstack.slice(0,$pyjs__trackstack_size_%(d)d);
 %(s)s\t$pyjs.track = $pyjs.trackstack.slice(-1)[0];
 %(s)s}
-%(s)s$pyjs.track.module='%(m)s';""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'm': self.module_name})
+%(s)s$pyjs.track.module=%(mp)s__name__;""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'mp': self.module_prefix})
             self.stacksize_depth -= 1
         self.generator_switch_case(increment=True)
         self.is_generator = save_is_generator
