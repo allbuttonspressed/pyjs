@@ -4799,15 +4799,13 @@ class dict:
         if len(d) > 1:
             raise TypeError("pop expected at most 2 arguments, got %s" %
                             (1 + len(d)))
-        try:
+
+        if k in self or not d:
             res = self[k]
             del self[k]
             return res
-        except KeyError:
-            if d:
-                return d[0]
-            else:
-                raise
+
+        return d[0]
 
     def popitem(self):
         for k, v in self.iteritems():
