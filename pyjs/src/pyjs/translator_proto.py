@@ -2657,7 +2657,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
     %(s)sif ($pyjs__raise_expr2 !== null && $pyjs__raise_expr1.__is_instance__ === true) {
     %(s)s\tthrow @{{TypeError}}('instance exception may not have a separate value');
     %(s)s}
-    %(s)s\tthrow ($pyjs__raise_expr1.apply($pyjs__raise_expr1, $pyjs__raise_expr2, $pyjs__raise_expr3));
+    %(s)sif (!@{{isinstance}}($pyjs__raise_expr2, $pyjs__raise_expr1)) {
+    %(s)s\t$pyjs__raise_expr2 = $pyjs__raise_expr1($pyjs__raise_expr2);
+    %(s)s}
+    %(s)s$pyjs.__active_exception_stack__ = $pyjs__raise_expr3;
+    %(s)sthrow $pyjs__raise_expr2;
     """ % { 's': self.spacing(),
             'expr1': self.expr(node.expr1, current_klass),
             'expr2': self.expr(node.expr2, current_klass),
