@@ -1863,6 +1863,39 @@ cmp = JS("""function(a, b) {
         }
     }
 
+    // use lt, gt and eq if defined on one of the two objects
+    if ((typeof a == 'object' || typeof a == 'function') && typeof a.__eq__ == 'function' && 
+            typeof a.__lt__ == 'function' && typeof a.__gt__ == 'function') {
+        eq_result = @{{bool}}(a.__eq__(b));
+        if (eq_result) {
+            return 0;
+        }
+        else {
+            lt_result = @{{bool}}(a.__lt__(b));
+            if (lt_result) {
+                return -1;
+            }
+            else {
+                return 1;
+            }
+        }
+    } else if ((typeof b == 'object' || typeof b == 'function') && typeof b.__eq__ == 'function' && 
+            typeof b.__lt__ == 'function' && typeof b.__gt__ == 'function') {
+        eq_result = @{{bool}}(b.__eq__(a));
+        if (eq_result) {
+            return 0;
+        }
+        else {
+            lt_result = @{{bool}}(b.__lt__(a));
+            if (lt_result) {
+                return 1;
+            }
+            else {
+                return -1;
+            }
+        }
+    }
+    
     if ((typeof a == 'object' || typeof a == 'function') && typeof a.__cmp__ == 'function') {
         return a.__cmp__(b);
     } else if ((typeof b == 'object' || typeof b == 'function') && typeof b.__cmp__ == 'function') {
@@ -6058,8 +6091,15 @@ def getattr(obj, name, default_value=_undefined):
 
         return method.apply(@{{obj}}, $pyjs_array_slice.call(arguments));
     };
+    
+    // copy all attribues
+    for (var attr in method) {
+        if (attr !== '__is_staticmethod__' && attr !== '__is_classmethod__') {
+            fnwrap[attr] = method[attr];
+        }
+    }
+     
     fnwrap.__name__ = re_mapped;
-    fnwrap.__args__ = method.__args__;
     if (fnwrap.__args__ != null) {
         // Remove the bound instance from the args list
         fnwrap.__args__ = $pyjs_array_slice.call(fnwrap.__args__, 0, 2).concat($pyjs_array_slice.call(fnwrap.__args__, 3));
@@ -6067,7 +6107,6 @@ def getattr(obj, name, default_value=_undefined):
     fnwrap.__is_staticmethod__ = true;
     fnwrap.__class__ = @{{obj}}.__class__;
     fnwrap.__doc__ = method.__doc__ || '';
-    fnwrap.__is_instance__ = method.__is_instance__;
     return fnwrap;
     """)
 
