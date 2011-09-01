@@ -5724,6 +5724,8 @@ class str(basestring):
         return String(@{{text}});
 """)
 
+unicode = str
+
 def ord(x):
     if(JS("typeof @{{x}}== 'string'") and len(x) is 1):
         return INT(x.charCodeAt(0));

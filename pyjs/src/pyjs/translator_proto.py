@@ -277,6 +277,7 @@ PYJSLIB_BUILTIN_FUNCTIONS=frozenset((
     "sum",
     "super",
     "type",
+    "unicode",
     "xrange",
     "zip",
 
