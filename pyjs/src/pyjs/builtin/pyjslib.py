@@ -468,7 +468,7 @@ def op_eq(a,b):
             return false;
         }
     }
-    return @{{a}} == @{{b}};
+    return @{{a}} === @{{b}};
     """)
 
 def op_uadd(v):
