@@ -127,7 +127,7 @@ def type(clsname, bases=None, methods=None):
         JS("@{{!bss}} = @{{bases}}.__array;")
     JS(" return $pyjs_type(@{{clsname}}, @{{!bss}}, @{{!mths}}); ")
 
-def type__new__(cls, name, bases, data):
+def type__new__(cls, clsname, bases, data):
     JS("""
     var value;
     for (var name in @{{cls}}) {
@@ -141,7 +141,7 @@ def type__new__(cls, name, bases, data):
         @{{data}}.__setitem__(name, value);
     }
     """)
-    new_type = type(name, bases, data)
+    new_type = type(clsname, bases, data)
     JS("@{{new_type}}.__class__ = @{{cls}};")
     return new_type
 
