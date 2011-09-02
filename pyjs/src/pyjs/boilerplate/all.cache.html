@@ -82,6 +82,7 @@ var onExecutionError = function (exception, name) {
 
 function app_imported() {
     $p = $pyjs.loaded_modules['pyjslib'];
+    $pyjs.loaded_modules['__main__'] = $pyjs.loaded_modules['%(app_name)s'];
     if (typeof $p != "undefined") {
         $p('pyjslib');
         $pyjs.__modules__.pyjslib = $p['pyjslib']
