@@ -452,6 +452,7 @@ def op_eq(a,b):
             }
             return false;
         }
+        return @{{a}} == @{{b}};
     } else if (typeof @{{b}} == 'object' || typeof @{{b}} == 'function') {
         if (typeof @{{b}}.__eq__ == 'function') {
             if (@{{_isinstance}}(@{{a}}, @{{b}})) {
@@ -467,6 +468,7 @@ def op_eq(a,b):
             }
             return false;
         }
+        return @{{a}} == @{{b}};
     }
     return @{{a}} === @{{b}};
     """)
