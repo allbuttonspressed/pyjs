@@ -9,7 +9,7 @@ if pyjd.is_desktop:
 import sys # needed by __browser__/pyjamas/HTTPRequest.py
 handlers = {}
 
-class XULrunnerHackCallback:
+class XULrunnerHackCallback(object):
     def __init__(self, htr, mode, user, pwd, url, postData=None, handler=None,
                  return_xml=False, content_type=None, headers = None):
         pass
@@ -20,7 +20,7 @@ class XULrunnerHackCallback:
                                   self.content_type, self.headers)
 
 
-class HTTPRequest:
+class HTTPRequest(object):
     def asyncGet(self, url, handler, returnxml=False, 
                  content_type=None, headers=None, user=None, pwd=None):
         postData = None

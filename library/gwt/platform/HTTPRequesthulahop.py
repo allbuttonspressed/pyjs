@@ -1,3 +1,4 @@
+
 class XULrunnerHackCallback:
     def __init__(self, htr, mode, user, pwd, url, postData=None, handler=None,
                  return_xml=False, content_type=None, headers=None):
@@ -15,7 +16,7 @@ class XULrunnerHackCallback:
 
         pyjd.add_timer_queue(self.callback)
 
-class HTTPRequest:
+class HTTPRequest(object):
     # See HTTPRequest.py
 
     def asyncGet(self, url, handler, returnxml=False,

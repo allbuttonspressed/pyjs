@@ -1,5 +1,5 @@
 
-class HTTPRequest:
+class HTTPRequest(object):
 
     def doCreateXmlHTTPRequest(self):
         # Check for IE6/ActiveX
