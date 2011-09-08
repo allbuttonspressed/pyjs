@@ -4650,9 +4650,6 @@ class dict:
         return value[1];
         """)
 
-    def __hash__(self):
-        raise TypeError("dict objects are unhashable")
-
     def __nonzero__(self):
         JS("""
         for (var i in @{{self}}.__object){
