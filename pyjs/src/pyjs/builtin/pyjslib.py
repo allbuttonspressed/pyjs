@@ -4962,7 +4962,7 @@ class BaseSet(object):
             var h = hashes.join("|");
             return (h in obj);
 """)
-        JS("""return @{{__hash}}(@{{value}}) in @{{self}}.__object;""")
+        JS("""return @{{hash}}(@{{value}}) in @{{self}}.__object;""")
 
     def __iter__(self):
         JS("""
@@ -5205,8 +5205,7 @@ class set(BaseSet):
             // It has an __array member to iterate over. Make that our data.
             if (typeof @{{!data}}.__array == 'object') {
                 data = @{{!data}}.__array;
-                } 
-            else {
+            } else {
                 // Several ways to deal with the __iter__ method
                 var iter = @{{!data}}.__iter__();
                 // iter has an __array member that's an array. Use that.
@@ -5236,7 +5235,7 @@ class set(BaseSet):
         } else if (!(@{{isUndefined}}(@{{data}})) && @{{isIteratable}}(@{{data}}))
             {
             for (var item in @{{data}}) {
-                selfObj[@{{__hash}}(item)] = item;
+                selfObj[@{{hash}}(item)] = item;
             }
             return null;
         } else {
@@ -5249,7 +5248,7 @@ class set(BaseSet):
         i = n-1;
         do {
             item = @{{!data}}[i];
-            selfObj[@{{__hash}}(item)] = item;
+            selfObj[@{{hash}}(item)] = item;
         }
         while (i--);
         return null;
@@ -5445,7 +5444,7 @@ class frozenset(BaseSet):
         } else if (!(@{{isUndefined}}(@{{data}})) && @{{isIteratable}}(@{{data}}))
             {
             for (var item in @{{data}}) {
-                selfObj[@{{__hash}}(item)] = item;
+                selfObj[@{{hash}}(item)] = item;
             }
             return @{{self}};
         } else {
@@ -5458,7 +5457,7 @@ class frozenset(BaseSet):
         i = n-1;
         do {
             item = @{{!data}}[i];
-            selfObj[@{{__hash}}(item)] = item;
+            selfObj[@{{hash}}(item)] = item;
         }
         while (i--);
         return @{{self}};
