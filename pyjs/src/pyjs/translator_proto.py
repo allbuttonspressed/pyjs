@@ -3139,15 +3139,17 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
     def _if_test(self, keyword, test, consequence, node, current_klass):
         if test:
-            expr = self.expr(test, current_klass)
+            expr, is_boolean = self._bool_expr(test, current_klass)
+            if not is_boolean:
+                expr = self.inline_bool_code(expr)
 
             if not self.is_generator:
-                self.w( self.indent() +keyword + " (" + self.track_call(self.inline_bool_code(expr), test.lineno)+") {")
+                self.w( self.indent() +keyword + " (" + self.track_call(expr, test.lineno)+") {")
             else:
                 self.generator_states[-1] += 1
                 self.w( self.indent() +keyword + "(($generator_state[%d]==%d)||($generator_state[%d]<%d&&(" % (\
                     len(self.generator_states)-1, self.generator_states[-1], len(self.generator_states)-1, self.generator_states[-1],) + \
-                    self.track_call(self.inline_bool_code(expr), test.lineno)+"))) {")
+                    self.track_call(expr, test.lineno)+"))) {")
                 self.w( self.spacing() + "$generator_state[%d]=%d;" % (len(self.generator_states)-1, self.generator_states[-1]))
 
         else:
@@ -3234,42 +3236,70 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
 
     def _not(self, node, current_klass):
-        expr = self.expr(node.expr, current_klass)
+        expr, is_boolean = self._bool_expr(node.expr, current_klass)
         if self.stupid_mode:
             return "(!(%s))" % expr
-        return "!" + self.inline_bool_code(expr)
+        if not is_boolean:
+            expr = self.inline_bool_code(expr)
+        return "!" + expr
 
     def _or(self, node, current_klass):
+        return self._bool_or(node, current_klass)[0]
+
+    def _bool_or(self, node, current_klass):
         if self.stupid_mode:
-            return " || ".join(map(bracket_fn, [self.expr(child, current_klass) for child in node.nodes]))
+            return " || ".join(map(bracket_fn, [self.expr(child, current_klass) for child in node.nodes])), False
         s = self.spacing()
-        expr = "@EXPR@"
-        for e in [self.expr(child, current_klass) for child in node.nodes[:-1]]:
-            v = self.uniqid('$or')
-            self.add_lookup('variable', v, v)
-            bool = self.inline_bool_code("%(v)s=%(e)s" % locals())
-            expr = expr.replace('@EXPR@', "(%(bool)s?%(v)s:@EXPR@)" % locals())
-        v = self.uniqid('$or')
-        self.add_lookup('variable', v, v)
-        return  expr.replace('@EXPR@', self.expr(node.nodes[-1], current_klass))
+        expr, is_boolean = self._bool_expr(node.nodes[-1], current_klass)
+        for child in reversed(node.nodes[:-1]):
+            e, boolean = self._bool_expr(child, current_klass)
+            if boolean:
+                expr = '(%(e)s || %(expr)s)' % locals()
+            else:
+                is_boolean = False
+                v = self.uniqid('$or')
+                self.add_lookup('variable', v, v)
+                bool = self.inline_bool_code("%(v)s=%(e)s" % locals())
+                expr = "(%(bool)s?%(v)s:%(expr)s)" % locals()
+        return expr, is_boolean
         expr = ",".join([self.expr(child, current_klass) for child in node.nodes])
-        return "@{{op_or}}([%s])" % expr
+        return "@{{op_or}}([%s])" % expr, is_boolean
 
     def _and(self, node, current_klass):
+        return self._bool_and(node, current_klass)[0]
+
+    def _bool_and(self, node, current_klass):
         if self.stupid_mode:
-            return " && ".join(map(bracket_fn, [self.expr(child, current_klass) for child in node.nodes]))
+            return " && ".join(map(bracket_fn, [self.expr(child, current_klass) for child in node.nodes])), False
         s = self.spacing()
-        expr = "@EXPR@"
-        for e in [self.expr(child, current_klass) for child in node.nodes[:-1]]:
-            v = self.uniqid('$and')
-            self.add_lookup('variable', v, v)
-            bool = self.inline_bool_code("%(v)s=%(e)s" % locals())
-            expr = expr.replace('@EXPR@', "(%(bool)s?@EXPR@:%(v)s)" % locals())
-        v = self.uniqid('$and')
-        self.add_lookup('variable', v, v)
-        return  expr.replace('@EXPR@', self.expr(node.nodes[-1], current_klass))
+        expr, is_boolean = self._bool_expr(node.nodes[-1], current_klass)
+        for child in reversed(node.nodes[:-1]):
+            e, boolean = self._bool_expr(child, current_klass)
+            if boolean:
+                expr = '(%(e)s && %(expr)s)' % locals()
+            else:
+                is_boolean = False
+                v = self.uniqid('$and')
+                self.add_lookup('variable', v, v)
+                bool = self.inline_bool_code("%(v)s=%(e)s" % locals())
+                expr = "(%(bool)s?%(expr)s:%(v)s)" % locals()
+        return expr, is_boolean
         expr = ",".join([self.expr(child, current_klass) for child in node.nodes])
-        return "@{{op_and}}([%s])" % expr
+        return "@{{op_and}}([%s])" % expr, is_boolean
+
+    def _bool_expr(self, node, current_klass):
+        if isinstance(node, self.ast.Name):
+            expr = self.expr(node, current_klass)
+            return expr, expr in ('true', 'false')
+        elif isinstance(node, self.ast.Compare):
+            return self._compare(node, current_klass), True
+        elif isinstance(node, self.ast.Not):
+            return self._not(node, current_klass), True
+        elif isinstance(node, self.ast.Or):
+            return self._bool_or(node, current_klass)
+        elif isinstance(node, self.ast.And):
+            return self._bool_and(node, current_klass)
+        return self.expr(node, current_klass), False
 
     def _for(self, node, current_klass):
         save_is_generator = self.is_generator
@@ -3426,7 +3456,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         save_is_generator = self.is_generator
         if self.is_generator:
             self.is_generator = self.compiler.walk(node, GeneratorExitVisitor(), walker=GeneratorExitVisitor()).has_yield
-        test = self.expr(node.test, current_klass)
+        test, is_boolean = self._bool_expr(node.test, current_klass)
+        if not is_boolean:
+            test = self.inline_bool_code(test)
 
         if node.else_:
             iterid = self.uniqid('$iter')
@@ -3442,13 +3474,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.generator_switch_case(increment=True)
             self.w( self.indent() + "for (;%s($generator_state[%d] > 0)||(" % (\
                 (assTestvar, len(self.generator_states),)) + \
-                self.track_call(self.inline_bool_code(test), node.lineno) + ");$generator_state[%d] = 0) {" % (len(self.generator_states), ))
+                self.track_call(test, node.lineno) + ");$generator_state[%d] = 0) {" % (len(self.generator_states), ))
 
             self.generator_add_state()
             self.generator_switch_open()
             self.generator_switch_case(increment=False)
         else:
-            self.w( self.indent() + "while (" + assTestvar + self.track_call(self.inline_bool_code(test), node.lineno) + ") {")
+            self.w( self.indent() + "while (" + assTestvar + self.track_call(test, node.lineno) + ") {")
 
         if isinstance(node.body, self.ast.Stmt):
             for child in node.body.nodes:
