@@ -9,6 +9,7 @@ class Tabs(Sink):
         Sink.__init__(self)
 
         self.fTabs = TabPanel()
+        self.fTabs.addTabListener(self)
         self.fTabs.add(self.createImage(self.baseURL() + "rembrandt/JohannesElison.jpg"), "1634")
         self.fTabs.add(self.createImage(self.baseURL() + "rembrandt/SelfPortrait1640.jpg"), "1640")
         self.fTabs.add(self.createImage(self.baseURL() + "rembrandt/LaMarcheNocturne.jpg"), "1642")
@@ -31,6 +32,16 @@ class Tabs(Sink):
         p.setVerticalAlignment(HasAlignment.ALIGN_MIDDLE)
         p.add(image)
         return p
+
+    def onBeforeTabSelected(self, sender, tabIndex):
+        # by returning False you can cancel this operation
+        return True
+
+    def onTabSelected(self, sender, tabIndex):
+        if tabIndex == 0:
+            self.fTabs.tabBar.getTabWidget(0).setText('1634 (selected)')
+        else:
+            self.fTabs.tabBar.getTabWidget(0).setText('1634 (not selected)')
 
 def init():
     text="This page demonstrates GWT's support for images.  Notice in particular how it uses the image's onLoad event to display a 'wait spinner' between the back and forward buttons."
