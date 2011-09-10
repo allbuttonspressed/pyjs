@@ -72,12 +72,16 @@ class TabBar(Composite):
     def getTabCount(self):
         return self.panel.getWidgetCount() - 2
 
+    def getTabWidget(self, index):
+        if index >= self.getTabCount(): 
+            return None 
+        delPanel = self.panel.getWidget(index + 1) 
+        focusablePanel = delPanel.getFocusablePanel() 
+        widget = focusablePanel.getWidget() 
+        return widget
+
     def getTabHTML(self, index):
-        if index >= self.getTabCount():
-            return None
-        delPanel = self.panel.getWidget(index + 1)
-        focusablePanel = delPanel.getFocusablePanel()
-        widget = focusablePanel.getWidget()
+        widget = self.getTabWidget(index)
         if hasattr(widget, "getHTML"):
             return widget.getHTML()
         elif hasattr(widget, "getText"): # assume it's a Label if it has getText
