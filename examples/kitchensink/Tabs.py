@@ -38,10 +38,11 @@ class Tabs(Sink):
         return True
 
     def onTabSelected(self, sender, tabIndex):
+        bar = self.fTabs.getTabBar()
         if tabIndex == 0:
-            self.fTabs.tabBar.getTabWidget(0).setText('1634 (selected)')
+            bar.getTabWidget(0).setText('1634 (selected)')
         else:
-            self.fTabs.tabBar.getTabWidget(0).setText('1634 (not selected)')
+            bar.getTabWidget(0).setText('1634 (not selected)')
 
 def init():
     text="This page demonstrates GWT's support for images.  Notice in particular how it uses the image's onLoad event to display a 'wait spinner' between the back and forward buttons."
