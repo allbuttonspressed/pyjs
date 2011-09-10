@@ -14,6 +14,7 @@ class Tabs(Sink):
         self.fTabs.add(self.createImage(self.baseURL() + "rembrandt/SelfPortrait1640.jpg"), "1640")
         self.fTabs.add(self.createImage(self.baseURL() + "rembrandt/LaMarcheNocturne.jpg"), "1642")
         self.fTabs.add(self.createImage(self.baseURL() + "rembrandt/TheReturnOfTheProdigalSon.jpg"), "1662")
+        self.fTabs.add(self.createImage(self.baseURL() + "rembrandt/TheReturnOfTheProdigalSon.jpg"), "1662 (disabled)")
         self.fTabs.selectTab(0)
 
         self.fTabs.setWidth("100%")
@@ -34,7 +35,9 @@ class Tabs(Sink):
         return p
 
     def onBeforeTabSelected(self, sender, tabIndex):
-        # by returning False you can cancel this operation
+        # Returning False disables the tab.
+        if tabIndex == 4:
+            return False
         return True
 
     def onTabSelected(self, sender, tabIndex):
