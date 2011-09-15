@@ -21,13 +21,14 @@ from __pyjamas__ import jsimport
 jsimport("example.js")
 
 def main():
-    global examplevar
-    # Note that the javascript example var is globally
-    # defined, but not accessible from the global
-    # scope. You'll have to swich to a local scope
-    # and define the javascript names global
+    global examplevar 
+    #examplevar is actually "out of modules", in a super scope
+
     log.writebr(examplevar)
     examplevar = 'Altered'
-    log.writebr( get_examplevar() )
+    log.writebr(get_examplevar())
 
 main()
+
+examplevar = "Realtered"
+log.writebr(get_examplevar())

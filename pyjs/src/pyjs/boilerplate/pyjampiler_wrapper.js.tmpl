@@ -30,8 +30,10 @@ $pyjs.in_try_except = 0;
 %(modules_source)s
 
 /* initialize library */
-pyjslib("pyjslib");
+// $p = $pyjs.loaded_modules["pyjslib"]
+// $p("pyjslib");
+
 
 /* initialize application */
-%(entry_module)s("%(entry_module)s");
+$pyjs.loaded_modules["%(entry_module)s"]("%(entry_module)s");
 

@@ -1122,7 +1122,7 @@ class Translator(object):
         if name_type != 'builtin':
             words[0] = self.vars_remap(words[0])
         if len(words) == 0:
-            return words[0]
+            return words[0] # WTF FIXME ?????
         return self.attrib_join(words)
 
     def add_lookup(self, name_type, pyname, jsname, depth = -1):
@@ -1177,7 +1177,7 @@ class Translator(object):
         #       ['builtin', '__pyjamas__', '__javascript__', 'global']:
         #    print "name_type", name_type, jsname
         #    jsname = "$l." + jsname
-        return (name_type, pyname, jsname, depth, (name_type is not None) and (max_depth > 0) and (max_depth == depth))
+        return (name_type, pyname, jsname, depth, is_local)
 
     def translate_escaped_names(self, txt, current_klass):
         """ escape replace names
@@ -3209,7 +3209,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
     def _lhsFromName(self, name, current_klass, set_name_type = 'variable'):
         name_type, pyname, jsname, depth, is_local = self.lookup(name)
-        if is_local:
+        if name_type == "__javascript__":
+            lhs = jsname
+        elif is_local:
             lhs = jsname
             self.add_lookup(set_name_type, name, jsname)
         elif self.top_level:
@@ -3221,6 +3223,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 #lhs = "var " + name + " = " + vname
                 lhs = vname
         else:
+            # global name assigned from function ?
             vname = self.add_lookup(set_name_type, name, name)
             if self.create_locals:
                 # hmmm...
