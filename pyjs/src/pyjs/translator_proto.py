@@ -2669,7 +2669,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         else:
             create_class += """
 %(s)svar $data = $p['dict']();
-%(s)sfor (var $item in %(local_prefix)s) { $data.__setitem__($item, %(local_prefix)s[$item]); }
+%(s)sfor (var $item in %(local_prefix)s) { $data.__setitem__($item.startswith('$$') ? $item.slice(2) : $item, %(local_prefix)s[$item]); }
 %(s)sreturn @{{_create_class}}('%(n)s', $p['tuple']($bases), $data);"""
         create_class %= {'n': node.name, 's': self.spacing(), 'local_prefix': local_prefix, 'bases': ",".join(map(lambda x: x[1], base_classes))}
         create_class += """
