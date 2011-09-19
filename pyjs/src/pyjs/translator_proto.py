@@ -821,6 +821,7 @@ class Translator(object):
         if self.parent_module_name:
             self.w( self.spacing() + "if(typeof $pyjs.loaded_modules['%s'] == 'undefined' || !$pyjs.loaded_modules['%s'].__was_initialized__) @{{___import___}}('%s', null);"% (self.parent_module_name, self.parent_module_name, self.parent_module_name))
         parts = self.js_module_name.split('.')
+        self.w( self.spacing() + "var $pyjs_last_exception, $pyjs_last_exception_stack;")
         if len(parts) > 1:
             self.w( self.spacing() + 'var %s = $pyjs.loaded_modules["%s"];' % (parts[0], module_name.split('.')[0]))
         if self.js_module_name in ['pyjslib', 'sys']:
@@ -2057,6 +2058,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         if force_local:
             real_name = '<lambda>'
         self.w("$pyjs__prepare_func('%s', function(%s) {" % (real_name, function_args))
+        self.w(self.spacing() + "  var $pyjs_last_exception, $pyjs_last_exception_stack;")
 
         defaults_done_by_inline = False
 
@@ -2410,7 +2412,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self.indent()
 
             if self.source_tracking:
-                self.w( self.spacing() + "$pyjs.__last_exception_stack__ = sys.save_exception_stack($pyjs__trackstack_size_%d - 1);" % self.stacksize_depth)
+                self.w( self.spacing() + "$pyjs_last_exception_stack = $pyjs.__last_exception_stack__ = sys.save_exception_stack($pyjs__trackstack_size_%d - 1);" % self.stacksize_depth)
                 self.w( self.spacing() + "$pyjs.__active_exception_stack__ = null;")
             if self.is_generator:
                 self.w( self.spacing() + "$generator_exc[%d] = %s;" % (self.try_depth, pyjs_try_err))
@@ -2440,7 +2442,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self.w( self.spacing() + """\
 var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__name__ );\
 """ % {'e': pyjs_try_err})
-            self.w( self.spacing() + "$pyjs.__last_exception__ = {error: %s, module: %s};" % (pyjs_try_err, self.module_prefix[:-1]))
+            self.w( self.spacing() + "$pyjs_last_exception = $pyjs.__last_exception__ = {error: %s, module: %s__name__};" % (pyjs_try_err, self.module_prefix))
             if self.source_tracking:
                 self.w( """\
     %(s)sif ($pyjs.trackstack.length > $pyjs__trackstack_size_%(d)d) {
@@ -2730,9 +2732,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     node.expr1, current_klass))
         else:
             if self.source_tracking:
+                self.w( self.spacing() + "if (typeof $pyjs_last_exception_stack != 'undefined') { $pyjs.__last_exception_stack__ = $pyjs_last_exception_stack; }")
                 self.w( self.spacing() + "$pyjs.__active_exception_stack__ = $pyjs.__last_exception_stack__;")
                 self.w( self.spacing() + "$pyjs.__last_exception_stack__ = null;")
             s = self.spacing()
+            self.w( self.spacing() + """if ($pyjs_last_exception != 'undefined') { $pyjs.__last_exception__ = $pyjs_last_exception; }""")
             self.w( """\
 %(s)sthrow ($pyjs.__last_exception__?
 %(s)s\t$pyjs.__last_exception__.error:
