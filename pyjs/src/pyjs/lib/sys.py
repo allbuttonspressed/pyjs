@@ -99,8 +99,9 @@ def trackstacklist(stack=None, limit=None):
     if limit is None:
         limit = -1
     while stack and limit:
-        JS("@{{msg}} = $pyjs.loaded_modules[@{{stack}}.module]['__track_lines__'][@{{stack}}['lineno']];")
-        JS("if (typeof @{{msg}} == 'undefined') @{{msg}} = null;")
+        msg = JS("$pyjs.loaded_modules[@{{stack}}.module]['__track_lines__'][@{{stack}}['lineno']];")
+        if JS("typeof @{{msg}} == 'undefined'"):
+            msg = None
         if msg:
             stackstrings.append(msg + '\n')
         else:

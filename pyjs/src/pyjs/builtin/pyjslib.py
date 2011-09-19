@@ -116,16 +116,16 @@ def type(clsname, bases=None, methods=None):
         raise ValueError("Cannot determine type for %r" % clsname)
 
     # creates a class, derived from bases, with methods and variables
-    JS(" var mths = {}; ")
+    mths = JS("{}")
     if methods:
         for k in methods.keys():
             mth = methods[k]
-            JS(" @{{!mths}}[@{{!k}}] = @{{mth}}; ")
+            JS("@{{!mths}}[@{{!k}}] = @{{mth}};")
 
-    JS(" var bss = null; ")
+    bss = JS("null")
     if bases:
-        JS("@{{!bss}} = @{{bases}}.__array;")
-    JS(" return $pyjs_type(@{{clsname}}, @{{!bss}}, @{{!mths}}); ")
+        bss = JS("@{{bases}}.__array")
+    JS("return $pyjs_type(@{{clsname}}, @{{!bss}}, @{{!mths}});")
 
 def type__new__(cls, clsname, bases, data):
     JS("""
@@ -4345,7 +4345,7 @@ class list:
         raise ValueError("list.index(x): x not in list")
 
     def insert(self, index, value):
-        JS("""    var a = @{{self}}.__array; @{{self}}.__array=a.slice(0, @{{index}}).concat(@{{value}}, a.slice(@{{index}}));""")
+        JS("""var a = @{{self}}.__array; @{{self}}.__array=a.slice(0, @{{index}}).concat(@{{value}}, a.slice(@{{index}}));""")
 
     def pop(self, _index = -1):
         JS("""
@@ -5163,10 +5163,10 @@ class set(BaseSet):
             Object/Function
         """
         if _data is None:
-            JS("var data = [];")
+            data = JS("[]")
         else:
-            JS("var data = @{{_data}};")
-        
+            data = _data
+
         if isSet(_data):
             JS("""
             @{{self}}.__object = {};
@@ -5371,9 +5371,9 @@ class frozenset(BaseSet):
         """
         self = super(frozenset, cls).__new__(cls, _data)
         if _data is None:
-            JS("var data = [];")
+            data = JS("[]")
         else:
-            JS("var data = @{{_data}};")
+            data = _data
         
         if isSet(_data):
             JS("""
@@ -6932,8 +6932,7 @@ def printFunc(objs, newline):
     """)
 
 def pow(x, y, z = None):
-    p = None
-    JS("@{{p}} = Math.pow(@{{x}}, @{{y}});")
+    p = JS("Math.pow(@{{x}}, @{{y}})")
     if z is None:
         return float(p)
     return float(p % z)
@@ -6974,8 +6973,7 @@ def oct(x):
 
 def round(x, n = 0):
     n = pow(10, n)
-    r = None
-    JS("@{{r}} = Math.round(@{{n}}*@{{x}})/@{{n}};")
+    r = JS("Math.round(@{{n}}*@{{x}})/@{{n}}")
     return float(r)
 
 def divmod(x, y):
