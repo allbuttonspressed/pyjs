@@ -51,6 +51,7 @@ JavaScript_Reserved_Words = frozenset((
     'label',
     'new',
     'null',
+    'package',
     'return',
     'switch',
     'this',
