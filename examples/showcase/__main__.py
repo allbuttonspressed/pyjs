@@ -9,7 +9,7 @@ import compile
 sys.path.pop(0)
 oldpath = os.getcwd()
 os.chdir(head)
-compile.main()
+compile.main() # here we process everything
 os.chdir(oldpath)
 del(oldpath)
 

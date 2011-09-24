@@ -1,4 +1,4 @@
-from UnitTest import UnitTest
+from UnitTest import UnitTest, PY27_BEHAVIOUR
 import sys
 
 
@@ -66,6 +66,10 @@ class ExceptionTest(UnitTest):
         self.fail('MyException was not caught or raised')
 
     def testCatchStringException(self):
+        
+        if PY27_BEHAVIOUR:
+            return # no string exceptions in recent python versions
+            
         try:
             raise "test"
         except "test":
@@ -217,7 +221,7 @@ class ExceptionTest(UnitTest):
             self.fail("No error raised on 'raise' after 'sys.exc_clear()'")
         except TypeError, e:
             # use message which works for both Python 2.5 and 2.6
-            self.failUnless(e.args[0].startswith('exceptions must be classes'))
+            self.failUnless(e.args[0].startswith('exceptions must be'), repr(e))
         except:
             e = sys.exc_info()
             self.fail('TypeError expected, got %s' % e[0])

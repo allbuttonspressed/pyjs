@@ -1,4 +1,4 @@
-from UnitTest import UnitTest
+from UnitTest import UnitTest, IN_JS
 
 class LetterNode(list):
 
@@ -373,8 +373,9 @@ class ListTest(UnitTest):
         try:
             l.index(200000)
         except ValueError, e:
-            self.assertTrue(str(e) == "list.index(x): x not in list",
-                            "ValueError exception has incorrect message")
+            expected_msg = "list.index(x): x not in list" if IN_JS else "200000 is not in list"
+            self.assertTrue(str(e) == expected_msg,
+                            "ValueError exception has incorrect message '%s'" % e)
         else:
             self.fail("ValueError not raised")
 

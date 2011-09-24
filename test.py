@@ -22,6 +22,7 @@ Should be also reflected at http://pyjs.org/wiki/githowto/
 
 """
 
+import glob
 from optparse import OptionParser
 from os import path, mkdir
 import subprocess
@@ -79,6 +80,8 @@ class PyjamasTester(object):
         default=True,
         help="Do not run any PyV8 tests"
         )
+    '''
+    # options unused at the moment ???
     parser.add_option(
         "--no-browsers",
         dest="browsers_run",
@@ -93,6 +96,7 @@ class PyjamasTester(object):
         default=True,
         help="Do not run any browsers tests"
         )
+    '''
     parser.add_option(
         "--no-utils",
         dest="utils_run",
@@ -139,6 +143,8 @@ class PyjamasTester(object):
         self.tracker_url = "http://code.google.com/p/pyjamas/issues/csv"
         if not path.isabs(self.options.pyv8):
             self.options.pyv8 = path.join(currentdir, self.options.pyv8)
+        if self.options.pyv8.endswith(".py"):
+            self.options.pyv8 = "%s %s" % (self.options.cpython, self.options.pyv8)
         
         if not path.isabs(self.options.examples_path):
             self.options.examples_path = path.join(currentdir, self.options.examples_path)
@@ -198,19 +204,22 @@ class PyjamasTester(object):
             )
 
     def test_libtest_pyv8(self, output):
+        directory = path.join(self.options.examples_path, 'libtest')
+        example_files = glob.glob1(path.join(directory, "I18N"), "??_??.py")
+        example_files = [path.join("I18N", basename) for basename in example_files]
         return self.parse_cmd_output(
             *self.run_cmd(cmd=self.options.pyv8,
                           opts=["-o %s" % output, 
                                 "--strict", 
                                 "--dynamic '^I18N[.].*.._..'",
-                                "LibTest", 
-                                "`find I18N -name ??_??.py`"],
-                          cwd=path.join(self.options.examples_path, 'libtest'))
+                                "LibTest"] + example_files,
+                          cwd=directory)
             )
     
     def test_examples(self, output):
         return self.check_stderr(*self.run_cmd(
             opts=["__main__.py", 
+                  # "--download", should it be there or not ???
                   "--", 
                   "-o %s" % output,],
             cwd=self.options.examples_path))
@@ -266,7 +275,7 @@ class PyjamasTester(object):
                     "%(stdout)s\n"
                     "STDERR:\n"
                     "------------------\n"
-                    "%(stderr)s" % {'stdout':'\n'.join(stdout.split('\n')[-5:]),
+                    "%(stderr)s" % {'stdout':'\n'.join(stdout.split('\n')[-10000:]),
                                     'stderr':stderr}
                     )]
         else:

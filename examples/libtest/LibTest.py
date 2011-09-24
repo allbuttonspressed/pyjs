@@ -1,4 +1,4 @@
-from UnitTest import IN_BROWSER, IN_JS, IN_BROWSER
+from UnitTest import IN_BROWSER, IN_JS
 from LoopTest import LoopTest
 from NoInlineCodeTest import NoInlineCodeTest
 from StringTest import StringTest

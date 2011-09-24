@@ -37,7 +37,7 @@ def main():
     (options, args) = parser.parse_args()
 
     if len(args)<1:
-        parser.error("incorrect number of arguments")
+        parser.error("incorrect number of arguments in %s" % repr(sys.argv))
 
     if name == 'dict':
         compiler = None
