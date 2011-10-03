@@ -2033,11 +2033,14 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         self.push_lookup()
 
         arg_names = []
+        py_arg_names = []
         for arg in node.argnames:
             if isinstance(arg, tuple):
                 for a in arg:
+                    py_arg_names.append(a)
                     arg_names.append(self.add_lookup('variable', a, a))
             else:
+                py_arg_names.append(arg)
                 arg_names.append(self.add_lookup('variable', arg, arg))
 
         normal_arg_names = list(arg_names)
@@ -2070,13 +2073,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         # default arguments
         if not defaults_done_by_inline:
             self._default_args_handler(node, declared_arg_names, current_klass, kwargname, "")
-
-        local_arg_names = normal_arg_names + declared_arg_names
-
-        if node.kwargs:
-            local_arg_names.append(kwargname)
-        if node.varargs:
-            local_arg_names.append(varargname)
 
         self.top_level = False
         save_output = self.output
@@ -2119,7 +2115,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         captured_output = self.output.getvalue()
         self.output = save_output
-        self.w( self.local_js_vars_decl(local_arg_names))
+        self.w( self.local_js_vars_decl(py_arg_names))
         if self.is_generator:
             self.generator(captured_output)
         else:
