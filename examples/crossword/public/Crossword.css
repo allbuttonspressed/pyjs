@@ -191,3 +191,68 @@ body {
     height: 30px;
 }
 
+.custom-dialog, .about{
+  background-color: #bdbdbd;
+  border: 2px solid;
+  border-color: #ddd #7b7b7b #7b7b7b #ddd;
+}
+.custom-dialog .Caption {
+  background-color: #cfcfcf;
+  cursor: default;
+  padding: 4px 10px;
+  margin: 1px;
+  font-weight: bold;
+  font-size: 14px;
+  text-align: left;
+}
+.custom-dialog td {
+  text-align: right;
+}
+.custom-dialog .contents {
+  padding: 20px 40px;
+}
+.custom-dialog .contents table {
+ width: 100%;
+}
+.custom-dialog .gwt-Label {
+  text-align: left;
+}
+.custom-dialog .gwt-TextBox {
+  width: 30px;
+}
+.about .contents {
+  padding: 20px;
+}
+a:link {color:#00f;}
+a:visited {color:#00f;}
+a:hover {color:#00f;}
+a:active {color:#00f;}
+.about .contents .comments {
+  color: #555;
+}
+.about .contents .pyjamas {
+}r-horizontal {
+  border: 2px solid;
+  border-color: #7b7b7b #fff #fff #7b7b7b;
+}
+.gwt-MenuBar-vertical {
+  background-color: #bdbdbd;
+  border: 1px solid;
+  border-color: #ddd #7b7b7b #7b7b7b #ddd;
+  text-align: left;
+}
+.gwt-MenuItem {
+  color: #444;
+  text-shadow: 0px 1px 0px #ddd;
+  padding: 1px 4px 1px 4px;
+  cursor: default;
+  line-height: 1.3em;
+}
+.gwt-MenuItem-selected {
+  background-color: #cfcfcf;
+}
+.gwt-MenuBar-vertical .gwt-MenuItem {
+  padding-left: 15px;
+}
+
+

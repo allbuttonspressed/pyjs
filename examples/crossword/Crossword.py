@@ -28,6 +28,7 @@ from pyjamas.ui.TextBox import TextBox
 from pyjamas.ui.FocusPanel import FocusPanel
 from pyjamas.ui.Image import Image
 from pyjamas.ui.DockPanel import DockPanel
+from pyjamas.ui.DeckPanel import DeckPanel
 from pyjamas.ui import HasHorizontalAlignment
 from pyjamas.ui import HasVerticalAlignment
 from pyjamas.ui import HasAlignment
@@ -42,6 +43,7 @@ from pyjamas import DOM
 from pyjamas.JSONService import JSONProxy
 
 from pyjamas.Timer import Timer
+from menu import CrossMenuBar
 
 def copy(ind):
     res = {}
@@ -74,6 +76,28 @@ class ClueDialog(PopupPanel):
         self.setPopupPosition(left, top)
         self.show()
 
+class CrossGame(DockPanel):
+
+    def __init__(self):
+
+        DockPanel.__init__(self)
+
+        self.deck = DeckPanel(StyleName="gwt-TabPanelBottom",
+                              Height="100%", Width="100%")
+        self.cross = Crossword()
+        self.solution = HTML("TODO")
+        self.deck.insert(self.cross, 0)
+        self.deck.insert(self.solution, 1)
+        self.menu = CrossMenuBar(self)
+        self.add(self.menu, DockPanel.NORTH)
+        self.add(self.deck, DockPanel.CENTER)
+        self.setCellWidth(self.deck, "100%")
+        self.setCellHeight(self.deck, "100%")
+        self.deck.showWidget(0)
+
+    def show_solution(self):
+        if Window.confirm("Do you wish to display the solution?"):
+            self.deck.showWidget(1)
 
 class Crossword(FocusPanel):
 
@@ -81,6 +105,7 @@ class Crossword(FocusPanel):
 
         #AbsolutePanel.__init__(self, Size=("100%", "100%"))
         FocusPanel.__init__(self)
+
 
         self.remote = InfoServicePython()
 
@@ -334,7 +359,7 @@ class InfoServicePython(JSONProxy):
 
 if __name__ == '__main__':
     pyjd.setup("http://127.0.0.1/examples/crossword/public/Crossword.html")
-    app = Crossword()
+    app = CrossGame()
     RootPanel("crossword").add(app)
     pyjd.run()
 
