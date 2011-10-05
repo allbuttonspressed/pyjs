@@ -4209,9 +4209,9 @@ $enumerate_array.prototype.$genfunc = $enumerate_array.prototype.next;
 # NOTE: $genfunc is defined to enable faster loop code
 
 class list:
-    def __new__(cls, data=JS("[]")):
+    def __new__(cls, *args, **kwargs):
         # initialize memory using a JS array
-        self = super(list, cls).__new__(cls, data)
+        self = super(list, cls).__new__(cls, *args, **kwargs)
         JS("""
         @{{self}}.__array = [];
         return @{{self}};
@@ -4522,9 +4522,9 @@ class list:
 JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type list>'; };")
 
 class dict:
-    def __new__(cls, seq=JS("[]"), **kwargs):
+    def __new__(cls, *args, **kwargs):
         # initialize memory
-        self = super(dict, cls).__new__(cls, seq, **kwargs)
+        self = super(dict, cls).__new__(cls, *args, **kwargs)
         JS("""
         @{{self}}.__object = {};
         return @{{self}};
@@ -4902,9 +4902,9 @@ def __empty_dict():
 """)
 
 class BaseSet(object):
-    def __new__(cls, _data=None):
+    def __new__(cls, *args, **kwargs):
         # initialize memory
-        self = super(BaseSet, cls).__new__(cls, _data)
+        self = super(BaseSet, cls).__new__(cls, *args, **kwargs)
         JS("""
         @{{self}}.__object = {};
         return @{{self}};
@@ -5805,7 +5805,10 @@ def repr(x):
     var constructor = "UNKNOWN";
 
     constructor = @{{get_pyjs_classtype}}(@{{x}});
-
+    
+    if (constructor === null && 'toString' in @{{x}}) {
+        return @{{x}}.toString();
+    }
     //alert("repr constructor: " + constructor);
 
     // If we get here, the class isn't one we know -> return the class name.
