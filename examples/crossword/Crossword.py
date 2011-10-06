@@ -85,7 +85,7 @@ class CrossGame(DockPanel):
         self.deck = DeckPanel(StyleName="gwt-TabPanelBottom",
                               Height="100%", Width="100%")
         self.cross = Crossword()
-        self.solution = HTML("TODO")
+        self.solution = CrossGrid()
         self.deck.insert(self.cross, 0)
         self.deck.insert(self.solution, 1)
         self.menu = CrossMenuBar(self)
@@ -95,9 +95,83 @@ class CrossGame(DockPanel):
         self.setCellHeight(self.deck, "100%")
         self.deck.showWidget(0)
 
+        self.remote = InfoServicePython()
+
+        width = Window.getClientWidth()
+        height = Window.getClientHeight()
+
+        self.onWindowResized(width, height)
+        Window.addWindowResizeListener(self)
+  
+    def onWindowResized(self, width, height):
+        self.remote.get_crossword(self)
+
     def show_solution(self):
         if Window.confirm("Do you wish to display the solution?"):
             self.deck.showWidget(1)
+
+    def onRemoteResponse(self, response, request_info):
+        method = request_info.method
+        if method == "get_crossword":
+            self.cross.create_crossword(response)
+            self.solution.resize(self.cross.cross_height, self.cross.cross_width)
+            self.solution.fill_crossword(self.cross.letters)
+
+    def onRemoteError(self, code, message, request_info):
+        RootPanel().add(HTML("Server Error" + str(code)))
+        RootPanel().add(HTML(str(message)))
+
+class CrossGrid(Grid):
+
+    def __init__(self, **kwargs):
+
+        Grid.__init__(self,
+                       StyleName='crossword',
+                       CellSpacing="0px", CellPadding="0px",
+                       zIndex=0)
+        self.cf = self.getCellFormatter()
+  
+    def highlight_cursor(self, row, col, highlight):
+        """ highlights (or dehighlights) the currently selected cell
+        """
+        self.cf._setStyleName(row, col, "cross-square-word-cursor",
+                                      highlight)
+
+    def highlight_selected(self, word, highlight):
+        """ highlights (or dehighlights) the currently-selected word
+        """
+        x1 = word['x']
+        y1 = word['y']
+        x2 = x1 + word['xd']
+        y2 = y1 + word['yd']
+        for x in range(x1, x2+1):
+            for y in range(y1, y2+1):
+                self.cf._setStyleName(y-1, x-1, "cross-square-word-select",
+                                      highlight)
+
+    def set_grid_value(self, clue, y, x):
+
+        style = clue and "cross-square" or "cross-square-block"
+        clue = clue or '&nbsp;'
+        self.setWidget(y, x, HTML(clue, StyleName=style))
+        self.cf.setAlignment(y, x,  HasAlignment.ALIGN_CENTER,
+                                    HasAlignment.ALIGN_MIDDLE)
+
+    def fill_crossword(self, letters):
+
+        # set up the letters (demo)
+        for c in letters:
+            x = c['x']
+            y = c['y']
+            clue = c['value']
+            self.set_grid_value(clue, y, x)
+
+
+class InfoServicePython(JSONProxy):
+    def __init__(self):
+            JSONProxy.__init__(self, "/crosswordservice/CrosswordService.py",
+                    ["get_crossword",
+                     ])
 
 class Crossword(FocusPanel):
 
@@ -107,22 +181,12 @@ class Crossword(FocusPanel):
         FocusPanel.__init__(self)
 
 
-        self.remote = InfoServicePython()
-
         # grid for crossword
-        self.tp = Grid(StyleName='crossword',
-                       CellSpacing="0px", CellPadding="0px",
-                       zIndex=0)
+        self.tp = CrossGrid()
         self.add(self.tp)
         self.cf = self.tp.getCellFormatter()
         self.cd = None
 
-        width = Window.getClientWidth()
-        height = Window.getClientHeight()
-
-        self.onWindowResized(width, height)
-        Window.addWindowResizeListener(self)
-  
         self.word_selected = None
         self.word_selected_pos = None
 
@@ -190,21 +254,13 @@ class Crossword(FocusPanel):
         """
         row = self.word_selected_pos[0]
         col = self.word_selected_pos[1]
-        self.cf._setStyleName(row, col, "cross-square-word-cursor",
-                                      highlight)
+        self.tp.highlight_cursor(row, col, highlight)
 
     def highlight_selected(self, highlight):
         """ highlights (or dehighlights) the currently-selected word
         """
         word = self.words[self.word_selected]
-        x1 = word['x']
-        y1 = word['y']
-        x2 = x1 + word['xd']
-        y2 = y1 + word['yd']
-        for x in range(x1, x2+1):
-            for y in range(y1, y2+1):
-                self.cf._setStyleName(y-1, x-1, "cross-square-word-select",
-                                      highlight)
+        self.tp.highlight_selected(word, highlight)
 
     def _find_clue(self, clues):
         num = self.word_selected
@@ -310,12 +366,14 @@ class Crossword(FocusPanel):
         self.words = copy(cross['words'])
         self.across = copy(cross['across'])
         self.down = copy(cross['down'])
+        self.cross_height = cross['height']
+        self.cross_width = cross['width']
 
         # set up the letters (demo)
         self.letters = []
         cells = cross["cells"]
         l = len(cells)
-        self.tp.resize(cross['height'], cross['width'])
+        self.tp.resize(self.cross_height, self.cross_width)
         for c in cells:
             x = c['x'] - 1
             y = c['y'] - 1
@@ -339,15 +397,6 @@ class Crossword(FocusPanel):
             self.rp.add_items(data.get('items'), name, index)
         elif data.has_key('html'):
             self.rp.add_html(data.get('html'), name, index)
-
-    def onRemoteResponse(self, response, request_info):
-        method = request_info.method
-        if method == "get_crossword":
-            self.create_crossword(response)
-
-    def onRemoteError(self, code, message, request_info):
-        RootPanel().add(HTML("Server Error" + str(code)))
-        RootPanel().add(HTML(str(message)))
 
 class InfoServicePython(JSONProxy):
     def __init__(self):
