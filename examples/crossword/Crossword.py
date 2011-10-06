@@ -47,6 +47,12 @@ from pyjamas.JSONService import JSONProxy
 from pyjamas.Timer import Timer
 from menu import CrossMenuBar
 
+# convenient "modes" definitions
+ACROSS = 1
+DOWN = 2
+
+# TODO: get a better version of this as a builtin!
+# but, there's a bug in pyjd's json handling, so maybe not ho hum...
 def copy(ind):
     res = {}
     for (k, v) in ind.items():
@@ -217,14 +223,35 @@ class Crossword(SimplePanel):
 
     def onKeyDown(self, sender, keycode, modifiers):
 
-        # check up/down/left/right cursor keys
-        if keycode == KeyboardListener.KEY_UP or \
-           keycode == KeyboardListener.KEY_LEFT:
-            self.move_cursor(-1)
+        if self.word_selected_pos is None:
             return
-        elif keycode == KeyboardListener.KEY_DOWN or \
-           keycode == KeyboardListener.KEY_RIGHT:
-            self.move_cursor(1)
+        row = self.word_selected_pos[0]
+        col = self.word_selected_pos[1]
+
+        # check up/down/left/right cursor keys
+        if keycode == KeyboardListener.KEY_UP:
+            if self.word_direction == ACROSS:
+                self.select_word(row, col)
+            else:
+                self.move_cursor(-1)
+            return
+        elif keycode == KeyboardListener.KEY_LEFT:
+            if self.word_direction == DOWN:
+                self.select_word(row, col)
+            else:
+                self.move_cursor(-1)
+            return
+        elif keycode == KeyboardListener.KEY_DOWN:
+            if self.word_direction == ACROSS:
+                self.select_word(row, col)
+            else:
+                self.move_cursor(1)
+            return
+        elif keycode == KeyboardListener.KEY_RIGHT:
+            if self.word_direction == DOWN:
+                self.select_word(row, col)
+            else:
+                self.move_cursor(1)
             return
         
         # check the key is a letter, and there's a grid position highlighted
@@ -233,8 +260,6 @@ class Crossword(SimplePanel):
             return
 
         # update value
-        row = self.word_selected_pos[0]
-        col = self.word_selected_pos[1]
         self.tp.set_grid_value(val, row, col)
 
         # move cursor onwards (if possible)
@@ -254,6 +279,7 @@ class Crossword(SimplePanel):
         col = self.word_selected_pos[1]
 
         if dirn == 1 and x2 == col+1 and y2 == row+1:
+            print "whoops", x2, col+1, y2, row+1
             return
 
         if dirn == -1 and x1 == col+1 and y1 == row+1:
@@ -282,6 +308,16 @@ class Crossword(SimplePanel):
         """
         word = self.words[self.word_selected]
         self.tp.highlight_selected(word, highlight)
+
+    def _find_clue_details(self, clues, direction):
+        clue = clues.get(self.word_selected, None)
+        if clue is None:
+            return None
+        return [clue, direction]
+
+    def find_clue_details(self):
+        return self._find_clue_details(self.across['clues'], ACROSS) or \
+               self._find_clue_details(self.down['clues'], DOWN)
 
     def _find_clue(self, clues):
         num = self.word_selected
@@ -316,9 +352,13 @@ class Crossword(SimplePanel):
         return found_words
             
     def onCellClicked(self, listener, row, col):
+        self.select_word(row, col)
+
+    def select_word(self, row, col):
 
         # find the words first
         words_found = self.find_word(row+1, col+1)
+        print words_found
 
         # de-highlight the word found
         if self.word_selected is not None:
@@ -354,6 +394,9 @@ class Crossword(SimplePanel):
         self.word_selected_pos = (row, col)
         self.highlight_selected(True)
         self.highlight_cursor(True)
+        c = self.find_clue_details()
+        self.word_direction = c[1]
+        print self.word_selected, self.word_direction
 
         # show the clue popup
         if self.cd is not None:
