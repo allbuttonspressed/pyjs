@@ -152,6 +152,9 @@ body {
   padding-bottom: 5px;
   padding-left: 8px;
   padding-right: 8px;
+  width: 14px;
+  height: 20px;
+  font-weight: bold;
 }
 
 .cross-square {
@@ -160,6 +163,9 @@ body {
   padding-bottom: 5px;
   padding-left: 8px;
   padding-right: 8px;
+  width: 14px;
+  height: 20px;
+  font-weight: bold;
 }
 
 .cross-square-word-select {
@@ -230,9 +236,10 @@ a:active {color:#00f;}
 .about .contents .comments {
   color: #555;
 }
-.about .contents .pyjamas {
-}r-horizontal {
+
+.gwt-MenuBar-horizontal {
   border: 2px solid;
+  background-color: #bdffbd;
   border-color: #7b7b7b #fff #fff #7b7b7b;
 }
 .gwt-MenuBar-vertical {
@@ -242,7 +249,6 @@ a:active {color:#00f;}
   text-align: left;
 }
 .gwt-MenuItem {
-  color: #444;
   text-shadow: 0px 1px 0px #ddd;
   padding: 1px 4px 1px 4px;
   cursor: default;
@@ -253,6 +259,16 @@ a:active {color:#00f;}
 }
 .gwt-MenuBar-vertical .gwt-MenuItem {
   padding-left: 15px;
+}
+
+.TooltipPopup {
+    background-color: #00FFCC;
+    border: 1px solid #000000;
+    border-top: 1px solid #ccc;
+    border-left: 1px solid #ccc;
+    padding: 2px 4px 2px 4px;
+    font-family: arial,sans-serif;
+    font-size: 14px;
 }
 
 

@@ -17,6 +17,7 @@
 import pyjd
 
 from pyjamas.ui.RootPanel import RootPanel
+from pyjamas.ui.SimplePanel import SimplePanel
 from pyjamas.ui.HTML import HTML
 from pyjamas.ui.Label import Label
 from pyjamas.ui.Button import Button
@@ -37,6 +38,7 @@ from pyjamas.ui import KeyboardListener
 from pyjamas.ui.PopupPanel import PopupPanel
 from pyjamas import Window
 from pyjamas import DOM
+from pyjamas.ui.Tooltip import TooltipListener
 
 #from pyjamas.HorizSplitPanel import HorizontalSplitPanel
 
@@ -68,7 +70,7 @@ class ClueDialog(PopupPanel):
         self.setWidget(contents)
         row = xword.word_selected_pos[0]
         col = xword.word_selected_pos[1]
-        cell = xword.tp.getWidget(row, col)
+        cell = xword.tp.tp.getWidget(row, col)
 
         self.setStyleName("clue-popup")
         left = cell.getAbsoluteLeft() + 40
@@ -95,16 +97,30 @@ class CrossGame(DockPanel):
         self.setCellHeight(self.deck, "100%")
         self.deck.showWidget(0)
 
-        self.remote = InfoServicePython()
+        # add brief advice on how to return to puzzle
+        self.tt = TooltipListener("Click solution to return.")
+        self.solution.addMouseListener(self.tt)
+        self.solution.addClickListener(self)
 
+        # trigger getting the crossword
+        self.remote = InfoServicePython()
+        self.remote.get_crossword(self)
+
+        # deal with window resizes at some point
         width = Window.getClientWidth()
         height = Window.getClientHeight()
 
         self.onWindowResized(width, height)
         Window.addWindowResizeListener(self)
+
   
+    def onClick(self, listener):
+        if listener == self.solution:
+            self.deck.showWidget(0)
+            self.tt.hide()
+            
     def onWindowResized(self, width, height):
-        self.remote.get_crossword(self)
+        return
 
     def show_solution(self):
         if Window.confirm("Do you wish to display the solution?"):
@@ -121,21 +137,28 @@ class CrossGame(DockPanel):
         RootPanel().add(HTML("Server Error" + str(code)))
         RootPanel().add(HTML(str(message)))
 
-class CrossGrid(Grid):
+class CrossGrid(FocusPanel):
 
     def __init__(self, **kwargs):
 
-        Grid.__init__(self,
-                       StyleName='crossword',
+        FocusPanel.__init__(self)
+        self.tp = Grid(StyleName='crossword',
                        CellSpacing="0px", CellPadding="0px",
                        zIndex=0)
-        self.cf = self.getCellFormatter()
+        self.add(self.tp)
+        self.cf = self.tp.getCellFormatter()
   
+    def addTableListener(self, listener):
+        self.tp.addTableListener(listener)
+
     def highlight_cursor(self, row, col, highlight):
         """ highlights (or dehighlights) the currently selected cell
         """
         self.cf._setStyleName(row, col, "cross-square-word-cursor",
                                       highlight)
+
+    def resize(self, width, height):
+        self.tp.resize(width, height)
 
     def highlight_selected(self, word, highlight):
         """ highlights (or dehighlights) the currently-selected word
@@ -153,7 +176,7 @@ class CrossGrid(Grid):
 
         style = clue and "cross-square" or "cross-square-block"
         clue = clue or '&nbsp;'
-        self.setWidget(y, x, HTML(clue, StyleName=style))
+        self.tp.setWidget(y, x, HTML(clue, StyleName=style))
         self.cf.setAlignment(y, x,  HasAlignment.ALIGN_CENTER,
                                     HasAlignment.ALIGN_MIDDLE)
 
@@ -173,26 +196,24 @@ class InfoServicePython(JSONProxy):
                     ["get_crossword",
                      ])
 
-class Crossword(FocusPanel):
+class Crossword(SimplePanel):
 
     def __init__(self):
 
         #AbsolutePanel.__init__(self, Size=("100%", "100%"))
-        FocusPanel.__init__(self)
-
+        SimplePanel.__init__(self)
 
         # grid for crossword
         self.tp = CrossGrid()
         self.add(self.tp)
-        self.cf = self.tp.getCellFormatter()
         self.cd = None
 
         self.word_selected = None
         self.word_selected_pos = None
 
         self.tp.addTableListener(self)
-        self.addKeyboardListener(self)
-        self.setFocus(True)
+        self.tp.addKeyboardListener(self)
+        self.tp.setFocus(True)
 
     def onKeyDown(self, sender, keycode, modifiers):
 
@@ -214,7 +235,7 @@ class Crossword(FocusPanel):
         # update value
         row = self.word_selected_pos[0]
         col = self.word_selected_pos[1]
-        self.set_grid_value(val, row, col)
+        self.tp.set_grid_value(val, row, col)
 
         # move cursor onwards (if possible)
         self.move_cursor(1)
@@ -350,14 +371,6 @@ class Crossword(FocusPanel):
         self.rps.setHeight("%dpx" % (height - 30))
         self.horzpanel1.setHeight("%dpx" % (height - 20))
 
-    def set_grid_value(self, clue, y, x):
-
-        style = clue and "cross-square" or "cross-square-block"
-        clue = clue or '&nbsp;'
-        self.tp.setWidget(y, x, HTML(clue, StyleName=style))
-        self.cf.setAlignment(y, x,  HasAlignment.ALIGN_CENTER,
-                                    HasAlignment.ALIGN_MIDDLE)
-
     def create_crossword(self, cross):
         """ creates the crossword, records all info from the server
         """
@@ -379,7 +392,7 @@ class Crossword(FocusPanel):
             y = c['y'] - 1
             clue = c['value']
             self.letters.append({'x': x, 'y': y, 'value': clue})
-            self.set_grid_value(clue and "&nbsp;" or None, y, x)
+            self.tp.set_grid_value(clue and "&nbsp;" or None, y, x)
 
     def fill_crossword(self):
 

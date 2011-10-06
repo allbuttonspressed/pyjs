@@ -32,7 +32,6 @@ class MenuCmd:
         self.command = command
     
     def execute(self):
-        print "execute", self.command
         if self.command == 'solution':
             self.game.show_solution()
         elif self.command == 'about':
@@ -42,7 +41,6 @@ class MenuCmd:
         self.dialog.hide()
     
     def show_about(self):
-        print "about"
         self.dialog = PopupPanel(StyleName='about', autoHide=True)
         
         contents = HTMLPanel('', StyleName='contents')
