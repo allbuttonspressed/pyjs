@@ -76,13 +76,11 @@ class TooltipListener:
         self.offsetY = self.DEFAULT_OFFSET_Y
 
     def onMouseEnter(self, sender):
-        if self.tooltip is not None:
-            self.tooltip.hide()
+        self.hide()
         self.tooltip = Tooltip(sender, self.offsetX, self.offsetY, self.text, self.show_delay, self.hide_delay, self.styleName)
 
     def onMouseLeave(self, sender):
-        if self.tooltip is not None:
-            self.tooltip.hide()
+        self.hide()
 
     def onMouseMove(self, sender, x, y):
         pass
@@ -111,5 +109,9 @@ class TooltipListener:
     def setOffsetY(self, offsetY):
         self.offsetY = offsetY
 
+    def hide(self):
+        if self.tooltip is not None:
+            self.tooltip.hide()
+        
 Factory.registerClass('pyjamas.ui.Tooltip', 'Tooltip', Tooltip)
 
