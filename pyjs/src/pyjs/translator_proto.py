@@ -639,7 +639,7 @@ __future__ = __Future__()
 
 
 # This is taken from the django project.
-# Escape every ASCII character with a value less than 32.
+# Escape every ASCII character with a value less than 32 or greater than 127.
 JS_ESCAPES = (
     ('\\', r'\x5C'),
     ('\'', r'\x27'),
@@ -648,7 +648,7 @@ JS_ESCAPES = (
     ('<', r'\x3C'),
     ('&', r'\x26'),
     (';', r'\x3B')
-    ) + tuple([('%c' % z, '\\x%02X' % z) for z in range(32)])
+    ) + tuple([('%c' % z, '\\x%02X' % z) for z in (range(32) + range(128, 256))])
 
 def escapejs(value):
     """Hex encodes characters for use in JavaScript strings."""
