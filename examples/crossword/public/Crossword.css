@@ -193,6 +193,7 @@ body {
   border: 1px solid #87B3FF;
   padding: 4px;
   font-size: large;
+  text-align: center;
 }
 
 .sudoku-cell {
