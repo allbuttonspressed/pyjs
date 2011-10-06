@@ -17,11 +17,11 @@ from pyjamas import Factory
 from pyjamas import Window
 from pyjamas.ui import Applier
 
-def setStyleName(element, style, add):
+def findStyleName(element, style):
 
     oldStyle = DOM.getAttribute(element, "className")
     if oldStyle is None:
-        oldStyle = ""
+        return -1
     idx = oldStyle.find(style)
 
     # Calculate matching index
@@ -29,21 +29,36 @@ def setStyleName(element, style, add):
     while idx != -1:
         if idx == 0 or (oldStyle[idx - 1] == " "):
             last = idx + len(style)
-            if (last == lastPos) or ((last < lastPos) and (oldStyle[last] == " ")):
+            if (last == lastPos) or ((last < lastPos) and \
+                                     (oldStyle[last] == " ")):
                 break
         idx = oldStyle.find(style, idx + 1)
+
+    return idx
+
+def setStyleName(element, style, add):
+
+    oldStyle = DOM.getAttribute(element, "className")
+    if oldStyle is None:
+        oldStyle = ""
+
+    idx = findStyleName(element, style)
 
     if add:
         if idx == -1:
             DOM.setAttribute(element, "className", oldStyle + " " + style)
+        return
+
+    if idx == -1:
+        return
+
+    if idx == 0:
+      begin = ''
     else:
-        if idx != -1:
-            if idx == 0:
-              begin = ''
-            else:
-              begin = oldStyle[:idx-1]
-            end = oldStyle[idx + len(style):]
-            DOM.setAttribute(element, "className", begin + end)
+      begin = oldStyle[:idx-1]
+
+    end = oldStyle[idx + len(style):]
+    DOM.setAttribute(element, "className", begin + end)
 
 class UIObject(Applier):
 
