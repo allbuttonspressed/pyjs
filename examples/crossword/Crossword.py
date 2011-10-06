@@ -128,6 +128,10 @@ class CrossGame(DockPanel):
     def onWindowResized(self, width, height):
         return
 
+    def show_errors(self):
+        if Window.confirm("Do you wish to highlight any errors?"):
+            self.cross.highlight_errors()
+
     def show_solution(self):
         if Window.confirm("Do you wish to display the solution?"):
             self.deck.showWidget(1)
@@ -160,7 +164,7 @@ class CrossGrid(FocusPanel):
     def highlight_cursor(self, row, col, highlight):
         """ highlights (or dehighlights) the currently selected cell
         """
-        self.cf._setStyleName(row, col, "cross-square-word-cursor",
+        self.cf.setStyleName(row, col, "cross-square-word-cursor",
                                       highlight)
 
     def resize(self, width, height):
@@ -229,6 +233,9 @@ class Crossword(SimplePanel):
         col = self.word_selected_pos[1]
 
         # check up/down/left/right cursor keys
+        # the basic rule is: if in same plane, go that way, else "flip"
+        # and then, obviously on the next press, the cursor will move
+        # when the key is pressed in that same plane
         if keycode == KeyboardListener.KEY_UP:
             if self.word_direction == ACROSS:
                 self.select_word(row, col)
@@ -259,10 +266,9 @@ class Crossword(SimplePanel):
         if not val.isalpha() or not self.word_selected_pos:
             return
 
-        # update value
+        # remove error highlighting, update value, move cursor (if possible)
+        self.tp.cf.removeStyleName(row, col, "cross-square-word-error")
         self.tp.set_grid_value(val, row, col)
-
-        # move cursor onwards (if possible)
         self.move_cursor(1)
 
     def move_cursor(self, dirn):
@@ -279,7 +285,6 @@ class Crossword(SimplePanel):
         col = self.word_selected_pos[1]
 
         if dirn == 1 and x2 == col+1 and y2 == row+1:
-            print "whoops", x2, col+1, y2, row+1
             return
 
         if dirn == -1 and x1 == col+1 and y1 == row+1:
@@ -288,7 +293,6 @@ class Crossword(SimplePanel):
         self.highlight_cursor(False)
         self.word_selected_pos = (row + (yd and dirn), col + (xd and dirn))
         self.highlight_cursor(True)
-        #self.highlight_input(True)
 
     def onKeyUp(self, sender, keycode, modifiers):
         pass
@@ -321,7 +325,6 @@ class Crossword(SimplePanel):
 
     def _find_clue(self, clues):
         num = self.word_selected
-        print num, clues
         if not clues.has_key(num):
             return None
         clue = clues[num]
@@ -358,7 +361,6 @@ class Crossword(SimplePanel):
 
         # find the words first
         words_found = self.find_word(row+1, col+1)
-        print words_found
 
         # de-highlight the word found
         if self.word_selected is not None:
@@ -396,7 +398,6 @@ class Crossword(SimplePanel):
         self.highlight_cursor(True)
         c = self.find_clue_details()
         self.word_direction = c[1]
-        print self.word_selected, self.word_direction
 
         # show the clue popup
         if self.cd is not None:
@@ -436,6 +437,20 @@ class Crossword(SimplePanel):
             clue = c['value']
             self.letters.append({'x': x, 'y': y, 'value': clue})
             self.tp.set_grid_value(clue and "&nbsp;" or None, y, x)
+
+    def highlight_errors(self):
+        """ adds error CSS style onto letters that are wrong
+        """
+        for c in self.letters:
+            x = c['x']
+            y = c['y']
+            clue = c['value']
+            if clue is None:
+                continue
+            w = self.tp.tp.getWidget(y, x)
+            txt = w and w.getHTML()
+            if txt != "&nbsp;" and txt != clue:
+                self.tp.cf.addStyleName(y, x, "cross-square-word-error")
 
     def fill_crossword(self):
 

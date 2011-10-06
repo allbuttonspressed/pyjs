@@ -176,6 +176,10 @@ body {
   background-color: #60c060;
 }
 
+.cross-square-word-error {
+  background-color: #c06060;
+}
+
 .crossword {
  padding: 0px;
  margin: 0px;
