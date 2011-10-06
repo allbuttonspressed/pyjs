@@ -24,6 +24,7 @@ class CrossMenuBar(MenuBar):
         super(CrossMenuBar, self).__init__()
         
         self.addItem(MenuItem('Solution', MenuCmd(game, 'solution')))
+        self.addItem(MenuItem('Hint', MenuCmd(game, 'hint')))
         self.addItem(MenuItem('Errors', MenuCmd(game, 'errors')))
         self.addItem(MenuItem('Help', MenuCmd(game, 'about')))
     
@@ -35,7 +36,9 @@ class MenuCmd:
     def execute(self):
         if self.command == 'errors':
             self.game.show_errors()
-        if self.command == 'solution':
+        elif self.command == 'hint':
+            self.game.show_hint()
+        elif self.command == 'solution':
             self.game.show_solution()
         elif self.command == 'about':
             self.show_about()

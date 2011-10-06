@@ -36,16 +36,16 @@ from pyjamas.ui import HasAlignment
 from pyjamas.ui import Event
 from pyjamas.ui import KeyboardListener
 from pyjamas.ui.PopupPanel import PopupPanel
+from pyjamas.ui.Tooltip import TooltipListener
+from pyjamas.JSONService import JSONProxy
+from pyjamas.Timer import Timer
+
 from pyjamas import Window
 from pyjamas import DOM
-from pyjamas.ui.Tooltip import TooltipListener
 
-#from pyjamas.HorizSplitPanel import HorizontalSplitPanel
-
-from pyjamas.JSONService import JSONProxy
-
-from pyjamas.Timer import Timer
 from menu import CrossMenuBar
+
+import random
 
 # convenient "modes" definitions
 ACROSS = 1
@@ -127,6 +127,9 @@ class CrossGame(DockPanel):
             
     def onWindowResized(self, width, height):
         return
+
+    def show_hint(self):
+        self.cross.add_hint()
 
     def show_errors(self):
         if Window.confirm("Do you wish to highlight any errors?"):
@@ -428,15 +431,19 @@ class Crossword(SimplePanel):
 
         # set up the letters (demo)
         self.letters = []
+        self.letters_grid = {}
         cells = cross["cells"]
         l = len(cells)
         self.tp.resize(self.cross_height, self.cross_width)
         for c in cells:
             x = c['x'] - 1
             y = c['y'] - 1
-            clue = c['value']
-            self.letters.append({'x': x, 'y': y, 'value': clue})
-            self.tp.set_grid_value(clue and "&nbsp;" or None, y, x)
+            value = c['value']
+            self.letters.append({'x': x, 'y': y, 'value': value})
+            if not self.letters_grid.has_key(x):
+                self.letters_grid[x] = {}
+            self.letters_grid[x][y] = value
+            self.tp.set_grid_value(value and "&nbsp;" or None, y, x)
 
     def highlight_errors(self):
         """ adds error CSS style onto letters that are wrong
@@ -444,13 +451,38 @@ class Crossword(SimplePanel):
         for c in self.letters:
             x = c['x']
             y = c['y']
-            clue = c['value']
-            if clue is None:
+            val = c['value']
+            if val is None:
                 continue
             w = self.tp.tp.getWidget(y, x)
             txt = w and w.getHTML()
-            if txt != "&nbsp;" and txt != clue:
+            if txt != "&nbsp;" and txt != val:
                 self.tp.cf.addStyleName(y, x, "cross-square-word-error")
+
+    def add_hint(self):
+        if self.word_selected is None:
+            return # TODO - show error
+        c = self.find_clue_details()
+        print c[0]
+        length = c[0]['format']
+        seq = range(length)
+        for i in xrange(length):
+            pick = random.choice(seq)
+            seq.remove(pick)
+            word = self.words[self.word_selected]
+            print word
+            x1 = word['x'] - 1
+            y1 = word['y'] - 1
+            x2 = x1 + (word['xd'] and 1 or 0) * pick
+            y2 = y1 + (word['yd'] and 1 or 0) * pick
+            print pick, x1, y1, x2, y2
+            w = self.tp.tp.getWidget(y2, x2)
+            letter = self.letters_grid[x2][y2]
+            txt = w and w.getHTML()
+            if txt != letter:
+                self.tp.set_grid_value(letter, y2, x2)
+                self.tp.cf.removeStyleName(y2, x2, "cross-square-word-error")
+                break
 
     def fill_crossword(self):
 
