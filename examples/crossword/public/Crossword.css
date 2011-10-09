@@ -276,4 +276,10 @@ a:active {color:#00f;}
     font-size: 14px;
 }
 
+.across-clue-panel {
+    border: 1px solid #000000;
+}
 
+.down-clue-panel {
+    border: 1px solid #000000;
+}

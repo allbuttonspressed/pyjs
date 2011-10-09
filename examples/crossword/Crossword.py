@@ -18,6 +18,7 @@ import pyjd
 
 from pyjamas.ui.RootPanel import RootPanel
 from pyjamas.ui.SimplePanel import SimplePanel
+from pyjamas.ui.FlowPanel import FlowPanel
 from pyjamas.ui.HTML import HTML
 from pyjamas.ui.Label import Label
 from pyjamas.ui.Button import Button
@@ -42,6 +43,7 @@ from pyjamas.Timer import Timer
 
 from pyjamas import Window
 from pyjamas import DOM
+from pyjamas import DeferredCommand
 
 from menu import CrossMenuBar
 
@@ -93,6 +95,16 @@ class CrossGame(DockPanel):
         self.deck = DeckPanel(StyleName="gwt-TabPanelBottom",
                               Height="100%", Width="100%")
         self.cross = Crossword()
+        self.afp = FlowPanel(Width="100%", Height="100%")
+        self.clues_across = ScrollPanel(Width="100%", Height="100%",
+                                        StyleName="across-clue-panel")
+        self.clues_across.add(self.afp)
+        self.afp.add(HTML("Across"))
+        self.dfp = FlowPanel(Width="100%", Height="100%")
+        self.clues_down = ScrollPanel(Width="200px", Height="100%",
+                                        StyleName="down-clue-panel")
+        self.clues_down.add(self.dfp)
+        self.dfp.add(HTML("Down"))
         self.solution = CrossGrid()
         self.deck.insert(self.cross, 0)
         self.deck.insert(self.solution, 1)
@@ -112,11 +124,6 @@ class CrossGame(DockPanel):
         self.remote = InfoServicePython()
         self.remote.get_crossword(self)
 
-        # deal with window resizes at some point
-        width = Window.getClientWidth()
-        height = Window.getClientHeight()
-
-        self.onWindowResized(width, height)
         Window.addWindowResizeListener(self)
 
   
@@ -126,6 +133,35 @@ class CrossGame(DockPanel):
             self.tt.hide()
             
     def onWindowResized(self, width, height):
+        cross_pos_x = self.cross.getAbsoluteLeft()
+        cross_pos_y = self.cross.getAbsoluteTop()
+        cross_width = self.cross.getOffsetWidth()
+        cross_height = self.cross.getOffsetHeight() 
+        clue_down_height = cross_height
+        clue_across_height = cross_height
+        clue_across_width = cross_width
+        self.clues_down.setHeight("%dpx" % cross_height)
+        if self.clues_across in self:
+            self.remove(self.clues_across)
+        if self.clues_down in self:
+            self.remove(self.clues_down)
+        if cross_width + cross_pos_x + cross_width + 20 < width:
+            self.add(self.clues_down, DockPanel.EAST)
+            self.add(self.clues_across, DockPanel.SOUTH)
+            clue_across_height = height - cross_height - cross_pos_y - 20
+            clue_across_width = width - 20
+        elif cross_height + cross_pos_y + 240 < height:
+            self.add(self.clues_down, DockPanel.SOUTH)
+            self.add(self.clues_across, DockPanel.SOUTH)
+            clue_height = height - cross_height - cross_pos_y - 20
+            clue_down_height = clue_height / 2
+            clue_across_height = clue_height / 2
+
+        print "ax", clue_across_width
+        self.clues_down.setWidth("%dpx" % cross_width)
+        self.clues_down.setHeight("%dpx" % clue_down_height)
+        self.clues_across.setHeight("%dpx" % clue_across_height)
+        #self.clues_across.setWidth("%dpx" % clue_across_width)
         return
 
     def show_hint(self):
@@ -145,6 +181,16 @@ class CrossGame(DockPanel):
             self.cross.create_crossword(response)
             self.solution.resize(self.cross.cross_height, self.cross.cross_width)
             self.solution.fill_crossword(self.cross.letters)
+            # trigger a resize now that the crossword's filled up
+            # (we can get the correct grid width, now)
+            DeferredCommand.add(self)
+
+    def execute(self):
+        """ deferred command for pseudo window resize
+        """
+        width = Window.getClientWidth()
+        height = Window.getClientHeight()
+        self.onWindowResized(width, height)
 
     def onRemoteError(self, code, message, request_info):
         RootPanel().add(HTML("Server Error" + str(code)))
