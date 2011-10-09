@@ -187,8 +187,14 @@ class CrossGame(DockPanel):
             # (we can get the correct grid width, now)
             DeferredCommand.add(self)
 
+    def clue_sort(self, c1, c2):
+        return cmp(c1['number'], c2['number'])
+
     def add_clues(self, panel, clues):
+        clues = clues['clues'].values()
+        clues.sort(self.clue_sort) # sort by number
         for c in clues:
+            print c
             txt = "<b>%(number)d.</b> %(word)s (%(format)d)" % c
             panel.add(HTML(txt))
 

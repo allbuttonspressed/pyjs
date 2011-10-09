@@ -63,6 +63,7 @@ def get_clues(dom):
         num = int(c.attributes['word'].nodeValue)
         clue = { 'word': unicode(c.childNodes[0].data),
                  'format': int(c.attributes['format'].nodeValue),
+                 'number': int(c.attributes['number'].nodeValue),
                }
         clues[num] = clue
     return {'title': title, 'clues': clues}
