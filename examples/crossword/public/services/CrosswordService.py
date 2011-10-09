@@ -18,22 +18,25 @@ def get_directory_info(prefix, pth, recursive):
                 res.append([p, None])
     return res
 
+def av(c, v):
+    return c.attributes[v].nodeValue
+
 def get_cells(dom):
     cells = []
     for c in dom:
-        x = int(c.attributes['x'].nodeValue)
-        y = int(c.attributes['y'].nodeValue)
+        x = int(av(c, 'x'))
+        y = int(av(c, 'y'))
         v = None
         if c.hasAttribute('solution'):
-            v = c.attributes['solution'].nodeValue
+            v = av(c, 'solution')
         cells.append({'x': x, 'y': y, 'value': v})
     return cells
 
 def get_words(dom):
     words = {}
     for c in dom:
-        x = c.attributes['x'].nodeValue
-        y = c.attributes['y'].nodeValue
+        x = av(c, 'x')
+        y = av(c, 'y')
         if '-' in x:
             y = int(y)
             yd = 0
@@ -48,7 +51,7 @@ def get_words(dom):
             y = map(int, y)
             yd = y[1] - y[0]
             y = y[0]
-        num = int(c.attributes['id'].nodeValue)
+        num = int(av(c, 'id'))
         word = { 'x': x, 'y': y, 'xd': xd, 'yd': yd, 'id': num,
                }
         words[num] = word
@@ -60,14 +63,18 @@ def get_clues(dom):
     dclues = dom.getElementsByTagName("clue")
     clues = {}
     for c in dclues:
-        num = int(c.attributes['word'].nodeValue)
+        num = int(av(c, 'word'))
         clue = { 'word': unicode(c.childNodes[0].data),
-                 'format': int(c.attributes['format'].nodeValue),
-                 'number': int(c.attributes['number'].nodeValue),
+                 'format': int(av(c, 'format')),
+                 'number': int(av(c, 'number')),
                }
         clues[num] = clue
     return {'title': title, 'clues': clues}
 
+def get_size(dom):
+    c = dom.getElementsByTagName("grid")[0]
+    return (int(av(c, 'width')), int(av(c, 'height')))
+    
 class Service:
     def get_crossword(self):
         """ return list of directory, including indicating whether each
@@ -83,8 +90,7 @@ class Service:
         down = get_clues(dclues[1])
         words = get_words(dom.getElementsByTagName("word"))
         cells = get_cells(dom.getElementsByTagName("cell"))
-        width = 9
-        height = 9
+        width, height = get_size(dom)
         res = {'across': across, 'down': down,
                'width': width, 'height': height,
                'cells': cells, 'words': words,

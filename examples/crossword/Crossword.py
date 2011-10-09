@@ -92,11 +92,11 @@ class CrossGame(DockPanel):
 
         DockPanel.__init__(self)
 
-        self.deck = DeckPanel(StyleName="gwt-TabPanelBottom",
-                              Height="100%", Width="100%")
+        self.deck = DeckPanel(StyleName="gwt-TabPanelBottom")
+                              #Height="100%", Width="100%")
         self.cross = Crossword()
         self.afp = FlowPanel(Width="100%", Height="100%")
-        self.clues_across = ScrollPanel(Width="100%", Height="100%",
+        self.clues_across = ScrollPanel(Width="98%", Height="100%",
                                         StyleName="across-clue-panel")
         self.clues_across.add(self.afp)
         self.afp.add(HTML("Across"))
@@ -111,7 +111,7 @@ class CrossGame(DockPanel):
         self.menu = CrossMenuBar(self)
         self.add(self.menu, DockPanel.NORTH)
         self.add(self.deck, DockPanel.CENTER)
-        self.setCellWidth(self.deck, "100%")
+        self.setCellWidth(self.deck, "5%")
         self.setCellHeight(self.deck, "100%")
         self.deck.showWidget(0)
 
@@ -133,36 +133,59 @@ class CrossGame(DockPanel):
             self.tt.hide()
             
     def onWindowResized(self, width, height):
-        cross_pos_x = self.cross.getAbsoluteLeft()
-        cross_pos_y = self.cross.getAbsoluteTop()
-        cross_width = self.cross.getOffsetWidth()
-        cross_height = self.cross.getOffsetHeight() 
+        cross_pos_x = self.cross.tp.tp.getAbsoluteLeft()
+        cross_pos_y = self.cross.tp.tp.getAbsoluteTop()
+        cross_width = self.cross.tp.tp.getOffsetWidth()
+        cross_height = self.cross.tp.tp.getOffsetHeight() 
         clue_down_height = cross_height
+        clue_down_width = width - cross_width - 20
         clue_across_height = cross_height
-        clue_across_width = cross_width
+        clue_across_width = width - 20
         self.clues_down.setHeight("%dpx" % cross_height)
-        if self.clues_across in self:
-            self.remove(self.clues_across)
+
+        print self.children
         if self.clues_down in self:
             self.remove(self.clues_down)
-        if cross_width + cross_pos_x + cross_width + 20 < width:
-            self.add(self.clues_down, DockPanel.EAST)
-            self.add(self.clues_across, DockPanel.SOUTH)
-            clue_across_height = height - cross_height - cross_pos_y - 20
-            clue_across_width = width - 20
-        elif cross_height + cross_pos_y + 240 < height:
+        print self.children
+        if self.clues_across in self:
+            self.remove(self.clues_across)
+        print self.children
+
+        self.remove(self.deck)
+
+        print "cw", cross_width, "cpx", cross_pos_x, "width", width
+        print "ch", cross_height, "cpy", cross_pos_y, "height", height
+
+        if cross_width + cross_pos_x + 200 + 20 < width:
+            if cross_height + cross_pos_y + 120 < height:
+                self.add(self.clues_across, DockPanel.SOUTH)
+                self.add(self.clues_down, DockPanel.EAST)
+                self.add(self.deck, DockPanel.CENTER)
+                clue_across_height = height - cross_height - cross_pos_y - 20
+                clue_across_width = width - 20
+            else:
+                self.add(self.deck, DockPanel.WEST)
+                self.add(self.clues_down, DockPanel.SOUTH)
+                self.add(self.clues_across, DockPanel.SOUTH)
+                clue_across_height = cross_height / 2
+                clue_across_width = clue_down_width
+                clue_down_height = clue_across_height
+        elif cross_height + cross_pos_y + 200 < height:
+            self.add(self.deck, DockPanel.CENTER)
             self.add(self.clues_down, DockPanel.SOUTH)
             self.add(self.clues_across, DockPanel.SOUTH)
             clue_height = height - cross_height - cross_pos_y - 20
             clue_down_height = clue_height / 2
             clue_across_height = clue_height / 2
+            clue_down_width = width - 20
+        else:
+            print "none"
+            self.add(self.deck, DockPanel.CENTER)
 
-        print "ax", clue_across_width
-        self.clues_down.setWidth("%dpx" % cross_width)
+        self.clues_down.setWidth("%dpx" % clue_down_width)
         self.clues_down.setHeight("%dpx" % clue_down_height)
         self.clues_across.setHeight("%dpx" % clue_across_height)
-        #self.clues_across.setWidth("%dpx" % clue_across_width)
-        return
+        self.clues_across.setWidth("%dpx" % clue_across_width)
 
     def show_hint(self):
         self.cross.add_hint()
@@ -190,13 +213,47 @@ class CrossGame(DockPanel):
     def clue_sort(self, c1, c2):
         return cmp(c1['number'], c2['number'])
 
+    def mash_clue_text(self, txt):
+        """ ok this complicated-looking function makes sure that the clues
+            can "wrap" properly, without expanding out of the boxes.
+            FlowPanel doesn't quite cope with properly "flowing" text.
+            basically it ensures that each sentence has at least _some_
+            spaces, every 10 letters or so, so that a balance is achieved
+            between grouping words together in a limited-width column, but
+            *not* having them bunch together with &nbsp; to the extent
+            that they push outside of the width of the container.
+
+            also the function is made all the more complicated by the fact
+            that the first word of each clue is deliberately associated with
+            the clue number (bold, bracketed)...
+        """
+        if len(txt) <= 18:
+            txt = txt.replace(" ", "&nbsp;")
+        else:
+            l = txt.split(" ")
+            txt = l.pop(0) + "&nbsp;"
+            lt = 0
+            print l
+            while l:
+                word = l.pop(0)
+                print word
+                lt += len(word)
+                if lt > 10 and len(l) != 0:
+                    txt += " "
+                    lt = 0
+                elif txt:
+                    txt += "&nbsp;"
+                txt += word
+        txt += " "
+        return txt.replace("&nbsp;&nbsp;", "&nbsp;")
+
     def add_clues(self, panel, clues):
         clues = clues['clues'].values()
         clues.sort(self.clue_sort) # sort by number
         for c in clues:
-            print c
             txt = "<b>%(number)d.</b> %(word)s (%(format)d)" % c
-            panel.add(HTML(txt))
+            txt = self.mash_clue_text(txt)
+            panel.add(HTML(txt, Element=DOM.createSpan(), StyleName="clue"))
 
     def execute(self):
         """ deferred command for pseudo window resize

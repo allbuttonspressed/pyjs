@@ -1,3 +1,8 @@
+body, html {
+  height: 100%;
+  width: 100%;
+}
+
 body {
     font-size: 11px;
     margin: 0px;
@@ -283,3 +288,8 @@ a:active {color:#00f;}
 .down-clue-panel {
     border: 1px solid #000000;
 }
+
+.clue {
+    margin-right: 5px;
+}
+
