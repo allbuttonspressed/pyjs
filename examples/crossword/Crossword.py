@@ -28,11 +28,8 @@ from pyjamas.ui.ScrollPanel import ScrollPanel
 from pyjamas.ui.Grid import Grid
 from pyjamas.ui.TextBox import TextBox
 from pyjamas.ui.FocusPanel import FocusPanel
-from pyjamas.ui.Image import Image
 from pyjamas.ui.DockPanel import DockPanel
 from pyjamas.ui.DeckPanel import DeckPanel
-from pyjamas.ui import HasHorizontalAlignment
-from pyjamas.ui import HasVerticalAlignment
 from pyjamas.ui import HasAlignment
 from pyjamas.ui import Event
 from pyjamas.ui import KeyboardListener
@@ -43,6 +40,7 @@ from pyjamas.Timer import Timer
 
 from pyjamas import Window
 from pyjamas import DOM
+from pyjamas import log
 from pyjamas import DeferredCommand
 
 from menu import CrossMenuBar
@@ -72,7 +70,6 @@ class ClueDialog(PopupPanel):
         PopupPanel.__init__(self, True)
 
         clue = xword.find_clue()
-        print clue
         contents = HTML(clue)
         contents.setWidth("200px")
         self.setWidget(contents)
@@ -114,7 +111,7 @@ class CrossGame(DockPanel):
         #self.setCellWidth(self.deck, "100%")
         #self.setCellHeight(self.deck, "100%")
         self.setCellHorizontalAlignment(self.deck,
-                                        HasHorizontalAlignment.ALIGN_CENTER)
+                                        HasAlignment.ALIGN_CENTER)
         self.deck.showWidget(0)
 
         # add brief advice on how to return to puzzle
@@ -135,6 +132,7 @@ class CrossGame(DockPanel):
             self.tt.hide()
             
     def onWindowResized(self, width, height):
+
         cross_pos_x = self.cross.tp.tp.getAbsoluteLeft()
         cross_pos_y = self.cross.tp.tp.getAbsoluteTop()
         cross_width = self.cross.tp.tp.getOffsetWidth()
@@ -145,18 +143,14 @@ class CrossGame(DockPanel):
         clue_across_width = width - 20
         self.clues_down.setHeight("%dpx" % cross_height)
 
-        print self.children
-        if self.clues_down in self:
+        if self.clues_down in self.children:
             self.remove(self.clues_down)
-        print self.children
-        if self.clues_across in self:
+
+        if self.clues_across in self.children:
             self.remove(self.clues_across)
-        print self.children
 
         self.remove(self.deck)
 
-        print "cw", cross_width, "cpx", cross_pos_x, "width", width
-        print "ch", cross_height, "cpy", cross_pos_y, "height", height
 
         if cross_width + cross_pos_x + 200 + 20 < width:
             if cross_height + cross_pos_y + 120 < height:
@@ -181,7 +175,6 @@ class CrossGame(DockPanel):
             clue_across_height = clue_height / 2
             clue_down_width = width - 20
         else:
-            print "none"
             self.add(self.deck, DockPanel.CENTER)
 
         self.clues_down.setWidth("%dpx" % clue_down_width)
@@ -210,7 +203,8 @@ class CrossGame(DockPanel):
             self.add_clues(self.dfp, self.cross.down)
             # trigger a resize now that the crossword's filled up
             # (we can get the correct grid width, now)
-            DeferredCommand.add(self)
+            #DeferredCommand.add(self)
+            self.execute()
 
     def clue_sort(self, c1, c2):
         return cmp(c1['number'], c2['number'])
@@ -235,10 +229,8 @@ class CrossGame(DockPanel):
             l = txt.split(" ")
             txt = l.pop(0) + "&nbsp;" + l.pop(0)
             lt = 0
-            print l
             while l:
                 word = l.pop(0)
-                print word
                 lt += len(word)
                 if lt > 10 and len(l) != 0:
                     txt += " "
@@ -272,11 +264,10 @@ class CrossGrid(FocusPanel):
 
     def __init__(self, **kwargs):
 
-        FocusPanel.__init__(self)
         self.tp = Grid(StyleName='crossword',
                        CellSpacing="0px", CellPadding="0px",
                        zIndex=0)
-        self.add(self.tp)
+        FocusPanel.__init__(self, Widget=self.tp)
         self.cf = self.tp.getCellFormatter()
   
     def addTableListener(self, listener):
@@ -418,9 +409,11 @@ class Crossword(SimplePanel):
         self.highlight_cursor(True)
 
     def onKeyUp(self, sender, keycode, modifiers):
+        log.write("up keycode: %d" % keycode)
         pass
 
     def onKeyPress(self, sender, keycode, modifiers):
+        log.write("press keycode: %d" % keycode)
         pass
 
     def highlight_cursor(self, highlight):
@@ -529,8 +522,8 @@ class Crossword(SimplePanel):
         self.cd = ClueDialog(self)
 
     def onWindowResized(self, width, height):
-        self.remote.get_crossword(self)
         return
+        self.remote.get_crossword(self)
         #self.hp.setWidth("%dpx" % (width - self.tree_width))
         #self.hp.setHeight("%dpx" % (height - 20))
         self.cp1.setHeight("%dpx" % (height - 30))
@@ -579,7 +572,6 @@ class Crossword(SimplePanel):
             txt = w and w.getHTML()
             if txt != "&nbsp;" and txt == val:
                 count += 1
-        print count, total
         if count == total:
             Window.alert("Congratulations!")
 
@@ -601,19 +593,16 @@ class Crossword(SimplePanel):
         if self.word_selected is None:
             return # TODO - show error
         c = self.find_clue_details()
-        print c[0]
         length = c[0]['format']
         seq = range(length)
         for i in xrange(length):
             pick = random.choice(seq)
             seq.remove(pick)
             word = self.words[self.word_selected]
-            print word
             x1 = word['x'] - 1
             y1 = word['y'] - 1
             x2 = x1 + (word['xd'] and 1 or 0) * pick
             y2 = y1 + (word['yd'] and 1 or 0) * pick
-            print pick, x1, y1, x2, y2
             w = self.tp.tp.getWidget(y2, x2)
             letter = self.letters_grid[x2][y2]
             txt = w and w.getHTML()
@@ -646,7 +635,6 @@ class InfoServicePython(JSONProxy):
             JSONProxy.__init__(self, "/crosswordservice/CrosswordService.py",
                     ["get_crossword",
                      ])
-
 
 
 if __name__ == '__main__':
