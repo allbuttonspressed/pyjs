@@ -92,8 +92,8 @@ class CrossGame(DockPanel):
 
         DockPanel.__init__(self)
 
-        self.deck = DeckPanel(StyleName="gwt-TabPanelBottom")
-                              #Height="100%", Width="100%")
+        self.deck = DeckPanel(StyleName="gwt-TabPanelBottom",
+                              Height="100%", Width="100%")
         self.cross = Crossword()
         self.afp = FlowPanel(Width="100%", Height="100%")
         self.clues_across = ScrollPanel(Width="98%", Height="100%",
@@ -111,8 +111,10 @@ class CrossGame(DockPanel):
         self.menu = CrossMenuBar(self)
         self.add(self.menu, DockPanel.NORTH)
         self.add(self.deck, DockPanel.CENTER)
-        self.setCellWidth(self.deck, "5%")
-        self.setCellHeight(self.deck, "100%")
+        #self.setCellWidth(self.deck, "100%")
+        #self.setCellHeight(self.deck, "100%")
+        self.setCellHorizontalAlignment(self.deck,
+                                        HasHorizontalAlignment.ALIGN_CENTER)
         self.deck.showWidget(0)
 
         # add brief advice on how to return to puzzle
@@ -231,7 +233,7 @@ class CrossGame(DockPanel):
             txt = txt.replace(" ", "&nbsp;")
         else:
             l = txt.split(" ")
-            txt = l.pop(0) + "&nbsp;"
+            txt = l.pop(0) + "&nbsp;" + l.pop(0)
             lt = 0
             print l
             while l:
@@ -389,6 +391,8 @@ class Crossword(SimplePanel):
         self.tp.cf.removeStyleName(row, col, "cross-square-word-error")
         self.tp.set_grid_value(val, row, col)
         self.move_cursor(1)
+
+        self.count_correct_letters()
 
     def move_cursor(self, dirn):
 
@@ -561,6 +565,24 @@ class Crossword(SimplePanel):
             self.letters_grid[x][y] = value
             self.tp.set_grid_value(value and "&nbsp;" or None, y, x)
 
+    def count_correct_letters(self):
+        count = 0
+        total = 0
+        for c in self.letters:
+            x = c['x']
+            y = c['y']
+            val = c['value']
+            if val is None:
+                continue
+            total += 1
+            w = self.tp.tp.getWidget(y, x)
+            txt = w and w.getHTML()
+            if txt != "&nbsp;" and txt == val:
+                count += 1
+        print count, total
+        if count == total:
+            Window.alert("Congratulations!")
+
     def highlight_errors(self):
         """ adds error CSS style onto letters that are wrong
         """
@@ -599,6 +621,8 @@ class Crossword(SimplePanel):
                 self.tp.set_grid_value(letter, y2, x2)
                 self.tp.cf.removeStyleName(y2, x2, "cross-square-word-error")
                 break
+
+        self.count_correct_letters()
 
     def fill_crossword(self):
 
