@@ -181,9 +181,16 @@ class CrossGame(DockPanel):
             self.cross.create_crossword(response)
             self.solution.resize(self.cross.cross_height, self.cross.cross_width)
             self.solution.fill_crossword(self.cross.letters)
+            self.add_clues(self.afp, self.cross.across)
+            self.add_clues(self.dfp, self.cross.down)
             # trigger a resize now that the crossword's filled up
             # (we can get the correct grid width, now)
             DeferredCommand.add(self)
+
+    def add_clues(self, panel, clues):
+        for c in clues:
+            txt = "<b>%(number)d.</b> %(word)s (%(format)d)" % c
+            panel.add(HTML(txt))
 
     def execute(self):
         """ deferred command for pseudo window resize
