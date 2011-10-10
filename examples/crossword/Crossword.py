@@ -21,12 +21,8 @@ from pyjamas.ui.SimplePanel import SimplePanel
 from pyjamas.ui.FlowPanel import FlowPanel
 from pyjamas.ui.HTML import HTML
 from pyjamas.ui.Label import Label
-from pyjamas.ui.Button import Button
-from pyjamas.ui.HorizontalPanel import HorizontalPanel
-from pyjamas.ui.AbsolutePanel import AbsolutePanel
 from pyjamas.ui.ScrollPanel import ScrollPanel
 from pyjamas.ui.Grid import Grid
-from pyjamas.ui.TextBox import TextBox
 from pyjamas.ui.FocusPanel import FocusPanel
 from pyjamas.ui.DockPanel import DockPanel
 from pyjamas.ui.DeckPanel import DeckPanel
@@ -205,6 +201,7 @@ class CrossGame(DockPanel):
             # (we can get the correct grid width, now)
             #DeferredCommand.add(self)
             self.execute()
+            self.cross.tp.setFocus(True)
 
     def clue_sort(self, c1, c2):
         return cmp(c1['number'], c2['number'])
@@ -335,7 +332,6 @@ class Crossword(SimplePanel):
 
         self.tp.addTableListener(self)
         self.tp.addKeyboardListener(self)
-        self.tp.setFocus(True)
 
     def onKeyDown(self, sender, keycode, modifiers):
 
@@ -409,11 +405,9 @@ class Crossword(SimplePanel):
         self.highlight_cursor(True)
 
     def onKeyUp(self, sender, keycode, modifiers):
-        log.write("up keycode: %d" % keycode)
         pass
 
     def onKeyPress(self, sender, keycode, modifiers):
-        log.write("press keycode: %d" % keycode)
         pass
 
     def highlight_cursor(self, highlight):
@@ -472,6 +466,7 @@ class Crossword(SimplePanel):
             
     def onCellClicked(self, listener, row, col):
         self.select_word(row, col)
+        self.tp.setFocus(True)
 
     def select_word(self, row, col):
 
@@ -630,6 +625,7 @@ class Crossword(SimplePanel):
         elif data.has_key('html'):
             self.rp.add_html(data.get('html'), name, index)
 
+
 class InfoServicePython(JSONProxy):
     def __init__(self):
             JSONProxy.__init__(self, "/crosswordservice/CrosswordService.py",
@@ -641,5 +637,6 @@ if __name__ == '__main__':
     pyjd.setup("http://127.0.0.1/examples/crossword/public/Crossword.html")
     app = CrossGame()
     RootPanel("crossword").add(app)
+
     pyjd.run()
 
