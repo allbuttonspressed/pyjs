@@ -120,7 +120,9 @@ def type(clsname, bases=None, methods=None):
     if methods:
         for k in methods.keys():
             mth = methods[k]
-            JS("@{{!mths}}[@{{!k}}] = @{{mth}};")
+            if JS("'$$' + @{{k}} in attrib_remap"):
+                k = '$$' + k
+            JS("@{{mths}}[@{{k}}] = @{{mth}};")
 
     bss = JS("null")
     if bases:
