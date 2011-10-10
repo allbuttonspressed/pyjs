@@ -17,6 +17,7 @@
 import pyjd
 
 from pyjamas.ui.RootPanel import RootPanel
+from pyjamas.ui.AbsolutePanel import AbsolutePanel
 from pyjamas.ui.SimplePanel import SimplePanel
 from pyjamas.ui.FlowPanel import FlowPanel
 from pyjamas.ui.HTML import HTML
@@ -61,23 +62,28 @@ def copy(ind):
     return res
 
 
-class ClueDialog(PopupPanel):
+class ClueDialog(AbsolutePanel):
     def __init__(self, xword):
-        PopupPanel.__init__(self, True, GlassEnabled=False)
+        AbsolutePanel.__init__(self, StyleName="clue-popup")
+
+        self.xword = xword
+        self.contents = HTML()
+        self.contents.setWidth("200px")
+        self.add(self.contents)
 
         clue = xword.find_clue()
-        contents = HTML(clue)
-        contents.setWidth("200px")
-        self.setWidget(contents)
-        row = xword.word_selected_pos[0]
-        col = xword.word_selected_pos[1]
-        cell = xword.tp.tp.getWidget(row, col)
+        self.contents.setHTML(clue)
+        row = self.xword.word_selected_pos[0]
+        col = self.xword.word_selected_pos[1]
+        cell = self.xword.tp.tp.getWidget(row, col)
 
-        self.setStyleName("clue-popup")
         left = cell.getAbsoluteLeft() + 40
         top = cell.getAbsoluteTop() + 40
-        self.setPopupPosition(left, top)
-        self.show()
+        RootPanel().add(self)
+        RootPanel().setWidgetPosition(self, left, top)
+
+    def hide(self):
+        RootPanel().remove(self)
 
 class CrossGame(DockPanel):
 
