@@ -63,7 +63,7 @@ def copy(ind):
 
 class ClueDialog(PopupPanel):
     def __init__(self, xword):
-        PopupPanel.__init__(self, True)
+        PopupPanel.__init__(self, True, GlassEnabled=False)
 
         clue = xword.find_clue()
         contents = HTML(clue)
