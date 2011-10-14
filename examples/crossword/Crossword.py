@@ -104,7 +104,6 @@ class CrossGame(DockPanel):
                                         StyleName="down-clue-panel")
         self.clues_down.add(self.dfp)
         self.dfp.add(HTML("Down"))
-        self.clue_list = []
         self.solution = CrossGrid()
         self.deck.insert(self.cross, 0)
         self.deck.insert(self.solution, 1)
@@ -252,17 +251,18 @@ class CrossGame(DockPanel):
         total = len(clues)
         print self.cross.words
         for c in clues:
-            total -= 1
+            total -= 1 # use this to stop adding dashes at the last clue
             txt = "<b>%(number)d.</b> %(word)s" % c
             txt = self.mash_clue_text(txt, total < 1)
             cp = HTML(txt, Element=DOM.createSpan(), StyleName="clue")
-            word = self.cross.words[c['id']]
+            clue_num = c['id']
+            word = self.cross.words[clue_num]
             col = word['x'] - 1
             row = word['y'] - 1
             print c, row, col
             cl = ClueListener(self.cross, row, col, direction)
             cp.addClickListener(cl)
-            self.clue_list.append(cp)
+            self.cross.clue_list[clue_num] = cp
             panel.add(cp)
 
     def execute(self):
@@ -321,6 +321,15 @@ class CrossGrid(FocusPanel):
                 self.cf._setStyleName(y-1, x-1, "cross-square-word-select",
                                       highlight)
 
+    def highlight_selected_clue(self, clue, highlight):
+        """ highlights (or dehighlights) the currently-selected word
+        """
+        print clue, highlight
+        if highlight:
+            clue.addStyleName("clue-select")
+        else:
+            clue.removeStyleName("clue-select")
+
     def set_grid_value(self, clue, y, x):
 
         style = clue and "cross-square" or "cross-square-block"
@@ -359,6 +368,7 @@ class Crossword(SimplePanel):
 
         self.word_selected = None
         self.word_selected_pos = None
+        self.clue_list = {}
 
         self.tp.addTableListener(self)
         self.tp.addKeyboardListener(self)
@@ -447,6 +457,12 @@ class Crossword(SimplePanel):
         col = self.word_selected_pos[1]
         self.tp.highlight_cursor(row, col, highlight)
 
+    def highlight_selected_clue(self, highlight):
+        """ highlights (or dehighlights) the currently-selected word
+        """
+        clue = self.clue_list[self.word_selected]
+        self.tp.highlight_selected_clue(clue, highlight)
+
     def highlight_selected(self, highlight):
         """ highlights (or dehighlights) the currently-selected word
         """
@@ -511,6 +527,7 @@ class Crossword(SimplePanel):
         # de-highlight the word found
         if self.word_selected is not None:
             self.highlight_selected(False)
+            self.highlight_selected_clue(False)
 
         # de-highlight cursor
         if self.word_selected_pos is not None:
@@ -541,6 +558,7 @@ class Crossword(SimplePanel):
         self.word_selected = new_word
         self.word_selected_pos = (row, col)
         self.highlight_selected(True)
+        self.highlight_selected_clue(True)
         self.highlight_cursor(True)
         c = self.find_clue_details()
         self.word_direction = c[1]
