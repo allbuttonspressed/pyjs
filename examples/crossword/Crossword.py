@@ -380,6 +380,8 @@ class Crossword(SimplePanel):
         row = self.word_selected_pos[0]
         col = self.word_selected_pos[1]
 
+        val = chr(keycode)
+
         # check up/down/left/right cursor keys
         # the basic rule is: if in same plane, go that way, else "flip"
         # and then, obviously on the next press, the cursor will move
@@ -408,9 +410,11 @@ class Crossword(SimplePanel):
             else:
                 self.move_cursor(1)
             return
+        elif val == ' ':
+            self.select_word(row, col)
+            return
         
         # check the key is a letter, and there's a grid position highlighted
-        val = chr(keycode)
         if not val.isalpha() or not self.word_selected_pos:
             return
 
