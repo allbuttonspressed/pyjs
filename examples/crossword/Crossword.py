@@ -297,6 +297,9 @@ class CrossGrid(FocusPanel):
         FocusPanel.__init__(self, Widget=self.tp)
         self.cf = self.tp.getCellFormatter()
   
+    def addDblTableListener(self, listener):
+        self.tp.addDblTableListener(listener)
+
     def addTableListener(self, listener):
         self.tp.addTableListener(listener)
 
@@ -371,6 +374,7 @@ class Crossword(SimplePanel):
         self.clue_list = {}
 
         self.tp.addTableListener(self)
+        self.tp.addDblTableListener(self)
         self.tp.addKeyboardListener(self)
 
     def onKeyDown(self, sender, keycode, modifiers):
@@ -519,6 +523,9 @@ class Crossword(SimplePanel):
                 found_words.append(num)
         return found_words
             
+    def onCellDoubleClicked(self, listener, row, col, direction=None):
+        self.onCellClicked(listener, row, col, direction)
+
     def onCellClicked(self, listener, row, col, direction=None):
         self.select_word(row, col, direction)
         self.tp.setFocus(True)
