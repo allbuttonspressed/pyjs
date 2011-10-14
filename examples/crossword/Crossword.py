@@ -202,8 +202,8 @@ class CrossGame(DockPanel):
             self.cross.create_crossword(response)
             self.solution.resize(self.cross.cross_height, self.cross.cross_width)
             self.solution.fill_crossword(self.cross.letters)
-            self.add_clues(self.afp, self.cross.across)
-            self.add_clues(self.dfp, self.cross.down)
+            self.add_clues(self.afp, self.cross.across, ACROSS)
+            self.add_clues(self.dfp, self.cross.down, DOWN)
             # trigger a resize now that the crossword's filled up
             # (we can get the correct grid width, now)
             #DeferredCommand.add(self)
@@ -246,16 +246,24 @@ class CrossGame(DockPanel):
             txt += "&nbsp;<b>-</b> "
         return txt.replace("&nbsp;&nbsp;", "&nbsp;")
 
-    def add_clues(self, panel, clues):
+    def add_clues(self, panel, clues, direction):
         clues = clues['clues'].values()
         clues.sort(self.clue_sort) # sort by number
         total = len(clues)
+        print self.cross.words
         for c in clues:
             total -= 1
             txt = "<b>%(number)d.</b> %(word)s" % c
             txt = self.mash_clue_text(txt, total < 1)
-            panel.add(HTML(txt, Element=DOM.createSpan(), StyleName="clue"))
-                       
+            cp = HTML(txt, Element=DOM.createSpan(), StyleName="clue")
+            word = self.cross.words[c['id']]
+            col = word['x'] - 1
+            row = word['y'] - 1
+            print c, row, col
+            cl = ClueListener(self.cross, row, col, direction)
+            cp.addClickListener(cl)
+            self.clue_list.append(cp)
+            panel.add(cp)
 
     def execute(self):
         """ deferred command for pseudo window resize
@@ -267,6 +275,17 @@ class CrossGame(DockPanel):
     def onRemoteError(self, code, message, request_info):
         RootPanel().add(HTML("Server Error" + str(code)))
         RootPanel().add(HTML(str(message)))
+
+class ClueListener:
+
+    def __init__(self, cross, row, col, direction):
+        self.cross = cross
+        self.row = row
+        self.col = col
+        self.direction = direction
+
+    def onClick(self, listener):
+        self.cross.onCellClicked(listener, self.row, self.col, self.direction)
 
 class CrossGrid(FocusPanel):
 
@@ -455,34 +474,39 @@ class Crossword(SimplePanel):
         return self._find_clue(self.across['clues']) or \
                self._find_clue(self.down['clues'])
 
-    def check_word_range(self, word, row, col):
+    def check_word_range(self, word, row, col, direction):
         """ checks if a word is "hit" by the row/col selected
         """
         x1 = word['x']
         y1 = word['y']
         x2 = x1 + word['xd']
         y2 = y1 + word['yd']
+        if direction is not None:
+            if direction == ACROSS and x1 == x2:
+                return False
+            if direction == DOWN and y1 == y2:
+                return False
         for x in range(x1, x2+1):
             for y in range(y1, y2+1):
                 if x == col and y == row:
                     return True
         return False
             
-    def find_word(self, row, col):
+    def find_word(self, row, col, direction):
         found_words = []
         for (num, word) in self.words.items():
-            if self.check_word_range(word, row, col):
+            if self.check_word_range(word, row, col, direction):
                 found_words.append(num)
         return found_words
             
-    def onCellClicked(self, listener, row, col):
-        self.select_word(row, col)
+    def onCellClicked(self, listener, row, col, direction=None):
+        self.select_word(row, col, direction)
         self.tp.setFocus(True)
 
-    def select_word(self, row, col):
+    def select_word(self, row, col, direction=None):
 
         # find the words first
-        words_found = self.find_word(row+1, col+1)
+        words_found = self.find_word(row+1, col+1, direction)
 
         # de-highlight the word found
         if self.word_selected is not None:
