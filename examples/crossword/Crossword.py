@@ -104,6 +104,7 @@ class CrossGame(DockPanel):
                                         StyleName="down-clue-panel")
         self.clues_down.add(self.dfp)
         self.dfp.add(HTML("Down"))
+        self.clue_list = []
         self.solution = CrossGrid()
         self.deck.insert(self.cross, 0)
         self.deck.insert(self.solution, 1)
@@ -212,7 +213,7 @@ class CrossGame(DockPanel):
     def clue_sort(self, c1, c2):
         return cmp(c1['number'], c2['number'])
 
-    def mash_clue_text(self, txt):
+    def mash_clue_text(self, txt, last):
         """ ok this complicated-looking function makes sure that the clues
             can "wrap" properly, without expanding out of the boxes.
             FlowPanel doesn't quite cope with properly "flowing" text.
@@ -241,16 +242,20 @@ class CrossGame(DockPanel):
                 elif txt:
                     txt += "&nbsp;"
                 txt += word
-        txt += " "
+        if not last:
+            txt += "&nbsp;<b>-</b> "
         return txt.replace("&nbsp;&nbsp;", "&nbsp;")
 
     def add_clues(self, panel, clues):
         clues = clues['clues'].values()
         clues.sort(self.clue_sort) # sort by number
+        total = len(clues)
         for c in clues:
-            txt = "<b>%(number)d.</b> %(word)s (%(format)d)" % c
-            txt = self.mash_clue_text(txt)
+            total -= 1
+            txt = "<b>%(number)d.</b> %(word)s" % c
+            txt = self.mash_clue_text(txt, total < 1)
             panel.add(HTML(txt, Element=DOM.createSpan(), StyleName="clue"))
+                       
 
     def execute(self):
         """ deferred command for pseudo window resize
