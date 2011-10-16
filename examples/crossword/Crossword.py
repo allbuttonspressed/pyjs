@@ -153,7 +153,6 @@ class CrossGame(DockPanel):
 
         self.remove(self.deck)
 
-
         if cross_width + cross_pos_x + 200 + 20 < width:
             if cross_height + cross_pos_y + 120 < height:
                 self.add(self.clues_across, DockPanel.SOUTH)
@@ -390,7 +389,13 @@ class Crossword(SimplePanel):
         # the basic rule is: if in same plane, go that way, else "flip"
         # and then, obviously on the next press, the cursor will move
         # when the key is pressed in that same plane
-        if keycode == KeyboardListener.KEY_UP:
+        if keycode == KeyboardListener.KEY_DELETE:
+            self.shift_letters_back()
+        elif keycode == KeyboardListener.KEY_BACKSPACE:
+            if self.move_cursor(-1):
+                self.shift_letters_back()
+
+        elif keycode == KeyboardListener.KEY_UP:
             if self.word_direction == ACROSS:
                 self.select_word(row, col)
             else:
@@ -429,6 +434,33 @@ class Crossword(SimplePanel):
 
         self.count_correct_letters()
 
+    def shift_letters_back(self):
+
+        word = self.words[self.word_selected]
+        x1 = word['x']
+        y1 = word['y']
+        xd = word['xd']
+        yd = word['yd']
+        x2 = x1 + xd
+        y2 = y1 + yd
+
+        row = self.word_selected_pos[0]
+        col = self.word_selected_pos[1]
+
+        if xd == col and yd == row:
+            return
+
+        yi = (yd and 1)
+        xi = (xd and 1)
+        
+        while (xd != col or yd != row):
+            w = self.tp.tp.getWidget(row+yi, col+xi)
+            txt = w and w.getHTML()
+            self.tp.set_grid_value(txt, row, col)
+            row += yi
+            col += xi
+        self.tp.set_grid_value("&nbsp;", row, col)
+            
     def move_cursor(self, dirn):
 
         word = self.words[self.word_selected]
@@ -443,14 +475,16 @@ class Crossword(SimplePanel):
         col = self.word_selected_pos[1]
 
         if dirn == 1 and x2 == col+1 and y2 == row+1:
-            return
+            return False
 
         if dirn == -1 and x1 == col+1 and y1 == row+1:
-            return
+            return False
 
         self.highlight_cursor(False)
         self.word_selected_pos = (row + (yd and dirn), col + (xd and dirn))
         self.highlight_cursor(True)
+
+        return True
 
     def onKeyUp(self, sender, keycode, modifiers):
         pass
