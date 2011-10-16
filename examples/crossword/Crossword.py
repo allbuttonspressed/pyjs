@@ -435,7 +435,9 @@ class Crossword(SimplePanel):
         self.count_correct_letters()
 
     def shift_letters_back(self):
-
+        """ this function is used by del and backspace, to move the letters
+            backwards from after the cursor
+        """
         word = self.words[self.word_selected]
         x1 = word['x']
         y1 = word['y']
