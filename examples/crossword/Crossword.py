@@ -439,8 +439,8 @@ class Crossword(SimplePanel):
             backwards from after the cursor
         """
         word = self.words[self.word_selected]
-        x1 = word['x']
-        y1 = word['y']
+        x1 = word['x']-1
+        y1 = word['y']-1
         xd = word['xd']
         yd = word['yd']
         x2 = x1 + xd
@@ -455,7 +455,8 @@ class Crossword(SimplePanel):
         yi = (yd and 1)
         xi = (xd and 1)
         
-        while (xd != col or yd != row):
+        
+        while (x2 != col or y2 != row):
             w = self.tp.tp.getWidget(row+yi, col+xi)
             txt = w and w.getHTML()
             self.tp.set_grid_value(txt, row, col)
