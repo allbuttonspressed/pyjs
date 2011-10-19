@@ -50,6 +50,7 @@ from RandomModuleTest import RandomModuleTest
 from ReModuleTest import ReModuleTest
 from CsvModuleTest import CsvModuleTest
 from StringIOModuleTest import StringIOModuleTest
+from HashableTest import HashableTest
 
 from RunTests import RunTests
 
@@ -89,6 +90,7 @@ def main():
     t.add(ReModuleTest)
     t.add(RandomModuleTest)
     t.add(CsvModuleTest)
+    t.add(HashableTest)
 
     if IN_BROWSER:
         t.add(JSOTest)
