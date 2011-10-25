@@ -60,5 +60,5 @@ class MailDetail(Composite):
         if (scrollHeight < 1):
             scrollHeight = 1
 
-        self.scroller.setSize("%d" % scrollWidth, "%d" % scrollHeight)
+        self.scroller.setSize("%dpx" % scrollWidth, "%dpx" % scrollHeight)
 
