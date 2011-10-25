@@ -185,7 +185,7 @@ class HTMLTable(Panel):
         for listener in lists:
             if event_type == 'click' and \
                hasattr(listener, 'onCellClicked'):
-                listener.onCellDoubleClicked(self, row, column)
+                listener.onCellClicked(self, row, column)
             elif event_type == 'dblclick' and \
                hasattr(listener, 'onCellDoubleClicked'):
                 listener.onCellDoubleClicked(self, row, column)
