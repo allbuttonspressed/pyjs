@@ -91,9 +91,19 @@ if __name__ == '__main__':
         author = "The Pyjamas Project",
         author_email = "lkcl@lkcl.net",
         keywords = keyw,
-        packages=["pyjs", "pyjs.jsonrpc", "pyjd"],
+        packages=["pyjs", "pyjs.jsonrpc",
+                "pyjs.jsonrpc.cgihandler",
+                "pyjs.jsonrpc.django",
+                "pyjs.jsonrpc.web2py",
+                "pyjd"],
         package_dir = {'pyjs': os.path.join('pyjs', 'src', 'pyjs'),
                        'pyjs.jsonrpc': os.path.join('pyjs', 'jsonrpc'),
+                       'pyjs.jsonrpc.cgihandler':
+                                os.path.join('pyjs', 'jsonrpc', 'cgihandler'),
+                       'pyjs.jsonrpc.django':
+                                os.path.join('pyjs', 'jsonrpc', 'django'),
+                       'pyjs.jsonrpc.web2py':
+                                os.path.join('pyjs', 'jsonrpc', 'web2py'),
                        'pyjd': 'pyjd'},
         data_files = data_files,
         license = "Apache Software License",
