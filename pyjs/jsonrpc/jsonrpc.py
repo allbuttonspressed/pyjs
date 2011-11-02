@@ -1,17 +1,25 @@
-import gluon.contrib.simplejson as simplejson
-import types
 import sys
 
+# some dog's dinner random ways to get a json library from somewhere... 
+try:
+    import json
+except ImportError, e:
+    try:
+        import gluon.contrib.simplejson as json
+    except ImportError, e:
+        import simplejson as json
+ 
+# this base class, use it to call self.process
 class JSONRPCServiceBase:
 
     def __init__(self):
         self.methods={}
 
-    def response(self, id, result):
-        return simplejson.dumps({'version': '1.1', 'id':id,
+    def response(self, mid, result):
+        return json.dumps({'version': '1.1', 'id':mid,
                                  'result':result, 'error':None})
-    def error(self, id, code, message):
-        return simplejson.dumps({'id': id,
+    def error(self, mid, code, message):
+        return json.dumps({'id': mid,
                                  'version': '1.1',
                                  'error': {'name': 'JSONRPCError',
                                            'code': code,
@@ -22,22 +30,47 @@ class JSONRPCServiceBase:
     def add_method(self, name, method):
         self.methods[name] = method
 
+    def __call__(self,func):
+        # this method is inadviseably added: please use jsonremote (below)
+        self.methods[func.__name__]=func
+        return func
+
     def process(self, data):
-        data = simplejson.loads(data)
-        id, method, params = data["id"], data["method"], data["params"]
+        data = json.loads(data)
+        msgid, method, params = data["id"], data["method"], data["params"]
         if method in self.methods:
             try:
                 result =self.methods[method](*params)
-                return self.response(id, result)
+                return self.response(msg_id, result)
             except BaseException:
                 etype, eval, etb = sys.exc_info()
-                return self.error(id, 100, '%s: %s' %(etype.__name__, eval))
+                return self.error(msgid, 100, '%s: %s' %(etype.__name__, eval))
             except:
                 etype, eval, etb = sys.exc_info()
-                return self.error(id, 100, 'Exception %s: %s' %(etype, eval))
+                return self.error(msgid, 100, 'Exception %s: %s' %(etype, eval))
         else:
-            return self.error(id, 100, 'method "%s" does not exist' % method)
+            return self.error(msgid, 100, 'method "%s" does not exist' % method)
 
     def listmethods(self):
         return self.methods.keys() 
+
+def jsonremote(service):
+    """Make JSONRPCService a decorator so that you can write :
+    
+    import JSONRPCService (note: this must derive from JSONRPCServiceBase!)
+    chatservice = JSONRPCService()
+
+    @jsonremote(chatservice)
+    def login(request, user_name):
+        (...)
+    """
+    def remotify(func):
+        if isinstance(service, JSONRPCServiceBase):
+            service.add_method(func.__name__, func)
+        else:
+            emsg = 'Service "%s" not found' % str(service.__name__)
+            raise NotImplementedError, emsg
+        return func
+    return remotify
+
 

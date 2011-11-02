@@ -1,4 +1,9 @@
-from pyjs.jsonrpc import JSONRPCServiceBase
+# note: please be advised to use the decorator method, jsonremote,
+# as shown in pyjs.jsonrpc.
+# the __call__ system which was added here does not have a documented
+# example but and has been moved to JSONRPCServiceBase.
+
+from pyjs.jsonrpc import JSONRPCServiceBase, jsonremote
 
 class JSONRPCService(JSONRPCServiceBase):
 
