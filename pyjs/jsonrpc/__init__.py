@@ -30,18 +30,13 @@ class JSONRPCServiceBase:
     def add_method(self, name, method):
         self.methods[name] = method
 
-    def __call__(self,func):
-        # this method is inadviseably added: please use jsonremote (below)
-        self.methods[func.__name__]=func
-        return func
-
     def process(self, data):
         data = json.loads(data)
         msgid, method, params = data["id"], data["method"], data["params"]
         if method in self.methods:
             try:
                 result =self.methods[method](*params)
-                return self.response(msg_id, result)
+                return self.response(msgid, result)
             except BaseException:
                 etype, eval, etb = sys.exc_info()
                 return self.error(msgid, 100, '%s: %s' %(etype.__name__, eval))
