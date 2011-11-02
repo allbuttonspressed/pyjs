@@ -1,5 +1,3 @@
-# note: please be advised to use the decorator method, jsonremote,
-# as shown in pyjs.jsonrpc.
 # please could someone add an example usage or link to example usage,
 # this is very very unclear as to what is going on, even though it's
 # incredibly short.
