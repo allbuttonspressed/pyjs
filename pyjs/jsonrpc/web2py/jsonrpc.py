@@ -1,4 +1,8 @@
-from pyjs.jsonrpc import JSONRPCServiceBase
+# please could someone add an example usage or link to example usage,
+# this is very very unclear as to what is going on, even though it's
+# incredibly short.
+
+from pyjs.jsonrpc import JSONRPCServiceBase, jsonremote
 
 class JSONRPCService(JSONRPCServiceBase):
 
@@ -6,6 +10,6 @@ class JSONRPCService(JSONRPCServiceBase):
         return self.process(request.body.read())
 
     def __call__(self,func):
-        self.methods[func.__name__]=func
+        self.methods[func.__name__] = func
         return func
 

@@ -297,9 +297,7 @@ def translate():
         cmd = [ENV['BIN_PYTHON'], ENV['BIN_PYJSBUILD']] + ENV['ARG_PYJSBUILD'] + opts + args
         
         if not [ENV['ARG_PYJSBUILD']] + opts + args:
-                import traceback
-                traceback.print_stack()
-                raise RuntimeError(cmd)
+            raise RuntimeError(cmd)
         path = _process_path(TARGETS, target)
         e = subprocess.Popen(cmd, cwd=path)
         ret = e.wait()

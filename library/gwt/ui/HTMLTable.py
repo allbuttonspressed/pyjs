@@ -44,6 +44,7 @@ class HTMLTable(Panel):
             kwargs['RowFormatter'] = RowFormatter(self)
 
         self.tableListeners = []
+        self.dbltableListeners = []
         self.widgetMap = {}
 
         if kwargs.has_key('Element'):
@@ -60,13 +61,16 @@ class HTMLTable(Panel):
             DOM.appendChild(self.tableElem, self.bodyElem)
         self.setElement(self.tableElem)
 
-        self.sinkEvents(Event.ONCLICK)
+        self.sinkEvents(Event.ONCLICK | Event.ONDBLCLICK)
 
         Panel.__init__(self, **kwargs)
 
     @classmethod
     def _getProps(self):
         return Panel._getProps() + self._props
+
+    def addDblTableListener(self, listener):
+        self.dbltableListeners.append(listener)
 
     def addTableListener(self, listener):
         self.tableListeners.append(listener)
@@ -163,22 +167,37 @@ class HTMLTable(Panel):
         """
         return self.widgetMap.itervalues()
 
+    def _onBrowserEvent(self, event, event_type):
+
+        td = self.getEventTargetCell(event)
+        if td is None:
+            return
+        tr = DOM.getParent(td)
+        body = DOM.getParent(tr)
+        row = DOM.getChildIndex(body, tr)
+        column = DOM.getChildIndex(tr, td)
+
+        if event_type == 'dblclick':
+            lists = self.dbltableListeners
+        else:
+            lists = self.tableListeners
+
+        for listener in lists:
+            if event_type == 'click' and \
+               hasattr(listener, 'onCellClicked'):
+                listener.onCellClicked(self, row, column)
+            elif event_type == 'dblclick' and \
+               hasattr(listener, 'onCellDoubleClicked'):
+                listener.onCellDoubleClicked(self, row, column)
+            else:
+                listener(self)
+
     def onBrowserEvent(self, event):
-        if DOM.eventGetType(event) == "click":
-            td = self.getEventTargetCell(event)
-            if td is None:
-                return
+        event_type = DOM.eventGetType(event)
+        if event_type != "dblclick" and event_type != "click":
+            return 
 
-            tr = DOM.getParent(td)
-            body = DOM.getParent(tr)
-            row = DOM.getChildIndex(body, tr)
-            column = DOM.getChildIndex(tr, td)
-
-            for listener in self.tableListeners:
-                if hasattr(listener, 'onCellClicked'):
-                    listener.onCellClicked(self, row, column)
-                else:
-                    listener(self)
+        self._onBrowserEvent(event, event_type)
 
     def remove(self, widget):
         if widget.getParent() != self:
@@ -186,6 +205,9 @@ class HTMLTable(Panel):
 
         self.removeWidget(widget)
         return True
+
+    def removeDblClickTableListener(self, listener):
+        self.dbltableListeners.remove(listener)
 
     def removeTableListener(self, listener):
         self.tableListeners.remove(listener)
