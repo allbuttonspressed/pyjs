@@ -2733,7 +2733,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 self.w( self.spacing() + "$pyjs.__active_exception_stack__ = $pyjs.__last_exception_stack__;")
                 self.w( self.spacing() + "$pyjs.__last_exception_stack__ = null;")
             s = self.spacing()
-            self.w( self.spacing() + """if (typeof $pyjs_last_exception != 'undefined') { $pyjs.__last_exception__ = $pyjs_last_exception; }""")
+            self.w( self.spacing() + """if ($pyjs_last_exception != 'undefined') { $pyjs.__last_exception__ = $pyjs_last_exception; }""")
             self.w( """\
 %(s)sthrow ($pyjs.__last_exception__?
 %(s)s\t$pyjs.__last_exception__.error:
@@ -3382,8 +3382,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return self._tuple(node, current_klass), 'tuple'
         elif isinstance(node, self.ast.Lambda):
             return self._lambda(node, current_klass), 'func'
+        elif isinstance(node, self.ast.SetComp):
+            return self._collcomp(node, current_klass), 'set'
+        elif isinstance(node, self.ast.DictComp):
+            return self._collcomp(node, current_klass), 'dict'
         elif isinstance(node, self.ast.ListComp):
-            return self._listcomp(node, current_klass), 'list'
+            return self._collcomp(node, current_klass), 'list'
         elif isinstance(node, self.ast.IfExp):
             return self._typed_if_expr(node, current_klass)
         return self.expr(node, current_klass), None
@@ -3901,18 +3905,41 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
         return function_name
 
-    def _listcomp(self, node, current_klass):
+    def _collcomp(self, node, current_klass):
         self.push_lookup()
-        resultlist = self.uniqid("$listcomp")
-        self.add_lookup('variable', resultlist, resultlist)
+        resultvar = self.uniqid("$collcomp")
+        self.add_lookup('variable', resultvar, resultvar)
         save_output = self.output
         self.output = StringIO()
 
-        tnode = self.ast.Discard(self.ast.CallFunc(self.ast.Getattr(self.ast.Name(resultlist), 'append'), [node.expr], None, None))
+        if isinstance(node, self.ast.ListComp):
+            tnode = self.ast.Discard(
+                self.ast.CallFunc(
+                    self.ast.Getattr(self.ast.Name(resultvar), 'append'),
+                    [node.expr], None, None)
+            )
+            varinit = "@{{list}}()"
+        elif isinstance(node, self.ast.SetComp):
+            tnode = self.ast.Discard(
+                self.ast.CallFunc(
+                    self.ast.Getattr(self.ast.Name(resultvar), 'add'),
+                    [node.expr], None, None)
+            )
+            varinit = "@{{set}}()"
+        elif isinstance(node, self.ast.DictComp):
+            tnode = self.ast.Assign([
+                self.ast.Subscript(self.ast.Name(resultvar),
+                                   'OP_ASSIGN', [node.key])
+                ], node.value)
+            varinit = "@{{dict}}()"
+        else:
+            raise TranslationError("unsupported collection comprehension", 
+                                   node, self.module_name)
+
         for qual in node.quals[::-1]:
             if len(qual.ifs) > 1:
-                raise TranslationError(
-                    "unsupported ifs (in _listcomp)", node, self.module_name)
+                raise TranslationError("unsupported ifs (in _collcomp)", 
+                                       node, self.module_name)
             tassign = qual.assign
             tlist = qual.list
             tbody = self.ast.Stmt([tnode])
@@ -3924,19 +3951,20 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
         captured_output = self.output
         self.output = save_output
-        listcomp_code = """\
-function(){
-\t%s
-\t%s = $p['list']();
-%s
-\treturn %s;}()""" % (
-            self.local_js_vars_decl([]),
-            resultlist,
-            captured_output.getvalue(),
-            resultlist,
+        collcomp_code = (
+            """function(){\n"""
+            """\t%(declarations)s\n"""
+            """\t%(resultvar)s = %(varinit)s;\n"""
+            """%(code)s\n"""
+            """\treturn %(resultvar)s;}()""" % dict(
+                declarations=self.local_js_vars_decl([]),
+                resultvar=resultvar,
+                varinit=varinit,
+                code=captured_output.getvalue(),
+            )
         )
         self.pop_lookup()
-        return listcomp_code
+        return collcomp_code
 
     def _genexpr(self, node, current_klass):
         save_has_yield = self.has_yield
@@ -4163,8 +4191,12 @@ function(){
             return self._slice(node, current_klass)
         elif isinstance(node, self.ast.Lambda):
             return self._lambda(node, current_klass)
+        elif isinstance(node, self.ast.SetComp):
+            return self._collcomp(node, current_klass)
+        elif isinstance(node, self.ast.DictComp):
+            return self._collcomp(node, current_klass)
         elif isinstance(node, self.ast.ListComp):
-            return self._listcomp(node, current_klass)
+            return self._collcomp(node, current_klass)
         elif isinstance(node, self.ast.IfExp):
             return self._typed_if_expr(node, current_klass)[0]
         elif isinstance(node, self.ast.Yield):
