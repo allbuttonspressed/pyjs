@@ -1,3 +1,36 @@
+from django.utils import simplejson
+from django.http import HttpResponse
+import pdb
+
+def wr(f):
+    def ret(*args, **kwargs):
+        rr = f(*args, **kwargs)
+        rr.update({"jsonrpc": "2.0"})
+        return HttpResponse(simplejson.dumps(rr))
+    return ret
+
+class JSONRPCService:
+    def __init__(self, method_map={}):
+        self.method_map = method_map
+        
+    def add_method(self, name, method):
+        self.method_map[name] = method
+        
+    @wr
+    def __call__(self, request, extra=None):
+        #TODO: add support for jsonrpc tag
+        #assert extra == None # we do not yet support GET requests, something pyjams do not use anyways.
+        data = simplejson.loads(request.raw_post_data)
+        id, method, params = data["id"], data["method"], [request,] + data["params"]
+        if method in self.method_map:
+            try:
+                result = self.method_map[method](*params)
+                return {'id': id, 'result': result}
+            except Exception, e:
+                return {'id': id, 'error': {"code": -2, "message": str(e), "data": ""}}
+        else:
+            return {'id': id, 'error': {"message": "No such method", "data": "", 'code': -1}}
+
 # FormProcessor provides a mechanism for turning Django Forms into JSONRPC
 # Services.  If you have an existing Django app which makes prevalent
 # use of Django Forms it will save you rewriting the app.
@@ -66,12 +99,15 @@ def describe_fields_errors(fields, field_names):
         res[name] = describe_field_errors(field)
     return res
 
+from django.utils.functional import Promise
 def describe_field(field):
-    field_type = field.__class__.__name__
-    res = {'field_type': field_type}
+    res = {}
+    res['type'] = field_type = field.__class__.__name__
     for fname in field_names.get(field_type, []) + \
           ['help_text', 'label', 'initial', 'required']:
         res[fname] = getattr(field, fname)
+        if isinstance(res[fname], Promise):
+            res[fname] = res[fname].title()
     if field_type in ['ComboField', 'MultiValueField', 'SplitDateTimeField']:
         res['fields'] = map(describe_field, field.fields)
     return res
@@ -112,7 +148,13 @@ class FormProcessor(JSONRPCService):
 
         elif command.has_key('describe'):
             field_names = command['describe']
-            return describe_fields(f.fields, field_names)
+            ret_val = describe_fields(f.fields, field_names)
+            print 'returning from describe: ', ret_val
+            print '>> params: ', params
+            print '>> command: ',command
+            return ret_val
+        elif command.has_key('is_valid'):
+            return {'success': f.is_valid() }
 
         elif command.has_key('save'):
             if not f.is_valid():
@@ -158,7 +200,7 @@ class FormProcessor(JSONRPCService):
 #  (r'^service1/$', 'djangoapp.views.jsonservice'),
 
 from django.core.serializers import serialize
-import datetime
+import datetime #remove ?
 from datetime import date
 
 def dict_datetimeflatten(item):
@@ -174,6 +216,7 @@ def dict_datetimeflatten(item):
     return d
 
 def json_convert(l, fields=None):
+#   return [dict_datetimeflatten(i) for i in serialize('python', l, fields=fields)]
     res = []
     for item in serialize('python', l, fields=fields):
         res.append(dict_datetimeflatten(item))
