@@ -68,7 +68,7 @@ def describe_fields_errors(fields, field_names):
 
 def describe_field(field):
     field_type = field.__class__.__name__
-    res = {'field_type': field_type}
+    res = {'type': field_type}
     for fname in field_names.get(field_type, []) + \
           ['help_text', 'label', 'initial', 'required']:
         res[fname] = getattr(field, fname)
