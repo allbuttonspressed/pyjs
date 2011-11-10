@@ -76,4 +76,3 @@ def setup(*args, **kwargs):
     _setup(*args, **kwargs)
     for cb in setup_callbacks:
         cb()
-
