@@ -31,7 +31,7 @@ class CharField(TextBox):
 
 class IntegerField(TextBox):
     def __init__(self, **kwargs):
-        writebr("MAKING INTEGERFIELD from kwargs: %s" % kwargs)
+        #writebr("MAKING INTEGERFIELD from kwargs: %s" % kwargs)
         TextBox.__init__(self)
         self.required = kwargs.get('required', None)
         if kwargs.get('initial'):
