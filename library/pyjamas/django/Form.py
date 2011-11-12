@@ -29,6 +29,22 @@ class CharField(TextBox):
     def getValue(self):
         return self.getText()
 
+class IntegerField(TextBox):
+    def __init__(self, **kwargs):
+        writebr("MAKING INTEGERFIELD from kwargs: %s" % kwargs)
+        TextBox.__init__(self)
+        self.required = kwargs.get('required', None)
+        if kwargs.get('initial'):
+            self.setValue(kwargs['initial'])
+
+    def setValue(self, val):
+        if val is None:
+            val = ''
+        self.setText(val)
+
+    def getValue(self):
+        return int(self.getText())
+
 class FloatField(TextBox):
     def __init__(self, **kwargs):
         TextBox.__init__(self)
@@ -47,6 +63,7 @@ class FloatField(TextBox):
         return self.getText()
 
 widget_factory = {'CharField': CharField,
+                  'IntegerField': IntegerField,
                   'FloatField': FloatField
                  }
 
@@ -93,10 +110,6 @@ class FormDescribeGrid:
 
         method = request_info.method
 
-        writebr(method)
-        writebr(repr(response))
-        writebr("%d" % len(response))
-        writebr("%s" % repr(response.keys()))
 
         self.sink.do_describe(response)
 
@@ -116,7 +129,6 @@ class Form(FormPanel):
             data = kwargs.pop('data')
         else:
             data = None
-        writebr(repr(data))
 
         FormPanel.__init__(self, **kwargs)
         self.svc = svc
@@ -169,7 +181,6 @@ class Form(FormPanel):
         if data is None:
             data = {}
         self.data = data
-        writebr(repr(self.data))
         self.svc(data, {'describe': None}, self.describer)
 
     def clear_errors(self):
@@ -212,7 +223,6 @@ class Form(FormPanel):
             field = fields[fname]
             if self.data and self.data.has_key(fname):
                 field['initial'] = self.data[fname]
-            writebr("%s %s %d" % (fname, field['label'], idx))
             field_type = field['type']
             widget_kls = widget_factory.get(field_type, CharField)
             fv = {}
