@@ -9,6 +9,18 @@ def wr(f):
         return HttpResponse(simplejson.dumps(rr))
     return ret
 
+def form_manager(f):
+    def ret(*args, **kwargs):
+        return f(*args, **kwargs)
+        # assume args[0] is request
+        pdb.set_trace()
+        request = args[0]
+        data = simplejson.loads(request.raw_post_data)
+        if "jsonrpc" in data:
+            request.POST = data["params"][0]
+        return f(request, *args[1:], **kwargs)
+    return ret
+
 class JSONRPCService:
     def __init__(self, method_map={}):
         self.method_map = method_map
@@ -100,26 +112,25 @@ def describe_fields_errors(fields, field_names):
     return res
 
 from django.utils.functional import Promise
-def describe_field(field):
+def describe_field(bfield):
+    "argument name stands for BoundField, see django.forms.BoundField definition - it has interface to extract name from form's field"
     res = {}
-    res['type'] = field_type = field.__class__.__name__
+    res['type'] = field_type = bfield.field.__class__.__name__
     for fname in field_names.get(field_type, []) + \
           ['help_text', 'label', 'initial', 'required']:
-        res[fname] = getattr(field, fname)
-        if isinstance(res[fname], Promise):
+        try:
+            res[fname] = getattr(bfield, fname)
+        except:
+            res[fname] = getattr(bfield.field, fname)
+        if isinstance(res[fname], Promise): # force translation if translatable name (can't serialize some proxy obj exception)
             res[fname] = res[fname].title()
-    if field_type in ['ComboField', 'MultiValueField', 'SplitDateTimeField']:
+    if field_type in ['ComboField', 'MultiValueField', 'SplitDateTimeField']:#TODO: (may work but look at it)
         res['fields'] = map(describe_field, field.fields)
     return res
 
-def describe_fields(fields, field_names):
-    res = {}
-    if not field_names:
-        field_names = fields.keys()
-    for name in field_names:
-        field = fields[name]
-        res[name] = describe_field(field)
-    return res
+def describe_fields(form, field_names_to_describe = []):
+    field_names_to_describe = field_names_to_describe or [bf.name for bf in form] # by default describe all fields
+    return dict((bf.name, describe_field(bf)) for bf in form if bf.name in field_names_to_describe)
 
 class FormProcessor(JSONRPCService):
     def __init__(self, forms, _formcls=None):
@@ -148,7 +159,7 @@ class FormProcessor(JSONRPCService):
 
         elif command.has_key('describe'):
             field_names = command['describe']
-            ret_val = describe_fields(f.fields, field_names)
+            ret_val = describe_fields(f, field_names)
             print 'returning from describe: ', ret_val
             print '>> params: ', params
             print '>> command: ',command
