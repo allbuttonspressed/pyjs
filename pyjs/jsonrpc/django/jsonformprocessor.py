@@ -1,5 +1,6 @@
 from django.utils import simplejson
 from django.http import HttpResponse
+import types
 import pdb
 
 def wr(f):
@@ -21,6 +22,22 @@ def form_manager(f):
         return f(request, *args[1:], **kwargs)
     return ret
 
+def force_positional_arguments(f):
+    """decorator that checks if params are tuple containing only one dict (indicating that on client side there was call
+    with positional arguments too - if so, pass values from dict as keyword arguments to decorated function"""
+    def wrapped(*args, **kwargs):
+        # assume args[0] is request
+        request, args = args[0], args[1:]
+        if len(args) == 1: # if calign code with keyword parameters from django or some other code
+            return f(request, **kwargs)
+        data = simplejson.loads(request.raw_post_data)
+        params = data["params"]
+        if isinstance(params, types.TupleType) and len(params) == 1 and isinstance(params[0], types.DictType):
+            return f(request, **params[0])
+        return f(request, *params, **kwargs)
+    return wrapped
+    
+
 class JSONRPCService:
     def __init__(self, method_map={}):
         self.method_map = method_map
@@ -33,10 +50,10 @@ class JSONRPCService:
         #TODO: add support for jsonrpc tag
         #assert extra == None # we do not yet support GET requests, something pyjams do not use anyways.
         data = simplejson.loads(request.raw_post_data)
-        id, method, params = data["id"], data["method"], [request,] + data["params"]
+        id, method, params = data["id"], data["method"], data["params"]
         if method in self.method_map:
             try:
-                result = self.method_map[method](*params)
+                result = self.method_map[method](request, *params)
                 return {'id': id, 'result': result}
             except Exception, e:
                 return {'id': id, 'error': {"code": -2, "message": str(e), "data": ""}}

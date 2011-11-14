@@ -43,6 +43,7 @@ class IntegerField(TextBox):
         self.setText(val)
 
     def getValue(self):
+        writebr('GETTING VALUE< self.text: %s' % self.getText())
         return int(self.getText())
 
 class FloatField(TextBox):
