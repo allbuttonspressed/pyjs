@@ -8,5 +8,5 @@ output
 *.pyc
 *.pyo
 .*.sw?
-
+_lokal_*
 /stdlib

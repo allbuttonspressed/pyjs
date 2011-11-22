@@ -219,7 +219,7 @@ class PyjamasTester(object):
     def test_examples(self, output):
         return self.check_stderr(*self.run_cmd(
             opts=["__main__.py", 
-                  # "--download", should it be there or not ???
+                  "--download", # should it be there or not ???
                   "--", 
                   "-o %s" % output,],
             cwd=self.options.examples_path))
@@ -257,6 +257,7 @@ class PyjamasTester(object):
             cmd,
             opts=["-r LibTest",
                   "-o %s/libtest.js" % output,
+                  "-e \"_[^_].*\"" # skip weird modules used to test syntax errors
                   ],
             cwd=path.join(self.options.examples_path, 'libtest')) +
                                  ('libtest', 'compile')))

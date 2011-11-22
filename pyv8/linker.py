@@ -38,7 +38,7 @@ $pyjs.__last_exception__ = null;
  * prepare app system vars
  */
 $pyjs.platform = 'pyv8';
-$pyjs.appname = '%(app_name)s';
+$pyjs.appname = %(app_name)r;
 $pyjs.loadpath = './';
 
 pyv8_load(%(module_files)s);
@@ -68,7 +68,7 @@ pyv8_load(%(js_lib_files)s);
 """
 
 def tostrlist(l):
-    l = map(lambda x: "'%s'" % x, l)
+    l = map(lambda x: repr(x), l)
     return "[%s]" % ', '.join(l)
 
 class PyV8Linker(linker.BaseLinker):

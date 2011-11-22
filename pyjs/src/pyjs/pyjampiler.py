@@ -28,7 +28,7 @@ BUILTIN_PATH = os.path.join(BASE, 'builtin')
 
 #print "PYJAMPILER_BASE", PYJAMPILER_BASE
 
-SYSTEM_MODULES_DIR = "system_modules"
+SYSTEM_MODULES_DIR = os.path.join(BASE, "lib")
 TMP_DIR = "pyjampiler_tmp"
 
 class Builder(object):
@@ -65,7 +65,7 @@ class Builder(object):
         f.close()
         return buf
 
-    def compile(self, src, module_name, base_dir=None):
+    def compile(self, src, module_name):
         dst = os.path.join(self.options.working_dir, TMP_DIR, module_name + ".js")
         internal_ast = False
         compiler = pyjs.translator.import_compiler(internal_ast)
@@ -81,15 +81,17 @@ class Builder(object):
         fr.close()
 
     def compile_system_modules(self):
-        # check if the system modules are present in the current direcoty
-        if os.path.isdir(SYSTEM_MODULES_DIR):
-            modules_dir = os.path.abspath(SYSTEM_MODULES_DIR)
-        else:
-            modules_dir = os.path.join(PYJAMPILER_BASE, SYSTEM_MODULES_DIR)
+        # check if the system modules are present in the current directory
 
-        for module_filename in glob.glob(os.path.join(modules_dir, "*.py")):
+        '''
+        lib_file = os.path.join(BUILTIN_PATH, "pyjslib.py")
+        self.compile(lib_file, "pyjslib")
+
+        # FIXME - add packages like 'os' too!!
+        for module_filename in glob.glob(os.path.join(SYSTEM_MODULES_DIR, "*.py")):
             module_name = os.path.basename(module_filename)[:-3]
-            self.compile(module_filename, module_name, modules_dir)
+            self.compile(os.path.join(SYSTEM_MODULES_DIR, module_filename), module_name)
+        '''
 
     def compile_application(self):
         # compile application
@@ -101,7 +103,7 @@ class Builder(object):
 
             for filename in files:
                 filename = os.path.join(dirname, filename)
-                based_filename = filename[len(self.options.working_dir)+1:]
+                based_filename = filename[len(self.options.working_dir) + 1:]
 
                 if not filename.endswith(".py"):
                     continue
@@ -115,8 +117,8 @@ class Builder(object):
                     module_name = based_filename[:-3] # cut ".py"
                 module_name = module_name.replace(os.sep, ".")
 
-                print "%s (%s)" % (module_name, based_filename)
-                self.compile(based_filename, module_name, self.options.working_dir)
+                print "Compiling %s (%s)" % (module_name, based_filename)
+                self.compile(os.path.join(self.options.working_dir, based_filename), module_name)
 
     def clear_tmp(self):
         tmp_dir = os.path.join(self.options.working_dir, TMP_DIR)
@@ -131,11 +133,11 @@ class Builder(object):
         self.compile_application()
 
         # application template
-        tmpl = self.__read_file(os.path.join(PYJAMPILER_BASE, 
+        tmpl = self.__read_file(os.path.join(PYJAMPILER_BASE,
                         "pyjampiler_wrapper.js.tmpl"))
 
         available_modules = repr(self.modules)
-        _pyjs = self.__read_file(os.path.join(BUILTIN_PATH, 
+        _pyjs = self.__read_file(os.path.join(BUILTIN_PATH,
                         "public/_pyjs.js")) # core pyjs functions
         modules_source = "\n\n".join(self.modules_source)
 

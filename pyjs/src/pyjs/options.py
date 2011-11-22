@@ -33,8 +33,8 @@ def add_compile_options(parser):
     parser.add_option("--no-internal-ast",
                       dest="internal_ast",
                       action="store_false",
-                      help="Use internal AST parser instead of standard python one"
-                     )    
+                      help="Use standard python parser instead of internal AST one"
+                     )
 
     parser.add_option("--debug-wrap",
                       dest="debug",
@@ -202,7 +202,7 @@ def add_compile_options(parser):
                      )
     speed_options['number_classes'] = False
     pythonic_options['number_classes'] = True
-    
+
     parser.add_option("--create-locals",
                       dest = "create_locals",
                       action="store_true",
@@ -249,7 +249,7 @@ def add_compile_options(parser):
                       help="Set all options that mimic standard python behavior",
                      )
     parser.set_defaults(**all_compile_options)
-    
+
 def get_compile_options(opts):
     d = {}
     for opt in all_compile_options:

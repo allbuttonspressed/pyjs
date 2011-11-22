@@ -32,15 +32,26 @@ class Global(PyV8.JSClass):
         #print "pyv8_import_module", parent_name, module_name
         exec "import " + module_name
         return locals()[module_name]
-    
+
     def pyv8_load(self, modules):
         for i in range(len(modules)):
             fname = modules[i]
             try:
-                fp = open(fname, 'r')
-                # XXX: Very bad hack! Do something about encoding of Translator
-                txt = fp.read().decode('latin1')
-                fp.close()            
-                x = self.__context__.eval(txt)
+                fp = open(fname, 'rb')
+                txt = fp.read()# historically js files were ascii or latin1 only, we only generate ascii to be safer
+                fp.close()
+                """ # Use this if encoding problems in generated javascript files
+                for index, line in enumerate(txt.split("\n")):
+                    assert isinstance(txt, str)
+                    try:
+                        line.decode("ascii")
+                    except UnicodeError:
+                        import sys
+                        print >> sys.stderr, "BUGGY LINE", index + 1, "-", repr(line)
+                """
+                x = self.__context__.eval(txt, fname)
             except Exception, e:
+                import traceback
+                import sys
+                traceback.print_exc(file=sys.stderr)
                 raise ImportError("Failed to load %s: '%s'" % (fname, e))
