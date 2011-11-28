@@ -17,3 +17,19 @@ and rebuild (or copy it to output/) and then restart Apache2.
 
 Thanks to Daniel Carvalho for working out how to run this example
 with mod_python.
+
+NOTE: JSONService.py as stand alone didn't work for me. I installed 
+apache with php to do the work (on debian squeeze):
+  - apt-get install libapache2-mod-php5
+  - vi /etc/apache2/sites-enabled/000-default
+    add:
+        <Directory "<path-to>/pyjamas/examples/">
+                Options Indexes MultiViews FollowSymLinks +ExecCGI
+                AllowOverride None
+                Order deny,allow
+                Deny from all
+                Allow from 127.0.0.0/255.0.0.0 ::1/128 <possible extra ranges>
+                AddHandler cgi-script .py
+        </Directory>
+  - change the parameter to pyjd.setup (if you do use pyjd) to
+    "http://127.0.0.1/examples/jsonrpc/public/JSONRPCExample.html"

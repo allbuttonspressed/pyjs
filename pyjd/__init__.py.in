@@ -72,8 +72,7 @@ def run(*args, **kwargs):
     _run(*args, **kwargs)
 
 _setup = setup
-def setup(*args):
-    _setup(*args)
+def setup(*args, **kwargs):
+    _setup(*args, **kwargs)
     for cb in setup_callbacks:
         cb()
-
