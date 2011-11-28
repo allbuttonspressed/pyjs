@@ -654,6 +654,14 @@ def escapejs(value):
         value = value.replace(bad, good)
     return value
 
+def uescapejs(value):
+    """
+    Hex encodes unicode characters for use in JavaScript unicode strings, with surrounding quotes.
+    We benefit from the fact that for the BSP, javascript and python have the same escape sequences.
+    """
+    data = repr(value)
+    return data.lstrip("u")
+
 
 class YieldVisitor(ASTVisitor):
     has_yield = False
@@ -906,7 +914,7 @@ class Translator(object):
         self.output = save_output
         if self.source_tracking and self.store_source:
             for l in self.track_lines.keys():
-                self.w( self.spacing() + '''%s__track_lines__[%d] = "%s";''' % (self.module_prefix, l, self.track_lines[l].replace('"', '\"')), translate=False)
+                self.w( self.spacing() + '''%s__track_lines__[%d] = %s;''' % (self.module_prefix, l, uescapejs(self.track_lines[l])), translate=False)
         self.w( self.local_js_vars_decl([]))
         if captured_output.find("@CONSTANT_DECLARATION@") >= 0:
             captured_output = captured_output.replace("@CONSTANT_DECLARATION@", self.constant_decl())
@@ -918,7 +926,7 @@ class Translator(object):
 
         if attribute_checking:
             self.w( self.dedent() + "} catch ($pyjs_attr_err) {throw @{{_errorMapping}}($pyjs_attr_err);};")
-
+ 
         self.w( self.spacing() + "return this;")
         self.w( self.dedent() + "}; /* end %s */"  % module_name)
         self.w( "\n")
@@ -1109,7 +1117,7 @@ class Translator(object):
             return word
         raise RuntimeError("attrib_remap %s" % words)
 
-    def push_lookup(self, scope = None):
+    def push_lookup(self, scope=None):
         if scope is None:
             scope = {}
         self.lookup_stack.append(scope)
@@ -1122,7 +1130,7 @@ class Translator(object):
         if name_type != 'builtin':
             words[0] = self.vars_remap(words[0])
         if len(words) == 0:
-            return words[0]
+            return words[0] # WTF FIXME ?????
         return self.attrib_join(words)
 
     def add_lookup(self, name_type, pyname, jsname, depth = -1):
@@ -1177,7 +1185,7 @@ class Translator(object):
         #       ['builtin', '__pyjamas__', '__javascript__', 'global']:
         #    print "name_type", name_type, jsname
         #    jsname = "$l." + jsname
-        return (name_type, pyname, jsname, depth, (name_type is not None) and (max_depth > 0) and (max_depth == depth))
+        return (name_type, pyname, jsname, depth, is_local)
 
     def translate_escaped_names(self, txt, current_klass):
         """ escape replace names
@@ -3112,13 +3120,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 srcLine = self.src[min(lineNum1, len(self.src))-1].strip()
                 if lineNum1 < lineNum2:
                     srcLine += ' ... ' + self.src[min(lineNum2, len(self.src))-1].strip()
-                srcLine = srcLine.replace('\\', '\\\\')
-                srcLine = srcLine.replace('"', '\\"')
-                srcLine = srcLine.replace("'", "\\'")
 
         return self.module_name + ".py, line " \
                + str(lineNum1) + ":"\
-               + "\\n" \
+               + "\n" \
                + "    " + srcLine
 
     def _augassign(self, node, current_klass):
@@ -3207,9 +3212,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             tnode = self.ast.Assign([lhs_ass], op(v, node.expr))
         return self._assign(tnode, current_klass)
 
-    def _lhsFromName(self, name, current_klass, set_name_type = 'variable'):
+    def _lhsFromName(self, name, current_klass, set_name_type='variable'):
         name_type, pyname, jsname, depth, is_local = self.lookup(name)
-        if is_local:
+        if name_type == "__javascript__":
+            lhs = jsname
+        elif is_local:
             lhs = jsname
             self.add_lookup(set_name_type, name, jsname)
         elif self.top_level:
@@ -3221,6 +3228,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 #lhs = "var " + name + " = " + vname
                 lhs = vname
         else:
+            # global name assigned from function
             vname = self.add_lookup(set_name_type, name, name)
             if self.create_locals:
                 # hmmm...
@@ -3779,15 +3787,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node.value, float):
             return str(node.value)
         elif isinstance(node.value, basestring):
-            v = node.value
-            if isinstance(node.value, unicode):
-                v = v.encode('utf-8')
+            escaped = uescapejs(node.value)
+            return escaped
             return  "'%s'" % escapejs(v)
         elif node.value is None:
             return "null"
         else:
             raise TranslationError(
-                "unsupported type (in _const)", node, self.module_name)
+                "unsupported  type (in _const)", node, self.module_name)
 
     def _unaryadd(self, node, current_klass):
         if not self.operator_funcs:
