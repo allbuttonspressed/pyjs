@@ -68,7 +68,7 @@ class Builder(object):
     def compile(self, src, module_name):
         dst = os.path.join(self.options.working_dir, TMP_DIR, module_name + ".js")
         internal_ast = False
-        compiler = pyjs.translator.import_compiler(internal_ast)
+        compiler = pyjs.translator.compiler
         pyjs.translator.translate(compiler, [src], dst, module_name,
                 debug=self.options.debug,
                 source_tracking=self.options.debug,

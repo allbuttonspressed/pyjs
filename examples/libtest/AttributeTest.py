@@ -1,4 +1,5 @@
 from UnitTest import UnitTest
+import sys
 
 name = 'Name'
 prototype = 'Prototype'
@@ -34,6 +35,9 @@ class AttributeTest(UnitTest):
         self.assertEqual(hasattr(self, "getName"), True, "AttrTest should have method 'getName'")
         self.assertEqual(hasattr(self, "blah"), False, "AttrTest has no method 'getName'")
         self.assertEqual(hasattr("", "find"), True, "str should have method 'find', bug #483")
+        
+        if sys.version_info < (2, 6):
+            return 
         self.assertEqual(hasattr(1.0, "real"), True, "float should have attribute 'real', bug #483")
         self.assertEqual(hasattr(1, "real"), True, "int should have attribute 'real', bug #483") 
 
@@ -151,7 +155,8 @@ class AttributeTest(UnitTest):
         try:
             x = [].append
             x = {}.get
-            x = (1,2,3).count
+            if sys.version_info >= (2, 6):
+                x = (1,2,3).count
             x = (lambda x:z).__name__
             x = [1,2,3,4][1:2].append
         except Exception, e:
@@ -160,3 +165,21 @@ class AttributeTest(UnitTest):
             x = "asdfgd".rjust
         except Exception, e:
             self.fail("String attribute, #595, '%s'" % e)
+    
+    def testExpressionAttributeCall(self):
+        s1 = "    1234"
+        s2 = "5678    "
+        
+        def s3():
+            return " 6 "
+        
+        l = [" 1 ", " 2", "3 "]
+        
+        self.assertEqual((s1 + s2).strip(), "12345678")
+        self.assertEqual((s1 + "").strip(), "1234")
+        self.assertEqual(l[0].strip(), "1")
+        self.assertEqual((''.join(l)).strip(), "1  23")
+        self.assertEqual((s3() + s2).strip(), "6 5678")
+        self.assertEqual(s3().strip(), "6")
+        self.assertEqual(" 6 ".strip(), "6")
+        self.assertEqual([1,2,3].pop(), 3)

@@ -3,7 +3,6 @@ speed_options={}
 pythonic_options={}
 
 all_compile_options = dict(
-    internal_ast = False,
     debug = False,
     print_statements=True,
     function_argument_checking=False,
@@ -23,18 +22,19 @@ all_compile_options = dict(
 )
 
 def add_compile_options(parser):
+
     global debug_options, speed_options, pythonic_options
 
-    parser.add_option("--internal-ast",
-                      dest="internal_ast",
-                      action="store_true",
-                      help="Use internal AST parser instead of standard python one"
-                     )
-    parser.add_option("--no-internal-ast",
-                      dest="internal_ast",
-                      action="store_false",
-                      help="Use standard python parser instead of internal AST one"
-                     )
+#    parser.add_option("--internal-ast",
+#                      dest="internal_ast",
+#                      action="store_true",
+#                      help="Use internal AST parser instead of standard python one"
+#                     )
+#    parser.add_option("--no-internal-ast",
+#                      dest="internal_ast",
+#                      action="store_false",
+#                      help="Use standard python parser instead of internal AST one"
+#                     )
 
     parser.add_option("--debug-wrap",
                       dest="debug",

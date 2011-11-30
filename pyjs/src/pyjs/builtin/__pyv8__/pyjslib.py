@@ -1,15 +1,3 @@
-# pyv8_print_fn is actually in pyv8run.py and is added to the Globals
-def printFunc(objs, newline):
-    JS("""
-        var s = "";
-        for(var i=0; i < @{{objs}}.length; i++) {
-            if(s != "") s += " ";
-                s += @{{objs}}[i];
-        }
-
-        pyv8_print_fn(s);
-    """)
-
 def __dynamic_load__(importName):
     setCompilerOptions("noDebug")
     module = JS("""$pyjs.loaded_modules[@{{importName}}]""")
@@ -30,9 +18,7 @@ def __dynamic_load__(importName):
     return module
 
 def debugReport(msg):
-    JS("""
-    pyv8_print_fn(@{{msg}});
-    """)
+    print msg
 
 def open(fname, mode='r'):
     return JS("pyv8_open(@{{fname}}, @{{mode}});")

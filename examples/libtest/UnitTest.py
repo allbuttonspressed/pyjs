@@ -147,6 +147,8 @@ class UnitTest:
     def failUnless(self, expr, msg=None):
         self.startTest()
         if not expr:
+            if not msg:
+                msg = "expected True, got False"
             return self.fail(msg)
 
     def failUnlessRaises(self, excClass, callableObj, *args, **kwargs):

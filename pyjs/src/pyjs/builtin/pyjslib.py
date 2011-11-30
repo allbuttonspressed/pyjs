@@ -23,6 +23,7 @@ setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noGetattrSuppo
 platform = JS("$pyjs.platform")
 sys = None
 dynamic = None
+Ellipsis = None
 JS("""
 var $max_float_int = 1;
 for (var i = 0; i < 1000; i++) {
@@ -72,6 +73,10 @@ def type(clsname, bases=None, methods=None):
             return float
         if JS("typeof @{{clsname}} == 'number'"):
             return float
+        if JS("@{{clsname}} == null"):
+            return NoneType
+        if JS("typeof @{{clsname}} == 'function'"):
+            return FunctionType
         raise ValueError("Cannot determine type for %r" % clsname)
 
     # creates a class, derived from bases, with methods and variables
@@ -133,6 +138,32 @@ object.__str__ = JS("""function (self) {
 class basestring(object):
     pass
 
+class TypeClass:
+    def __repr__(cls):
+        return "<type '%s'>" % cls.__name__
+
+class NoneType(TypeClass):
+    pass
+class ModuleType(TypeClass):
+    pass
+class FunctionType(TypeClass):
+    pass
+class CodeType(TypeClass):
+    pass
+class TracebackType(TypeClass):
+    pass
+class FrameType(TypeClass):
+    pass
+class EllipsisType(TypeClass):
+    def __new__(cls):
+        if Ellipsis is None:
+            return object.__new__(cls)
+        else:
+            return Ellipsis
+    def __repr__(self):
+        return 'Ellipsis'
+    def __str__(self):
+        return 'Ellipsis'
 
 def op_is(a,b):
     JS("""
@@ -802,12 +833,18 @@ JS("""
 def ___import___(path, context, module_name=None, get_base=True):
     save_track_module = JS("$pyjs.track.module")
     sys = JS("$pyjs.loaded_modules['sys']")
+    pyjslib = JS("$pyjs.loaded_modules['pyjslib']")
     if JS("@{{sys}}.__was_initialized__ != true"):
         module = JS("$pyjs.loaded_modules[@{{path}}]")
         module()
         JS("$pyjs.track.module = @{{save_track_module}};")
         if path == 'sys':
-            module.modules = dict({'pyjslib': pyjslib, 'sys': module})
+            module.modules = dict({'pyjslib': pyjslib,
+                                   '__builtin__':pyjslib,
+                                   'builtins':pyjslib,
+                                   'sys': module})
+            JS("$pyjs.loaded_modules['__builtin__'] = @{{pyjslib}};")
+            JS("$pyjs.loaded_modules['builtins'] = @{{pyjslib}};")
         return module
     importName = path
     is_module_object = False
@@ -915,7 +952,7 @@ def ___import___(path, context, module_name=None, get_base=True):
             if get_base:
                 return JS("$pyjs.loaded_modules[@{{topName}}]")
             return module
-
+    
     # If we are here, the module is not loaded (yet).
     if JS("$pyjs.options.dynamic_loading"):
         module = __dynamic_load__(importName)
@@ -987,19 +1024,29 @@ class BaseException:
 class KeyboardInterrupt(BaseException):
     pass
 
+class GeneratorExit(BaseException):
+    pass
+
+class SystemExit(BaseException):
+    pass
+
+
 class Exception(BaseException):
     pass
 
 class StandardError(Exception):
     pass
 
-class AssertionError(StandardError):
+class ArithmeticError(StandardError):
     pass
 
 class StopIteration(Exception):
     pass
 
 class GeneratorExit(Exception):
+    pass
+
+class AssertionError(StandardError):
     pass
 
 class TypeError(StandardError):
@@ -1023,7 +1070,7 @@ class LookupError(StandardError):
 class RuntimeError(StandardError):
     pass
 
-class ArithmeticError(StandardError):
+class SystemError(StandardError):
     pass
 
 class KeyError(LookupError):
@@ -1104,7 +1151,12 @@ String.prototype.find = function(sub, start, end) {
     if (pos + sub.length>end) return -1;
     return pos;
 };
-
+String.prototype.index = function(sub, start, end) {
+    var pos = this.find(sub, start, end);
+    if (pos < 0)
+        throw @{{ValueError}}('substring not found');
+    return pos;
+}
 String.prototype.count = function(sub, start, end) {
     var pos, count = 0, n = sub.length;
     if (typeof start == 'undefined') start = 0;
@@ -1271,7 +1323,17 @@ String.prototype.rsplit = function(sep, maxsplit) {
 
     return items;
 };
-
+String.prototype.splitlines = function(keepends) {
+    var items = this.$$split("\\n");
+    if (typeof keepends != 'undefined' && keepends)
+    {
+        for (var i=0; i<items.__array.length; i++)
+        {
+            items.__array[i] = items.__array[i] + "\\n";
+        }
+    }
+    return items;
+}
 if (typeof "a"[0] == 'undefined' ) {
     // IE: cannot do "abc"[idx]
     String.prototype.__iter__ = function() {
@@ -4132,6 +4194,7 @@ class list:
     def __getitem__(self, _index):
         JS("""
         var index = @{{_index}}.valueOf();
+        if (typeof index == 'boolean') index = @{{int}}(index);
         if (index < 0) index += @{{self}}.__array.length;
         if (index < 0 || index >= @{{self}}.__array.length) {
             throw @{{IndexError}}("list index out of range");
@@ -4242,6 +4305,100 @@ class list:
 JS("@{{list}}.__str__ = @{{list}}.__repr__;")
 JS("@{{list}}.toString = @{{list}}.__str__;")
 
+class slice:
+    def __init__(self, a1, *args):
+        if args:
+            self.start = a1
+            self.stop = args[0]
+            if len(args) > 1:
+                self.step = args[1]
+            else:
+                self.step = None
+        else:
+            self.stop = a1
+            self.start = None
+            self.step = None
+            
+    def __cmp__(self, x):
+        r = cmp(self.start, x.start)
+        if r != 0:
+            return r
+        r = cmp(self.stop, x.stop)
+        if r != 0:
+            return r
+        r = cmp(self.step, x.step)
+        return r        
+            
+    def indices(self, length):
+        """
+        PySlice_GetIndicesEx at ./Objects/sliceobject.c
+        """
+        step = 0
+        start = 0
+        stop = 0
+        if self.step is None:
+            step = 1
+        else:
+            step = self.step
+            if step == 0:
+                raise ValueError("slice step cannot be zero")
+            
+        if step < 0:
+            defstart = length - 1
+            defstop = -1
+        else:
+            defstart = 0
+            defstop = length
+            
+        if self.start is None:
+            start = defstart
+        else:
+            start = self.start
+            if start < 0:
+                start += length
+            if start < 0:
+                if step < 0:
+                    start = -1
+                else:
+                    start = 0
+            if start >= length:
+                if step < 0:
+                    start = length - 1
+                else:
+                    start = length
+    
+        if self.stop is None:
+            stop = defstop
+        else:
+            stop = self.stop
+            if stop < 0:
+                stop += length
+            if stop < 0:
+                if step < 0:
+                    stop = -1
+                else:
+                    stop = 0
+            if stop >= length:
+                if step < 0:
+                    stop = length - 1
+                else:
+                    stop = length
+
+        if ((step < 0 and stop >= start)
+            or (step > 0 and start >= stop)):
+            slicelength = 0
+        elif step < 0:
+            slicelength = (stop - start + 1)/step + 1;
+        else:
+            slicelength = (stop - start - 1)/step + 1;
+            
+        return (start, stop, step)
+
+    def __repr__(self):
+        return "slice(%s, %s, %s)" % (self.start, self.stop, self.step)            
+
+JS("@{{slice}}.__str__ = @{{slice}}.__repr__;")
+JS("@{{slice}}.toString = @{{slice}}.__str__;")
 
 class tuple:
     def __init__(self, data=JS("[]")):
@@ -4315,6 +4472,7 @@ class tuple:
     def __getitem__(self, _index):
         JS("""
         var index = @{{_index}}.valueOf();
+        if (typeof index == 'boolean') index = @{{int}}(index);
         if (index < 0) index += @{{self}}.__array.length;
         if (index < 0 || index >= @{{self}}.__array.length) {
             throw @{{IndexError}}("tuple index out of range");
@@ -4324,9 +4482,39 @@ class tuple:
 
     def __len__(self):
         return INT(JS("""@{{self}}.__array.length"""))
+    
+    def index(self, value, _start=0):
+        JS("""
+        var start = @{{_start}}.valueOf();
+        /* if (typeof valueXXX == 'number' || typeof valueXXX == 'string') {
+            start = selfXXX.__array.indexOf(valueXXX, start);
+            if (start >= 0)
+                return start;
+        } else */ {
+            var len = @{{self}}.__array.length >>> 0;
+
+            start = (start < 0)
+                    ? Math.ceil(start)
+                    : Math.floor(start);
+            if (start < 0)
+                start += len;
+
+            for (; start < len; start++) {
+                if ( /*start in selfXXX.__array && */
+                    @{{cmp}}(@{{self}}.__array[start], @{{value}}) == 0)
+                    return start;
+            }
+        }
+        """)
+        raise ValueError("list.index(x): x not in list")    
 
     def __contains__(self, value):
-        return JS('@{{self}}.__array.indexOf(@{{value}})>=0')
+        try:
+            self.index(value)
+        except ValueError:
+            return False
+        return True
+        #return JS('@{{self}}.__array.indexOf(@{{value}})>=0')
 
     def __iter__(self):
         return JS("new $iter_array(@{{self}}.__array)")
@@ -5414,34 +5602,48 @@ def xrange(start, stop = None, step = 1):
     @{{!x}}['__str__'] = @{{!x}}.toString;
     return @{{!x}};
     """)
+    
+def get_len_of_range(lo, hi, step):
+    n = 0
+    JS("""
+    var diff = @{{hi}} - @{{lo}} - 1;
+    @{{n}} = Math.floor(diff / @{{step}}) + 1;
+    """);
+    return n
 
 def range(start, stop = None, step = 1):
     if stop is None:
         stop = start
         start = 0
-    i = start
+    ilow = start
     if not JS("@{{start}}!== null && @{{start}}.__number__ && (@{{start}}.__number__ != 0x01 || isFinite(@{{start}}))"):
         raise TypeError("xrange() integer start argument expected, got %s" % start.__class__.__name__)
     if not JS("@{{stop}}!== null && @{{stop}}.__number__ && (@{{stop}}.__number__ != 0x01 || isFinite(@{{stop}}))"):
         raise TypeError("xrange() integer end argument expected, got %s" % stop.__class__.__name__)
     if not JS("@{{step}}!== null && @{{step}}.__number__ && (@{{step}}.__number__ != 0x01 || isFinite(@{{step}}))"):
         raise TypeError("xrange() integer step argument expected, got %s" % step.__class__.__name__)
+    
+    if step == 0:
+        raise ValueError("range() step argument must not be zero")
+    
+    if step > 0:
+        n = get_len_of_range(ilow, stop, step)
+    else:
+        n = get_len_of_range(stop, ilow, -step)
+    r = None
     items = JS("new Array()")
     JS("""
-    var nstep = (@{{stop}}-@{{start}})/@{{step}};
-    nstep = nstep < 0 ? Math.ceil(nstep) : Math.floor(nstep);
-    if ((@{{stop}}-@{{start}}) % @{{step}}) {
-        nstep++;
+    for (var i = 0; i < @{{n}}; i++) {
+    """)
+    items.push(INT(ilow))
+    JS("""
+        @{{ilow}} += @{{step}};
     }
-    var _stop = @{{start}}+ nstep * @{{step}};
-    if (nstep <= 0) @{{i}}= _stop;
-    for (; @{{i}}!= _stop; @{{i}}+= @{{step}}) {
-""")
-    items.push(INT(i))
-    JS('}')
-    return list(items)
+    @{{r}} = @{{list}}(items);
+    """)
+    return r
 
-def slice(object, lower, upper):
+def __getslice(object, lower, upper):
     JS("""
     if (@{{object}}=== null) {
         return null;
@@ -6078,6 +6280,28 @@ def sum(iterable, start=None):
         start += i
     return start
 
+class complex:
+    def __init__(self, real, imag):
+        self.real = float(real)
+        self.imag = float(imag)
+        
+    def __repr__(self):
+        if self.real:
+            return "(%s+%sj)" % (self.real, self.imag)
+        else:
+            return "%sj" % self.imag
+    
+    def __add__(self, b):
+        if isinstance(b, complex):
+            return complex(self.real + b.real, self.imag + b.imag)
+        elif JS("typeof @{{b}}.__number__ != 'undefined'"):
+            return complex(self.real + b, self.imag)
+        else:
+            raise TypeError("unsupported operand type(s) for +: '%r', '%r'" % (self, b))
+        
+JS("@{{complex}}['__radd__'] = @{{complex}}['__add__'];")
+JS("@{{complex}}['__str__'] = @{{complex}}['__repr__'];")
+JS("@{{complex}}['toString'] = @{{complex}}['__repr__'];")
 
 JS("@{{next_hash_id}} = 0;")
 
@@ -6542,13 +6766,15 @@ def sprintf(strng, args):
     return result.join("");
 """)
 
+__module_internals = set(['__track_lines__'])
 def _globals(module):
     """
     XXX: It should return dictproxy instead!
     """
     d = dict()
     for name in dir(module):
-        d[name] = JS("@{{module}}[@{{name}}]")
+        if not name in __module_internals:
+            d[name] = JS("@{{module}}[@{{name}}]")
     return d
     
 def debugReport(msg):
@@ -6737,7 +6963,82 @@ wrapped_next = JS("""function (iter) {
     return res;
 }""")
 
+# Slice `data` in `count`-long array.
+# If not `extended`, make sure `data` length is same as count
+# Otherwise put all excessive elements in new array at `extended` position
+__ass_unpack = JS("""function (data, count, extended) {
+    if (data === null) {
+        throw @{{TypeError}}("'NoneType' is not iterable");
+    }
+    if (data.constructor === Array) {
+    } else if (typeof data.__iter__ == 'function') {
+        if (typeof data.__array == 'object') {
+            data = data.__array;
+        } else {
+            var iter = data.__iter__();
+            if (typeof iter.__array == 'object') {
+                data = iter.__array;
+            }
+            data = [];
+            var item, i = 0;
+            if (typeof iter.$genfunc == 'function') {
+                while (typeof (item=iter.next(true)) != 'undefined') {
+                    data[i++] = item;
+                }
+            } else {
+                try {
+                    while (true) {
+                        data[i++] = iter.next();
+                    }
+                }
+                catch (e) {
+                    if (e.__name__ != 'StopIteration') throw e;
+                }
+            }
+        }
+    } else {
+        throw @{{TypeError}}("'" + @{{repr}}(data) + "' is not iterable");
+    }
+    var res = new Array();
+    if (typeof extended == 'undefined' || extended === null)
+    {
+        if (data.length != count)
+        if (data.length > count)
+            throw @{{ValueError}}("too many values to unpack");
+        else
+            throw @{{ValueError}}("need more than "+data.length+" values to unpack");
+        return data;
+    }
+    else
+    {
+        throw @{{NotImplemented}}("Extended unpacking is not implemented");
+    }
+}""")
+
+def __with(mgr, func):
+    """
+    Copied verbatim from http://www.python.org/dev/peps/pep-0343/
+    """
+    exit = type(mgr).__exit__  # Not calling it yet
+    value = type(mgr).__enter__(mgr)
+    exc = True
+    try:
+        try:
+            func(value)
+        except:
+            # The exceptional case is handled here
+            exc = False
+            if not exit(mgr, *sys.exc_info()):
+                raise
+            # The exception is swallowed if exit() returns true
+    finally:
+        # The normal and non-local-goto cases are handled here
+        if exc:
+            exit(mgr, None, None, None)
+            
 init()
+
+Ellipsis = EllipsisType()
 
 __nondynamic_modules__ = {}
 

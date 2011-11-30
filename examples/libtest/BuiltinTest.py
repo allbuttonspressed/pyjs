@@ -119,32 +119,9 @@ class BuiltinTest(UnitTest):
         self.assertEqual(float("0"), 0)
         self.assertEqual(float(0), 0)
         
-        try:
-            float('not float')
-            self.fail("No float('not float') argument error raised")
-        except ValueError, e:
-            if PY27_BEHAVIOUR:
-                self.assertEqual(e[0], "could not convert string to float: not float")
-            else:
-                self.assertEqual(e[0], "invalid literal for float(): not float")
-
-        try:
-            float('')
-            self.fail("No float('') argument error raised")
-        except ValueError, e:
-            if PY27_BEHAVIOUR:
-                self.assertEqual(e[0], "could not convert string to float: ")
-            else:
-                self.assertEqual(e[0], "empty string for float()")
-
-        try:
-            float(' ')
-            self.fail("No float(' ') argument error raised")
-        except ValueError, e:
-            if PY27_BEHAVIOUR:
-                self.assertEqual(e[0], "could not convert string to float: ")
-            else:
-                self.assertEqual(e[0], "empty string for float()")
+        self.assertRaises(ValueError, float, 'not float')
+        self.assertRaises(ValueError, float, '')
+        self.assertRaises(ValueError, float, ' ')
 
         self.assertTrue(isinstance(1.0, float), "1.0 should be instance of float")
 
@@ -292,12 +269,24 @@ class BuiltinTest(UnitTest):
         self.assertTrue(CLS is imports.loccls.CLS, "CLS is imports.loccls.CLS")
         self.assertTrue(CLS is imports.upcls.CLS, "CLS is imports.upcls.CLS")
 
+        from imports import __doc__ as imports_doc
+        self.assertEqual(imports.__doc__, imports_doc, "Module object must have __doc__ attribute")
+        from imports import __name__ as imports_name
+        self.assertEqual(imports.__name__, imports_name)
+
         # from ... import * tests, issue #615
         self.assertEqual(imports.all_masked, False, "from ... import * should respect __all__, #615")
         self.assertEqual(imports.all_override, True, "Should override globals, #615")
         self.assertEqual(imports.all_import1, 1)
         self.assertEqual(imports.all_import2, 3)
         self.assertEqual(imports.all_import3, 3)
+        
+        # import builtins module
+        import __builtin__
+        self.assertEqual(__builtin__.dict, dict, "__builtin__.dict != dict")
+        
+        from __builtin__ import dict as dict_bltin
+        self.assertEqual(dict_bltin, dict, "__builtin__.dict != dict")
 	
     def testBitOperations(self):
         self.assertEqual(1 << 2 - 1, 2, "shift error 1")
@@ -400,6 +389,10 @@ class BuiltinTest(UnitTest):
         self.assertEqual(r, [])
         r = range(-6, -2, -1)
         self.assertEqual(r, [])
+        r = range(2, 1, 2)
+        self.assertEqual(r, [])
+        r = range(0, 2, 2)
+        self.assertEqual(r, [0])
 
     def testXRange(self):
         r = [i for i in xrange(3)]
@@ -465,7 +458,38 @@ class BuiltinTest(UnitTest):
             e = 2
         self.assertEqual(i, 0)
         self.assertEqual(e, 1)
-
+        
+        class X(object):
+            pass
+        x = X()
+        x.a = 1
+        for x.a in [3,4,5]:
+            pass
+        self.assertEqual(x.a, 5)
+                
+        d = {}
+        for d['zz'] in [1,2,3]:
+            pass
+        self.assertEqual(d, {'zz': 3})
+        
+        l = [1]
+        for l[0] in [1,2,3]:
+            pass
+        self.assertEqual(l, [3])
+        
+        l = [1,3,4]
+        for l[1:2] in [[5,6,7]]:
+            pass
+        self.assertEqual(l, [1, 5, 6, 7, 4])
+        
+        x = ((1, 2), 3, (4, 5))
+        for (a, b), c, (d, e) in [x]*5:
+            pass
+        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
+        
+        for [[a, b], c, [d, e]] in [x]*5:
+            pass
+        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
 
     def testIter(self):
 
@@ -583,11 +607,7 @@ class BuiltinTest(UnitTest):
         self.assertEqual(s1, s2)
         self.assertNotEqual(s1, s3, "slice() is mis-used, issue #582")
         # members
-        try:
-            s = slice(1)
-        except Exception, e:
-            self.fail("slice() is mis-used, issue #582")
-            return False
+        s = slice(1)
         self.assertEqual(s.start, None)
         self.assertEqual(s.stop, 1)
         self.assertEqual(s.step, None)

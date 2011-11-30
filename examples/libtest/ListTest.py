@@ -1,4 +1,5 @@
 from UnitTest import UnitTest, IN_JS
+import sys 
 
 class LetterNode(list):
 
@@ -40,6 +41,10 @@ class ListTest(UnitTest):
         self.assertTrue(value[1] is 1)
         self.assertTrue(value[4] is 4)
         self.assertTrue(value[-3] is 2)
+        
+        l = [1, 2]
+        self.assertEqual(l[True], 2)
+        self.assertEqual(l[False], 1)
 
     def testSliceRange(self):
         value = [0, 1, 2, 3, 4]
@@ -87,6 +92,12 @@ class ListTest(UnitTest):
         self.assertTrue(value == [1, 11, 12, 3], "%s == [1, 11, 12, 3]" % value)
         value[3:] = [21,22,23]
         self.assertTrue(value == [1, 11, 12, 21, 22, 23], "%s == [1, 11, 12, 21, 22, 23]" % value)
+        
+        a = range(20)
+        a[slice(2,10,3)] = [1,2,3]
+        self.assertEqual(a, [0, 1, 1, 3, 4, 2, 6, 7, 3,
+                             9, 10, 11, 12, 13, 14, 15,
+                             16, 17, 18, 19])
 
     def testMultipleSliceSet(self):
         """Test assignment to a slice in an assignment list (issue 514)."""
@@ -369,15 +380,8 @@ class ListTest(UnitTest):
             self.assertEqual(l.index(2), 0)
         except ValueError:
             self.fail("ValueError raised when not expected")
-
-        try:
-            l.index(200000)
-        except ValueError, e:
-            expected_msg = "list.index(x): x not in list" if IN_JS else "200000 is not in list"
-            self.assertTrue(str(e) == expected_msg,
-                            "ValueError exception has incorrect message '%s'" % e)
-        else:
-            self.fail("ValueError not raised")
+ 
+        self.assertRaises(ValueError, l.index, 200000)
 
         l = [[1],[2],[3]]
         self.assertEqual(l.index([2]), 1)
@@ -444,7 +448,57 @@ class ListTest(UnitTest):
 
         l = [{'monkey':1}, {'patch':1}, {'fish':1}, {'chips':1}]
         self.assertTrue({'fish':1} in l, "{'fish':1} in l")
-
+        
+    def testExtendedSlicing(self):
+        # deletion
+        a = [0,1,2,3,4]
+        del a[::2]
+        self.assertEqual(a, [1,3])
+        
+        a = range(5)
+        del a[1::2]
+        self.assertEqual(a, [0,2,4])
+        
+        a = range(5)
+        del a[1::-2]
+        self.assertEqual(a, [0,2,3,4])
+        
+        a = range(10)
+        del a[::1000]
+        self.assertEqual(a, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+        
+        #  assignment
+        a = range(10)
+        a[::2] = [-1]*5
+        self.assertEqual(a, list([-1, 1, -1, 3, -1, 5, -1, 7, -1, 9]))
+        
+        a = list(range(10))
+        a[::-4] = [10]*3
+        self.assertEqual(a, list([0, 10, 2, 3, 4, 10, 6, 7, 8 ,10]))
+        
+        a = list(range(4))
+        a[::-1] = a
+        self.assertEqual(a, list([3, 2, 1, 0]))
+        
+        a = list(range(10))
+        b = a[:]
+        c = a[:]
+        a[2:3] = list(["two", "elements"])
+        b[slice(2,3)] = list(["two", "elements"])
+        c[2:3:] = list(["two", "elements"])
+        self.assertEqual(a, b)
+        self.assertEqual(a, c)
+        
+        a = list(range(10))
+        a[::2] = tuple(range(5))
+        self.assertEqual(a, list([0, 1, 1, 3, 2, 5, 3, 7, 4, 9]))
+        
+        # causes segfault in older versions
+        if sys.version_info < (2,5,5):
+            return
+        # test issue7788
+        a = list(range(10))
+        del a[9::1<<333]        
 
 class A:
     def __cmp__(self, other):
