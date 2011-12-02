@@ -246,7 +246,9 @@ var _DATE_FORMAT_REGXES = {
     'd': new RegExp('^[0-9]{1,2}'),
     'm': new RegExp('^[0-9]{1,2}'),
     'H': new RegExp('^[0-9]{1,2}'),
-    'M': new RegExp('^[0-9]{1,2}')
+    'M': new RegExp('^[0-9]{1,2}'),
+    'S': new RegExp('^[0-9]{1,2}'),
+    'f': new RegExp('^[0-9]{1,6}')
 }
 
 /*
@@ -265,6 +267,12 @@ function _parseDate(datestring, format) {
             }
             data = data[0];
             i2 += data.length-1;
+
+            if (c1 == 'f') {
+                while (data.length < 6) {
+                    data += '0';
+                }
+            }
             var value = parseInt(data, 10);
             if (isNaN(value)) {
                 return null;
@@ -321,6 +329,18 @@ function strptime(datestring, format) {
             return null;
         }
         date.setMinutes(parsed.M);
+    }
+    if (typeof parsed.S != "undefined") {
+        if (parsed.S < 0 || parsed.S > 59) {
+            return null;
+        }
+        date.setSeconds(parsed.S);
+    }
+    if (typeof parsed.f != "undefined") {
+        if (parsed.f < 0 || parsed.f > 999999) {
+            return null;
+        }
+        date.setMilliseconds(parsed.f);
     }
     return date;
 };
