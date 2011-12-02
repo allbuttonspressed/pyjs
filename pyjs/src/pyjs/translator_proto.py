@@ -2733,7 +2733,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 self.w( self.spacing() + "$pyjs.__active_exception_stack__ = $pyjs.__last_exception_stack__;")
                 self.w( self.spacing() + "$pyjs.__last_exception_stack__ = null;")
             s = self.spacing()
-            self.w( self.spacing() + """if ($pyjs_last_exception != 'undefined') { $pyjs.__last_exception__ = $pyjs_last_exception; }""")
+            self.w( self.spacing() + """if (typeof $pyjs_last_exception != 'undefined') { $pyjs.__last_exception__ = $pyjs_last_exception; }""")
             self.w( """\
 %(s)sthrow ($pyjs.__last_exception__?
 %(s)s\t$pyjs.__last_exception__.error:
