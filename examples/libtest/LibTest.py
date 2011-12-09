@@ -18,6 +18,7 @@ from BuiltinTest import BuiltinTest
 from GeneratorTest import GeneratorTest
 from LongTest import LongTest
 from CompileTest import CompileTest
+from TemplateStringTest import TemplateStringTest
 
 if 1L << 31 > 0:
     has_long_type = True
@@ -67,6 +68,7 @@ def main():
     t.add(ExceptionTest)
     t.add(ClassTest)
     t.add(StringTest)
+    t.add(TemplateStringTest)
     t.add(SetTest)
     t.add(FrozenSetTest)
     t.add(ArgsTest)

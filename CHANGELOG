@@ -1,5 +1,9 @@
                     Changes made to Pyjamas since 0.7
                     ---------------------------------
+ * pyjs/src/pyjs/lib/string.py workaround Issue #658, mods to Template
+   class so that template strings substitution works.
+   By Phil Charlesworth
+
  * Added simple sys.stdout and sys.stderr objects. The print statement
    now uses sys.stdout for printing. You can intercept print statements
    by overriding sys.stdout (e.g. for displaying them on the web page).
