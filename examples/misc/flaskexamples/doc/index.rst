@@ -134,7 +134,7 @@ be using `RabbitMQ`_.  Therefore, we require installation of the following
 
 
 `RabbitMQ`_
-++++++++
++++++++++++
 
 First, install `RabbitMQ`_ and make sure it is running via either the 
 HTTP plugin and/or rabbitmqctl.  Please refer to the `RabbitMQ Documentation`_
@@ -153,7 +153,7 @@ usable home directory, and creating the necessary log directories your
 mileage could vary greatly.
 
 `Celery`_
-++++++
++++++++++
 
 Celery has excellent Python support and has a script wrapper around Flask
 applications.  You can install Flask-Celery and its dependencies via::
