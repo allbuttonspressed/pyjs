@@ -35,7 +35,7 @@ class UnitTest:
         try:        
             try:
                 test_method()
-            except Exception,e:
+            except Exception as e:
                 self.fail("uncaught exception:" + str(e))
         except:
             self.fail("uncaught javascript exception")
@@ -199,7 +199,7 @@ class UnitTest:
         self.startTest()
         try:
             callableObj(*args, **kwargs)
-        except excClass, exc:
+        except excClass:
             return
         else:
             if hasattr(excClass, '__name__'):

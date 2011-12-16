@@ -81,7 +81,7 @@ def b64decode(s, altchars=None):
         s = _translate(s, {altchars[0]: '+', altchars[1]: '/'})
     try:
         return binascii.a2b_base64(s)
-    except binascii.Error, msg:
+    except binascii.Error as msg:
         # Transform this exception for consistency
         raise TypeError(msg)
 
@@ -356,13 +356,13 @@ def test():
     import sys, getopt
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'deut')
-    except getopt.error, msg:
+    except getopt.error as msg:
         sys.stdout = sys.stderr
-        print msg
-        print """usage: %s [-d|-e|-u|-t] [file|-]
+        print(msg)
+        print("""usage: %s [-d|-e|-u|-t] [file|-]
         -d, -u: decode
         -e: encode (default)
-        -t: encode and decode string 'Aladdin:open sesame'"""%sys.argv[0]
+        -t: encode and decode string 'Aladdin:open sesame'""" % sys.argv[0])
         sys.exit(2)
     func = encode
     for o, a in opts:

@@ -517,7 +517,7 @@ class __Pyjamas__(object):
            ):
             try:
                 data = open(node.args[0].value, 'r').read()
-            except IOError, e:
+            except IOError as e:
                 raise TranslationError(
                     "Cannot include file '%s': %s" % (node.args[0].value, e), node.node)
             translator.ignore_debug = True
@@ -1947,7 +1947,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                         self.add_lookup("__pyjamas__", ass_name, name[0])
                     else:
                         self.add_lookup("__pyjamas__", ass_name, jsname)
-                except AttributeError, e:
+                except AttributeError:
                     #raise TranslationError("Unknown __pyjamas__ import: %s" % name, node)
                     pass
             return
@@ -2238,11 +2238,11 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     else:
                         raw_js = self.translate_escaped_names(raw_js, current_klass)
                     return raw_js, None
-                except AttributeError, e:
+                except AttributeError:
                     raise TranslationError(
                         "Unknown __pyjamas__ function %s" % pyname,
                          v.node, self.module_name)
-                except TranslationError, e:
+                except TranslationError as e:
                     raise TranslationError(e.msg, v, self.module_name)
             elif v.node.name == 'locals':
                 return """$p.dict({%s})""" % (",".join(["'%s': %s" % (pyname, self.lookup_stack[-1][pyname][2]) for pyname in self.lookup_stack[-1] if self.lookup_stack[-1][pyname][0] not in ['__pyjamas__', 'global']])), None

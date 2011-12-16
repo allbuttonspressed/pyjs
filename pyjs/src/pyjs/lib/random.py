@@ -71,7 +71,7 @@ class Random(_random.Random):
             #   version 2 to positive longs for version 3.
             try:
                 internalstate = tuple( long(x) % (2**32) for x in internalstate )
-            except ValueError, e:
+            except ValueError as e:
                 raise TypeError, e
             super(Random, self).setstate(internalstate)
         else:
