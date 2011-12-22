@@ -25,7 +25,7 @@ class ColourThing(object):
              self.r, self.g, self.b = rgb
          def fget(self):
              return (self.r, self.g, self.b)
-         return property(**locals()) 
+         return property(**locals())
 
 #from pyjamas import log
 
@@ -289,7 +289,7 @@ class BuiltinTest(UnitTest):
         self.assertEqual(imports.all_import1, 1)
         self.assertEqual(imports.all_import2, 3)
         self.assertEqual(imports.all_import3, 3)
-	
+
     def testBitOperations(self):
         self.assertEqual(1 << 2 - 1, 2, "shift error 1")
         self.assertEqual((1 << 2) - 1, 3, "shift error 2")
@@ -316,7 +316,7 @@ class BuiltinTest(UnitTest):
 
         local_vars = fn1()
         self.assertEqual(local_vars, {'b': 1})
-        
+
         def fn2():
             lx = 3
             def g():
@@ -483,7 +483,7 @@ class BuiltinTest(UnitTest):
                     break
         except:
             self.fail("error in user-defined iterator (caught here so tests can proceed)")
-            
+
         self.assertEqual(res, range(1,5))
 
     def testSorted(self):
@@ -563,7 +563,7 @@ class BuiltinTest(UnitTest):
         self.assertEqual(6, sum([0,1,2,3]))
         self.assertEqual(5, sum([0,1,2,3], -1))
         self.assertRaises(TypeError, sum, [0,1,2,3], "a")
-    
+
     def testSlice(self):
         # repr()
         self.assertEqual(repr(slice(1, 2, 3)), "slice(1, 2, 3)", "slice() is mis-used, issue #582")

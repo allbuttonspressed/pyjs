@@ -384,15 +384,15 @@ class ListTest(UnitTest):
     def testIndexClass(self):
 
         l = get_test_letters()
-        self.assertEqual(l[0].letter, 'g', '#413 index __cmp__ class issue') 
-        self.assertEqual(l[1].letter, 'f', '#413 index __cmp__ class issue') 
-        self.assertEqual(l[0][0].letter, 'o', '#413 index __cmp__ class issue') 
-        self.assertEqual(l[1][0].letter, 'r', '#413 index __cmp__ class issue') 
-        self.assertEqual(len(l), 2, '#413 index __cmp__ class issue') 
+        self.assertEqual(l[0].letter, 'g', '#413 index __cmp__ class issue')
+        self.assertEqual(l[1].letter, 'f', '#413 index __cmp__ class issue')
+        self.assertEqual(l[0][0].letter, 'o', '#413 index __cmp__ class issue')
+        self.assertEqual(l[1][0].letter, 'r', '#413 index __cmp__ class issue')
+        self.assertEqual(len(l), 2, '#413 index __cmp__ class issue')
         self.assertEqual(len(l[0]), 1, '#413 index __cmp__ class issue')
-        self.assertEqual(len(l[1]), 1, '#413 index __cmp__ class issue') 
+        self.assertEqual(len(l[1]), 1, '#413 index __cmp__ class issue')
         self.assertEqual(len(l[0][0]), 1, '#413 index __cmp__ class issue')
-        self.assertEqual(len(l[1][0]), 2, '#413 index __cmp__ class issue') 
+        self.assertEqual(len(l[1][0]), 2, '#413 index __cmp__ class issue')
 
     def testAugAssign(self):
         l = [10, 10.0]
