@@ -123,19 +123,28 @@ class BuiltinTest(UnitTest):
             float('not float')
             self.fail("No float('not float') argument error raised")
         except ValueError, e:
-            self.assertEqual(e[0], "invalid literal for float(): not float")
+            self.assertIn(e[0], [
+                "invalid literal for float(): not float", # <= 2.6
+                "could not convert string to float: not float", # 2.7
+            ])
 
         try:
             float('')
             self.fail("No float('') argument error raised")
         except ValueError, e:
-            self.assertEqual(e[0], "empty string for float()")
+            self.assertIn(e[0], [
+                "empty string for float()", # <= 2.6
+                "could not convert string to float: ", # 2.7
+            ])
 
         try:
             float(' ')
             self.fail("No float(' ') argument error raised")
         except ValueError, e:
-            self.assertEqual(e[0], "empty string for float()")
+            self.assertIn(e[0], [
+                "empty string for float()", # <= 2.6
+                "could not convert string to float: ", # 2.7
+            ])
 
         self.assertTrue(isinstance(1.0, float), "1.0 should be instance of float")
 

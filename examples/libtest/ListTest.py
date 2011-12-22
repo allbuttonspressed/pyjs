@@ -373,8 +373,11 @@ class ListTest(UnitTest):
         try:
             l.index(200000)
         except ValueError, e:
-            self.assertTrue(str(e) == "list.index(x): x not in list",
-                            "ValueError exception has incorrect message")
+            print '[%s]' % str(e)
+            self.assertIn(str(e), [
+                "list.index(x): x not in list", # <= 2.6
+                "200000 is not in list", # <= 2.6
+                ], "ValueError exception has incorrect message")
         else:
             self.fail("ValueError not raised")
 

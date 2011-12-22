@@ -186,6 +186,21 @@ class UnitTest:
                 msg=repr(first) + " == " + repr(second) + " within " + repr(places) + " places"
             return self.fail(msg)
 
+    # from 2.7 unittest/case.py
+    def assertIn(self, member, container, msg=None):
+        """Just like self.assertTrue(a in b), but with a nicer default message."""
+        if member not in container:
+            standardMsg = '%s not found in %s' % (repr(member)[:80],
+                                                  repr(container)[:80])
+            self.fail(msg if msg else standardMsg)
+
+    def assertNotIn(self, member, container, msg=None):
+        """Just like self.assertTrue(a not in b), but with a nicer default message."""
+        if member in container:
+            standardMsg = '%s unexpectedly found in %s' % (repr(member)[:80],
+                                                        repr(container)[:80])
+            self.fail(msg if msg else standardMsg)
+
     # based on the Python standard library
     def assertRaises(self, excClass, callableObj, *args, **kwargs):
         """
