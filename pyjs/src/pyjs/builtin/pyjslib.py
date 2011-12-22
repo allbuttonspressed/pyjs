@@ -58,7 +58,7 @@ def _create_class(clsname, bases=None, methods=None):
 
 def type(clsname, bases=None, methods=None):
     if bases is None and methods is None:
-        # First check for str and bool, since these are not implemented 
+        # First check for str and bool, since these are not implemented
         # as real classes, but instances do have a __class__ method
         if isinstance(clsname, str):
             return str
@@ -87,7 +87,7 @@ def type(clsname, bases=None, methods=None):
     JS(" return $pyjs_type(@{{clsname}}, @{{!bss}}, @{{!mths}}); ")
 
 class object:
-    
+
     def __setattr__(self, name, value):
         JS("""
         if (typeof @{{name}} != 'string') {
@@ -165,7 +165,7 @@ def op_eq(a,b):
         return false;
     }
     if (@{{a}} === @{{b}}) {
-        if (@{{a}}.__is_instance__ === false && 
+        if (@{{a}}.__is_instance__ === false &&
             @{{b}}.__is_instance__ === false) {
             return true;
         }
@@ -262,7 +262,7 @@ def op_usub(v):
 
 def __op_add(x, y):
     JS("""
-        return (typeof (@{{x}})==typeof (@{{y}}) && 
+        return (typeof (@{{x}})==typeof (@{{y}}) &&
                 (typeof @{{x}}=='number'||typeof @{{x}}=='string')?
                 @{{x}}+@{{y}}:
                 @{{op_add}}(@{{x}},@{{y}}));
@@ -305,7 +305,7 @@ def op_add(x, y):
 
 def __op_sub(x, y):
     JS("""
-        return (typeof (@{{x}})==typeof (@{{y}}) && 
+        return (typeof (@{{x}})==typeof (@{{y}}) &&
                 (typeof @{{x}}=='number'||typeof @{{x}}=='string')?
                 @{{x}}-@{{y}}:
                 @{{op_sub}}(@{{x}},@{{y}}));
@@ -2436,7 +2436,7 @@ JS("""
                 // Not 0, and base not a power of 2.
                 var scratch, pin, scratch_idx, pin_idx;
                 var powbase = base, power = 1, size = size_a;
-               
+
                 while (1) {
                     var newpow = powbase * base;
                     if (newpow >>> PyLong_SHIFT)  /* doesn't fit in a digit */
@@ -2740,8 +2740,8 @@ JS("""
     }
 
     function l_divmod(v, w, pdiv, pmod) {
-        var div = $l_divmod_div, 
-            mod = $l_divmod_mod; 
+        var div = $l_divmod_div,
+            mod = $l_divmod_mod;
 
         if (long_divrem(v, w, div, mod) < 0)
                 return -1;
@@ -3088,7 +3088,7 @@ JS("""
 
     $long.__cmp__ = function (b) {
         var sign;
- 
+
         if (this.ob_size != b.ob_size) {
             if (this.ob_size < b.ob_size) return -1;
             return 1;
@@ -3136,7 +3136,7 @@ JS("""
     };
 
     $long.__lshift = function (y) {
-        var a, z, wordshift, remshift, oldsize, newsize, 
+        var a, z, wordshift, remshift, oldsize, newsize,
             accum, i, j;
         if (y < 0) {
             throw @{{ValueError}}('negative shift count');
@@ -3814,7 +3814,7 @@ JS("""
             }
         }
 
-        if ((c !== null) && negativeOutput && 
+        if ((c !== null) && negativeOutput &&
             (z.ob_size != 0) && (c.ob_size != 0)) {
             z = z.__sub__(c);
         }
@@ -4757,7 +4757,7 @@ JS("@{{dict}}.iterkeys = @{{dict}}.__iter__;")
 JS("@{{dict}}.__str__ = @{{dict}}.__repr__;")
 
 # __empty_dict is used in kwargs initialization
-# There must me a temporary __init__ function used to prevent infinite 
+# There must me a temporary __init__ function used to prevent infinite
 # recursion
 def __empty_dict():
     JS("""
@@ -4774,16 +4774,16 @@ def __empty_dict():
 
 class set(object):
     def __init__(self, _data=None):
-        """ Transform data into an array with [key,value] and add set 
+        """ Transform data into an array with [key,value] and add set
             self.__object
-            Input data can be Array(key, val), iteratable (key,val) or 
+            Input data can be Array(key, val), iteratable (key,val) or
             Object/Function
         """
         if _data is None:
             JS("var data = [];")
         else:
             JS("var data = @{{_data}};")
-        
+
         if isSet(_data):
             JS("""
             @{{self}}.__object = {};
@@ -4794,16 +4794,16 @@ class set(object):
             }
             return null;""")
         JS("""
-        var item, 
-            i, 
+        var item,
+            i,
             n,
             selfObj = @{{self}}.__object = {};
 
-        if (@{{!data}}.constructor === Array) { 
+        if (@{{!data}}.constructor === Array) {
         // data is already an Array.
         // We deal with the Array of data after this if block.
-          } 
-          
+          }
+
           // We may have some other set-like thing with __object
           else if (typeof @{{!data}}.__object == 'object') {
             var dataObj = @{{!data}}.__object;
@@ -4811,15 +4811,15 @@ class set(object):
                 selfObj[sKey] = dataObj[sKey];
             }
             return null;
-          } 
-          
+          }
+
           // Something with an __iter__ method
           else if (typeof @{{!data}}.__iter__ == 'function') {
-          
+
             // It has an __array member to iterate over. Make that our data.
             if (typeof @{{!data}}.__array == 'object') {
                 data = @{{!data}}.__array;
-                } 
+                }
             else {
                 // Several ways to deal with the __iter__ method
                 var iter = @{{!data}}.__iter__();
@@ -4908,8 +4908,8 @@ class set(object):
         if isSet(value) == 1: # An instance of set
             # Use frozenset hash
             JS("""
-            var hashes = new Array(), 
-                obj = @{{self}}.__object, 
+            var hashes = new Array(),
+                obj = @{{self}}.__object,
                 i = 0;
             for (var v in obj) {
                 hashes[i++] = v;
@@ -4926,7 +4926,7 @@ class set(object):
     def __iter__(self):
         JS("""
         var items = new Array(),
-            i = 0, 
+            i = 0,
             obj = @{{self}}.__object;
         for (var key in obj) {
             items[i++] = obj[key];
@@ -5232,7 +5232,7 @@ class frozenset(set):
     def __init__(self, _data=None):
         if JS("(!('__object' in @{{self}}))"):
             set.__init__(self, _data)
-        
+
     def __hash__(self):
         JS("""
         var hashes = new Array(), obj = @{{self}}.__object, i = 0;
@@ -5254,7 +5254,7 @@ class frozenset(set):
 
     def discard(self, value):
         raise AttributeError('frozenset is immutable')
-        
+
     def intersection_update(self, other):
         raise AttributeError('frozenset is immutable')
 
@@ -5604,11 +5604,11 @@ def len(object):
     if (typeof @{{object}}== 'undefined') {
         throw @{{UndefinedValueError}}("obj");
     }
-    if (@{{object}}=== null) 
+    if (@{{object}}=== null)
         return @{{v}};
-    else if (typeof @{{object}}.__array != 'undefined') 
+    else if (typeof @{{object}}.__array != 'undefined')
         @{{v}} = @{{object}}.__array.length;
-    else if (typeof @{{object}}.__len__ == 'function') 
+    else if (typeof @{{object}}.__len__ == 'function')
         @{{v}} = @{{object}}.__len__();
     else if (typeof @{{object}}.length != 'undefined')
         @{{v}} = @{{object}}.length;
@@ -5638,7 +5638,7 @@ def isinstance(object_, classinfo):
                 if (@{{object_}}.__number__ == 0x02) {
                     return true;
                 }
-                if (isFinite(@{{object_}}) && 
+                if (isFinite(@{{object_}}) &&
                     Math.ceil(@{{object_}}) == @{{object_}}) {
                     return true;
                 }
@@ -5668,7 +5668,7 @@ def isinstance(object_, classinfo):
 
 def _isinstance(object_, classinfo):
     JS("""
-    if (   @{{object_}}.__is_instance__ !== true 
+    if (   @{{object_}}.__is_instance__ !== true
         || @{{classinfo}}.__is_instance__ === null) {
         return false;
     }
@@ -5691,7 +5691,7 @@ def _isinstance(object_, classinfo):
 def issubclass(class_, classinfo):
     if JS(""" typeof @{{class_}} == 'undefined' || @{{class_}} === null || @{{class_}}.__is_instance__ !== false """):
         raise TypeError("arg 1 must be a class")
-        
+
     if isinstance(classinfo, tuple):
         for ci in classinfo:
             if issubclass(class_, ci):
@@ -5701,10 +5701,10 @@ def issubclass(class_, classinfo):
         if JS(""" typeof @{{classinfo}} == 'undefined' || @{{classinfo}}.__is_instance__ !== false """):
             raise TypeError("arg 2 must be a class or tuple of classes")
         return _issubtype(class_, classinfo)
-    
+
 def _issubtype(object_, classinfo):
     JS("""
-    if (   @{{object_}}.__is_instance__ === null 
+    if (   @{{object_}}.__is_instance__ === null
         || @{{classinfo}}.__is_instance__ === null) {
         return false;
     }
@@ -5732,11 +5732,11 @@ def __getattr_check(attr, attr_left, attr_right, attrstr,
             var $pyjs__testval;
             var v, vl; /* hmm.... */
             if (bound_methods || descriptors) {
-                pyjs__testval = (v=(vl=attr_left)[attr_right]) == null || 
-                                ((vl.__is_instance__) && 
+                pyjs__testval = (v=(vl=attr_left)[attr_right]) == null ||
+                                ((vl.__is_instance__) &&
                                  typeof v == 'function');
                 if (descriptors) {
-                    pyjs_testval = pyjs_testval || 
+                    pyjs_testval = pyjs_testval ||
                             (typeof v['__get__'] == 'function');
                 }
                 pyjs__testval = (pyjs__testval ?
@@ -5827,7 +5827,7 @@ def delattr(obj, name):
         @{{obj}}.__delattr__(@{{name}});
         return;
     }
-    var mapped_name = attrib_remap.indexOf(@{{name}}) < 0 ? @{{name}}: 
+    var mapped_name = attrib_remap.indexOf(@{{name}}) < 0 ? @{{name}}:
                         '$$'+@{{name}};
     if (   @{{obj}}!== null
         && (typeof @{{obj}}== 'object' || typeof @{{obj}}== 'function')
@@ -6223,7 +6223,7 @@ def isIteratable(a):
 
 def isNumber(a):
     JS("""
-    return @{{a}}!== null && @{{a}}.__number__ && 
+    return @{{a}}!== null && @{{a}}.__number__ &&
            (@{{a}}.__number__ != 0x01 || isFinite(@{{a}}));
     """)
 
@@ -6550,7 +6550,7 @@ def _globals(module):
     for name in dir(module):
         d[name] = JS("@{{module}}[@{{name}}]")
     return d
-    
+
 def debugReport(msg):
     JS("""
     @{{printFunc}}([@{{msg}}], true);
