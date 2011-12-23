@@ -63,12 +63,12 @@ class PanelBase(object):
         existing = self.getWidget(index)
         if existing is not None:
             self.remove(existing)
-        self.insert(widget, index)
+        self.insert(widget, self.getElement(), index)
 
     def append(self, widget):
         return self.add(widget)
 
-    def __setitem__(self, index):
+    def __setitem__(self, index, widget):
         return self.setWidget(index, widget)
 
     def __getitem__(self, index):
