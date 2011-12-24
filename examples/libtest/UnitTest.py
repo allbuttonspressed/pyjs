@@ -22,7 +22,7 @@ class UnitTest:
         self.assertNotEqual = self.assertNotEquals = self.failIfEqual
         self.assertAlmostEqual = self.assertAlmostEquals = self.failUnlessAlmostEqual
         self.assertNotAlmostEqual = self.assertNotAlmostEquals = self.failIfAlmostEqual
-        self.assertRaises = self.failUnlessRaises
+        self.failUnlessRaises = self.assertRaises
         self.assert_ = self.assertTrue = self.failUnless
         self.assertFalse = self.failIf
 
@@ -147,17 +147,6 @@ class UnitTest:
         if not expr:
             return self.fail(msg)
 
-    def failUnlessRaises(self, excClass, callableObj, *args, **kwargs):
-        try:
-            callableObj(*args, **kwargs)
-        except excClass:
-            return
-        else:
-            if hasattr(excClass,'__name__'): excName = excClass.__name__
-            else: excName = str(excClass)
-            #raise self.failureException, "%s not raised" % excName
-            self.fail("%s not raised" % excName)
-
     def failUnlessEqual(self, first, second, msg=None):
         self.startTest()
         if not first == second:
@@ -214,7 +203,7 @@ class UnitTest:
         self.startTest()
         try:
             callableObj(*args, **kwargs)
-        except excClass, exc:
+        except excClass:
             return
         else:
             if hasattr(excClass, '__name__'):
