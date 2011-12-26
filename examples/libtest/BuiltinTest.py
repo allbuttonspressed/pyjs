@@ -925,3 +925,98 @@ class BuiltinTest(UnitTest):
             self.fail("%s not raised" % excName)
 
     ### end from CPython 2.7 Lib/Test/test_str.py
+
+    ### from Lib/Test/test_float.py
+    def test_format_float(self):
+        # these should be rewritten to use both format(x, spec) and
+        # x.__format__(spec)
+
+        self.assertEqual(format(0.0, 'f'), '0.000000')
+
+        # the default is 'g', except for empty format spec
+        #self.assertEqual(format(0.0, ''), '0.0')
+        #self.assertEqual(format(0.01, ''), '0.01')
+        #self.assertEqual(format(0.01, 'g'), '0.01')
+
+        # empty presentation type should format in the same way as str
+        # (issue 5920)
+        x = 100/7.
+        self.assertEqual(format(x, ''), str(x))
+        #self.assertEqual(format(x, '-'), str(x))
+        #self.assertEqual(format(x, '>'), str(x))
+        #self.assertEqual(format(x, '2'), str(x))
+
+        self.assertEqual(format(1.0, 'f'), '1.000000')
+
+        self.assertEqual(format(-1.0, 'f'), '-1.000000')
+
+        self.assertEqual(format( 1.0, ' f'), ' 1.000000')
+        self.assertEqual(format(-1.0, ' f'), '-1.000000')
+        self.assertEqual(format( 1.0, '+f'), '+1.000000')
+        self.assertEqual(format(-1.0, '+f'), '-1.000000')
+
+        # % formatting
+        self.assertEqual(format(-1.0, '%'), '-100.000000%')
+
+        # conversion to string should fail
+        self.format_raises(ValueError, "{:s}", 3.0)
+
+        # other format specifiers shouldn't work on floats,
+        #  in particular int specifiers
+        for format_spec in ([chr(x) for x in range(ord('a'), ord('z')+1)] +
+                            [chr(x) for x in range(ord('A'), ord('Z')+1)]):
+            if not format_spec in 'eEfFgGn%':
+                # AvdN: ToDo: these should also throw!!
+                if format_spec in 'bcdoxX':
+                    continue
+                format_spec = '{:' + format_spec + '}'
+                self.format_raises(ValueError, format_spec, 0.0)
+                # AvdN: ToDo
+                #self.format_raises(ValueError, format_spec, 1.0)
+                #self.format_raises(ValueError, format_spec, -1.0)
+                #self.format_raises(ValueError, format_spec, 1e100)
+                #self.format_raises(ValueError, format_spec, -1e100)
+                #self.format_raises(ValueError, format_spec, 1e-100)
+                #self.format_raises(ValueError, format_spec, -1e-100)
+
+        # issue 3382: 'f' and 'F' with inf's and nan's
+        # AvdN: NAN and INF is Cpython specific
+        #INF = float('inf')
+        #NAN = float('nan')
+        #self.assertEqual('{0:f}'.format(INF), 'inf')
+        #self.assertEqual('{0:F}'.format(INF), 'INF')
+        #self.assertEqual('{0:f}'.format(-INF), '-inf')
+        #self.assertEqual('{0:F}'.format(-INF), '-INF')
+        #self.assertEqual('{0:f}'.format(NAN), 'nan')
+        #self.assertEqual('{0:F}'.format(NAN), 'NAN')
+
+    def test_issue5864(self):
+        self.assertEqual(format(123.456, '.4'), '123.5')
+        # AvdN: ToDo
+        #self.assertEqual(format(1234.56, '.4'), '1.235e+03')
+        #self.assertEqual(format(12345.6, '.4'), '1.235e+04')
+
+    ### end from Lib/Test/test_float.py
+
+    ### from pypy test_newformat.py
+
+    def test_sign(self):
+        self.assertEquals(format(-6), "-6")
+        self.assertEquals(format(-6, "-"), "-6")
+        self.assertEquals(format(-6, "+"), "-6")
+        self.assertEquals(format(-6, " "), "-6")
+        self.assertEquals(format(6, " "), " 6")
+        self.assertEquals(format(6, "-"), "6")
+        self.assertEquals(format(6, "+"), "+6")
+
+    def test_thousands_separator(self):
+        self.assertEquals(format(123, ","), "123")
+        self.assertEquals(format(12345, ","), "12,345")
+        self.assertEquals(format(123456789, ","), "123,456,789")
+        self.assertEquals(format(12345, "7,"), " 12,345")
+        self.assertEquals(format(12345, "<7,"), "12,345 ")
+        self.assertEquals(format(1234, "0=10,"), "00,001,234")
+        self.assertEquals(format(1234, "010,"), "00,001,234")
+
+    ### end from pypy test_newformat.py
+

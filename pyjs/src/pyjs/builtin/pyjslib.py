@@ -7812,6 +7812,11 @@ def _string_format(s, args=[], kw={}):
     res = fm.build(args, kw)
     return res
 
+def format(val, spec=''):
+    args = [val]
+    space = StringFormatSpace()
+    return str(space.format(val, spec))
+
 
 ### end from pypy 2.7.1 string formatter (newformat.py)
 
