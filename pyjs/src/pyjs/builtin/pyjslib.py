@@ -6397,6 +6397,8 @@ def sprintf(strng, args):
                 subst = String(parseFloat(param).toFixed(precision)).toUpperCase();
                 break;
             case 'g':
+                // FIXME: Issue 672 should return double digit exponent
+                // probably can remove code in formatd after that
                 if (precision === null && flags.indexOf('#') >= 0) {
                     precision = 6;
                 }
@@ -6952,6 +6954,9 @@ class TemplateFormatter(object):
                     i += 1
                 if not got_bracket:
                     raise ValueError("Missing ']'")
+                if name[start] == '{':
+                    # CPython raise TypeError on '{0[{1}]}', pyjs converts
+                    raise TypeError('no replacement on fieldname')
                 index, reached = _parse_int(name, start, i)
                 if index != -1 and reached == i:
                     w_item = index
@@ -7070,7 +7075,6 @@ class Formatter(BaseFormatter):
     """__format__ implementation for builtin types."""
 
     _grouped_digits = None
-    DTSF_ADD_DOT_0 = 0x2
 
     def __init__(self, space, spec):
         self.space = space
@@ -7389,7 +7393,7 @@ class Formatter(BaseFormatter):
                 digits = self._upcase_string(digits)
             out.append(digits)
         if spec.n_decimal:
-            out.append(self._lit(".")[0])
+            out.append(".")
         if spec.n_remainder:
             out.append(num[to_remainder:])
         if spec.n_rpadding:
@@ -7541,7 +7545,7 @@ class Formatter(BaseFormatter):
         if tp == "\0":
             tp = "g"
             default_precision = 12
-            flags |= self.DTSF_ADD_DOT_0
+            flags |= DTSF_ADD_DOT_0
         elif tp == "n":
             tp = "g"
         value = float(w_float)
@@ -7760,6 +7764,9 @@ class StringFormatSpace(object):
             return fmt.format_int_or_long(w_obj, spec)
         elif isinstance(w_obj, float):
             return fmt.format_float(w_obj)
+        if isinstance(w_obj, object):
+            if hasattr(w_obj, '__str__'):
+                return fmt.format_string(w_obj.__str__())
         print 'type not implemented'
         return w_obj
 
@@ -7792,11 +7799,25 @@ def formatd(x, code, precision, flags=0):
         # i.e., they should contain a decimal point or an exponent.
         # However, %g may print the number as an integer;
         # in such cases, we append ".0" to the string.
-        for c in s:
+        idx = len(s)
+        for idx in range(len(s),0, -1):
+            c = s[idx-1]
+            # this is to solve Issue #672
+            if c in 'eE':
+                if s[idx] in '+-':
+                    idx += 1
+                s = s[:idx] + '%02d' % (int(s[idx:]))
+                break
             if c in '.eE':
                 break
         else:
-            s += '.0'
+            if len(s) < precision:
+                s += '.0'
+            else: # for numbers truncated by javascripts toPrecision()
+                sign = '+'
+                if x < 1:
+                    sign = '-'
+                s = '%s.%se%s%02d' % (s[0], s[1:], sign, len(s) - 1)
     elif code == 'r' and s.endswith('.0'):
         s = s[:-2]
 
