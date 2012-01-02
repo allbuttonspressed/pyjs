@@ -637,7 +637,7 @@ class BuiltinTest(UnitTest):
         )
         self.assertEqual(slice(-100L, 100L, 2L).indices(10), (0, 10,  2))
 
-    ### begin from CPython 2.7 Lib/Test/test_str.py
+    ### begin from CPython 2.7 Lib/test/test_str.py
 
     def test_format(self):
         self.assertEqual(''.format(), '')
@@ -696,7 +696,18 @@ class BuiltinTest(UnitTest):
             def __format__(self, format_spec):
                 if format_spec == 'd':
                     return 'G(' + self.x + ')'
+                # Issue #674
                 return object.__format__(self, format_spec)
+
+        class Galt:
+            def __init__(self, x):
+                self.x = x
+            def __str__(self):
+                return "string is " + self.x
+            def __format__(self, format_spec):
+                if format_spec == 'd':
+                    return 'G(' + self.x + ')'
+                return format(str(self), format_spec)
 
         # class that returns a bad type from __format__
         class H:
@@ -793,22 +804,23 @@ class BuiltinTest(UnitTest):
         self.assertEqual('{0:d}'.format(G('data')), 'G(data)')
         self.assertEqual('{0!s}'.format(G('data')), 'string is data')
 
-        msg = 'object.__format__ with a non-empty format string is deprecated'
-        '''# AvdN:ToDo
-        with test_support.check_warnings((msg, PendingDeprecationWarning)):
-            self.assertEqual('{0:^10}'.format(E('data')), ' E(data)  ')
-            self.assertEqual('{0:^10s}'.format(E('data')), ' E(data)  ')
-            self.assertEqual('{0:>15s}'.format(G('data')), ' string is data')
+        self.assertEqual('{0:^10}'.format(E('data')), ' E(data)  ')
+        self.assertEqual('{0:^10s}'.format(E('data')), ' E(data)  ')
+        self.assertEqual('{0:>15s}'.format(Galt('data')), ' string is data')
+        # if Issue #674 is fixed the following should no longer throw an
+        # exception, then Galt can be changed to G and Galt removed
+        self.assertRaises(Exception, format, G('data'), ':>15s')
 
-        self.assertEqual("{0:date: %Y-%m-%d}".format(I(year=2007,
-                                                       month=8,
-                                                       day=27)),
-                         "date: 2007-08-27")
 
-        '''
+
+        self.assertEqual("{0:date: %Y-%m-%d}".format(
+                                   I(year=2007, month=8, day=27)),
+                         "date: 2007-08-27",
+                         "Issue #673. datetime.date should have __format___")
+
         # test deriving from a builtin type and overriding __format__
-        # AvdN:ToDo __format__ on int
-        #self.assertEqual("{0}".format(J(10)), "20")
+        self.assertEqual("{0}".format(J(10)), "20",
+                'Issue #670 derived from int/float/str not instance of object')
 
 
         # string format specifiers
@@ -862,20 +874,17 @@ class BuiltinTest(UnitTest):
         self.format_raises(ValueError, "{0[0](10)}", [None])
 
         # can't have a replacement on the field name portion
-        # AvdN: ToDo
-        #self.format_raises(TypeError, '{0[{1}]}', 'abcdefg', 4)
+        # this is Issue 671: string & list indices must be integers, not str
+        self.format_raises(TypeError, '{0[{1}]}', 'abcdefg', 4)
 
         # exceed maximum recursion depth
-        # AvdN: ToDo
-        #self.format_raises(ValueError, "{0:{1:{2}}}", 'abc', 's', '')
-        #self.format_raises(ValueError, "{0:{1:{2:{3:{4:{5:{6}}}}}}}",
-        #                  0, 1, 2, 3, 4, 5, 6, 7)
+        self.format_raises(ValueError, "{0:{1:{2}}}", 'abc', 's', '')
+        self.format_raises(ValueError, "{0:{1:{2:{3:{4:{5:{6}}}}}}}",
+                          0, 1, 2, 3, 4, 5, 6, 7)
 
         # string format spec errors
         self.format_raises(ValueError, "{0:-s}", '')
-        # AvdN: ToDo
-        # original: self.assertRaises(ValueError, format, "", "-")
-        # self.format_raises(ValueError, "{-}", "")
+        self.assertRaises(ValueError, format, "", "-")
         self.format_raises(ValueError, "{0:=s}", '')
 
     def test_format_auto_numbering(self):
@@ -897,11 +906,10 @@ class BuiltinTest(UnitTest):
         self.assertEqual('a{:{}x}b'.format(20, '#'), 'a0x14b')
 
         # can't mix and match numbering and auto-numbering
-        # AvdN:ToDo
-        #self.format_raises(ValueError, '{}{1}', 1, 2)
-        #self.format_raises(ValueError, '{1}{}', 1, 2)
-        #self.format_raises(ValueError, '{:{1}}', 1, 2)
-        #self.format_raises(ValueError, '{0:{}}', 1, 2)
+        self.format_raises(ValueError, '{}{1}', 1, 2)
+        self.format_raises(ValueError, '{1}{}', 1, 2)
+        self.format_raises(ValueError, '{:{1}}', 1, 2)
+        self.format_raises(ValueError, '{0:{}}', 1, 2)
 
         # can mix and match auto-numbering and named
         self.assertEqual('{f}{}'.format(4, f='test'), 'test4')
@@ -916,12 +924,114 @@ class BuiltinTest(UnitTest):
         try:
             args[0].format(*args[1:], **kw)
         except e:
-            return
+            return True
         else:
             if hasattr(e, '__name__'):
                 excName = e.__name__
             else:
                 excName = str(e)
             self.fail("%s not raised" % excName)
+        return False
 
-    ### end from CPython 2.7 Lib/Test/test_str.py
+    ### end from CPython 2.7 Lib/test/test_str.py
+
+    ### from Lib/Test/test_float.py
+    def test_format_float(self):
+        # these should be rewritten to use both format(x, spec) and
+        # x.__format__(spec)
+
+        self.assertEqual(format(0.0, 'f'), '0.000000')
+
+        # the default is 'g', except for empty format spec
+        #self.assertEqual(format(0.0, ''), '0.0')
+        #self.assertEqual(format(0.01, ''), '0.01')
+        #self.assertEqual(format(0.01, 'g'), '0.01')
+
+        # empty presentation type should format in the same way as str
+        # (issue 5920)
+        x = 100/7.
+        self.assertEqual(format(x, ''), str(x))
+        #self.assertEqual(format(x, '-'), str(x))
+        #self.assertEqual(format(x, '>'), str(x))
+        #self.assertEqual(format(x, '2'), str(x))
+
+        self.assertEqual(format(1.0, 'f'), '1.000000')
+
+        self.assertEqual(format(-1.0, 'f'), '-1.000000')
+
+        self.assertEqual(format( 1.0, ' f'), ' 1.000000')
+        self.assertEqual(format(-1.0, ' f'), '-1.000000')
+        self.assertEqual(format( 1.0, '+f'), '+1.000000')
+        self.assertEqual(format(-1.0, '+f'), '-1.000000')
+
+        # % formatting
+        self.assertEqual(format(-1.0, '%'), '-100.000000%')
+
+        # conversion to string should fail
+        self.format_raises(ValueError, "{:s}", 3.0)
+
+        # other format specifiers shouldn't work on floats,
+        #  in particular int specifiers
+        for format_spec in ([chr(x) for x in range(ord('a'), ord('z')+1)] +
+                            [chr(x) for x in range(ord('A'), ord('Z')+1)]):
+            if not format_spec in 'eEfFgGn%':
+                # Issue #524, no destinction between float and integer
+                issue524_solved = False
+                try:
+                    format(1.0, 'd')
+                except ValueError:
+                    issue524_solved = True
+                if not issue524_solved and format_spec in 'bcdoxX':
+                    continue
+                self.assertRaises(ValueError, format, 0.0, format_spec)
+                self.assertRaises(ValueError, format, 1.0, format_spec)
+                self.assertRaises(ValueError, format, -1.0, format_spec)
+                self.assertRaises(ValueError, format, 1e100, format_spec)
+                self.assertRaises(ValueError, format, -1e100, format_spec)
+                self.assertRaises(ValueError, format, 1e-100, format_spec)
+                self.assertRaises(ValueError, format, -1e-100, format_spec)
+
+        # CPython issue 3382: 'f' and 'F' with inf's and nan's
+        # Issue #675 NAN and INF should be implemented
+        try:
+            INF = float('inf')
+            NAN = float('nan')
+        except ValueError:
+            pass
+        else:
+            self.assertEqual('{0:f}'.format(INF), 'inf')
+            self.assertEqual('{0:F}'.format(INF), 'INF')
+            self.assertEqual('{0:f}'.format(-INF), '-inf')
+            self.assertEqual('{0:F}'.format(-INF), '-INF')
+            self.assertEqual('{0:f}'.format(NAN), 'nan')
+            self.assertEqual('{0:F}'.format(NAN), 'NAN')
+
+    def test_issue5864(self):
+        self.assertEqual(format(123.456, '.4'), '123.5')
+        self.assertEqual(format(1234.56, '.4'), '1.235e+03')
+        self.assertEqual(format(12345.6, '.4'), '1.235e+04')
+
+    ### end from Lib/Test/test_float.py
+
+    ### from pypy test_newformat.py
+
+    def test_sign(self):
+        self.assertEquals(format(-6), "-6")
+        self.assertEquals(format(-6, "-"), "-6")
+        self.assertEquals(format(-6, "+"), "-6")
+        self.assertEquals(format(-6, " "), "-6")
+        self.assertEquals(format(6, " "), " 6")
+        self.assertEquals(format(6, "-"), "6")
+        self.assertEquals(format(6, "+"), "+6")
+
+    def test_thousands_separator(self):
+        self.assertEquals(format(123, ","), "123")
+        self.assertEquals(format(12345, ","), "12,345")
+        self.assertEquals(format(123456789, ","), "123,456,789")
+        self.assertEquals(format(12345, "7,"), " 12,345")
+        self.assertEquals(format(12345, "<7,"), "12,345 ")
+        self.assertEquals(format(1234, "0=10,"), "00,001,234")
+        self.assertEquals(format(1234, "010,"), "00,001,234")
+
+    ### end from pypy test_newformat.py
+
