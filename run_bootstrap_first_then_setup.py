@@ -93,6 +93,7 @@ if __name__ == '__main__':
         keywords = keyw,
         packages=["pyjs", "pyjs.jsonrpc",
                 "pyjs.jsonrpc.cgihandler",
+                "pyjs.jsonrpc.mongrel2",
                 "pyjs.jsonrpc.django",
                 "pyjs.jsonrpc.web2py",
                 "pyjd"],
@@ -100,6 +101,8 @@ if __name__ == '__main__':
                        'pyjs.jsonrpc': os.path.join('pyjs', 'jsonrpc'),
                        'pyjs.jsonrpc.cgihandler':
                                 os.path.join('pyjs', 'jsonrpc', 'cgihandler'),
+                       'pyjs.jsonrpc.mongrel2':
+                                os.path.join('pyjs', 'jsonrpc', 'mongrel2'),
                        'pyjs.jsonrpc.django':
                                 os.path.join('pyjs', 'jsonrpc', 'django'),
                        'pyjs.jsonrpc.web2py':
