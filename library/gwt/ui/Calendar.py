@@ -20,6 +20,7 @@ from pyjamas.ui import HasAlignment
 from pyjamas import DOM
 
 import time
+from datetime import datetime
 
 class Calendar(FocusPanel):
     monthsOfYear = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
@@ -46,6 +47,13 @@ class Calendar(FocusPanel):
         self.defaultGrid = None # used later
 
         return
+
+
+    def setDate(self,_date):
+        """ _date - object of datetime.date class """
+        self.currentMonth = _date.month
+        self.currentYear = _date.year
+        self.currentDay = _date.day
 
     def getMonthsOfYear(self):
         return self.monthsOfYear
@@ -92,8 +100,10 @@ class Calendar(FocusPanel):
         self.setVisible(True)
 
     def drawCurrent(self):
-        yr, mth, day = time.strftime("%Y-%m-%d").split("-")
+        #yr, mth, day = time.strftime("%Y-%m-%d").split("-")
+        yr, mth, day = self.currentYear, self.currentMonth, self.currentDay 
         self.draw(int(mth), int(yr))
+
 
     def draw(self, month , year):
         tod = time.localtime()
@@ -341,10 +351,6 @@ class Calendar(FocusPanel):
     def onCancel(self, event):
         self.setVisible(False)
 
-    def drawCurrent(self):
-        yr, mth, day = time.strftime("%Y-%m-%d").split("-")
-        self.draw(int(mth), int(yr))
-
     def drawDate(self, month, year):
         # if year == self.currentYear and month == self.currentYear():
             # self.drawCurrent()
@@ -459,6 +465,13 @@ class DateField(Composite):
         self.tbox.setText(today)
 
     def onShowCalendar(self, sender):
+        txt = self.tbox.getText().strip()
+        try:
+            if txt:
+                _d = datetime.strptime(txt,self.format).date()
+                self.calendar.setDate(_d)
+        except ValueError: pass
+
         p = CalendarPopup(self.calendar)
         x = self.tbox.getAbsoluteLeft() + 10
         y = self.tbox.getAbsoluteTop() + 10
