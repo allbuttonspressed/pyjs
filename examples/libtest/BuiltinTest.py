@@ -741,7 +741,8 @@ class BuiltinTest(UnitTest):
             def __format__(self, format_spec):
                 if format_spec == 'd':
                     return 'G(' + self.x + ')'
-                # Issue #674
+                if not hasattr(object, "__format__"):
+                    self.fail("#674")
                 return object.__format__(self, format_spec)
 
         class Galt:
@@ -853,8 +854,8 @@ class BuiltinTest(UnitTest):
         self.assertEqual('{0:^10s}'.format(E('data')), ' E(data)  ')
         self.assertEqual('{0:>15s}'.format(Galt('data')), ' string is data')
         # if Issue #674 is fixed the following should no longer throw an
-        # exception, then Galt can be changed to G and Galt removed
-        self.assertRaises(Exception, format, G('data'), ':>15s')
+        # exception (classified as known issue), then Galt can be changed to G and Galt removed
+        self.assertEqual('{0:>15s}'.format(G('data')), ' string is data')
 
 
 
