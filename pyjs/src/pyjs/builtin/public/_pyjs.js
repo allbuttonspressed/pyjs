@@ -27,7 +27,7 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args)
  'undefined') {
                 $pyjs__exception_func_multiple_values(func.__name__, k);
              }
-            args[0][k] = v; 
+            args[0][k] = v;
         }
 
     }
@@ -551,9 +551,9 @@ function $pyjs_instance_method_get(inst, args,
 {
     /* TODO: pass these in, to save time */
     var callee_args = args.callee.__args__;
-    var varargname = callee_args[0]; 
-    var kwargname = callee_args[1]; 
-    var arg_names = callee_args.slice(2); 
+    var varargname = callee_args[0];
+    var kwargname = callee_args[1];
+    var arg_names = callee_args.slice(2);
 
     console.debug(inst.__name__ + " " + args.callee.__name__ + " isinst " + inst.__is_instance__ + " hva " + has_varargs + " hkwa " + has_kwargs + " va " + varargname + " kw " + kwargname + " al " + arg_names.length);
 
@@ -650,7 +650,7 @@ if ($pyjs.options.arg_instance_type) {
 }\
 """ % {'self': arg_names[0], '__md5__': current_klass.__md5__}, output=output)
     */
-    $pyjs_default_args_handler($l, args, defaults_count, 
+    $pyjs_default_args_handler($l, args, defaults_count,
                                     has_varargs, has_kwargs);
 
     var i = 0;
@@ -673,14 +673,14 @@ function $pyjsdf(arg, alternate)
 
 /* this function mirrors _default_args_handler
  */
-function $pyjs_default_args_handler($l, args, defaults_count, 
+function $pyjs_default_args_handler($l, args, defaults_count,
                                     has_varargs, has_kwargs)
 {
     /* TODO: pass these in, to save time */
     var callee_args = args.callee.__args__;
-    var varargname = callee_args[0]; 
-    var kwargname = callee_args[1]; 
-    var arg_names = callee_args.slice(2); 
+    var varargname = callee_args[0];
+    var kwargname = callee_args[1];
+    var arg_names = callee_args.slice(2);
 
     if (has_kwargs
         && kwargname !== null
@@ -690,9 +690,9 @@ function $pyjs_default_args_handler($l, args, defaults_count,
             # This is necessary when **kwargs in function definition
             # and the call didn't pass the pyjs_kwargs_call().
             # See libtest testKwArgsInherit
-            # This is not completely safe: if the last element in arguments 
-            # is an dict and the corresponding argument shoud be a dict and 
-            # the kwargs should be empty, the kwargs gets incorrectly the 
+            # This is not completely safe: if the last element in arguments
+            # is an dict and the corresponding argument shoud be a dict and
+            # the kwargs should be empty, the kwargs gets incorrectly the
             # dict and the argument becomes undefined.
             # E.g.
             # def fn(a = {}, **kwargs): pass

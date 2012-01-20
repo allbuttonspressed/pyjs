@@ -102,7 +102,7 @@ def init():
     historyToken = ''
     hash = wnd().location.hash
 
-    if len(hash) > 0:
+    if hash and len(hash) > 0:
         historyToken = hash[1:]
 
 init()

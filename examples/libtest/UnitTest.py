@@ -24,7 +24,7 @@ class UnitTest:
         self.assertNotEqual = self.assertNotEquals = self.failIfEqual
         self.assertAlmostEqual = self.assertAlmostEquals = self.failUnlessAlmostEqual
         self.assertNotAlmostEqual = self.assertNotAlmostEquals = self.failIfAlmostEqual
-        self.assertRaises = self.failUnlessRaises
+        self.failUnlessRaises = self.assertRaises
         self.assert_ = self.assertTrue = self.failUnless
         self.assertFalse = self.failIf
 
@@ -34,7 +34,7 @@ class UnitTest:
         test_method=getattr(self, test_method_name)
         self.current_test_name = test_method_name
         self.setUp()
-        try:        
+        try:
             try:
                 test_method()
             except Exception,e:
@@ -83,12 +83,12 @@ class UnitTest:
                 msg=" " + str(msg)
             if self.current_test_name:
                 msg += " (%s) " % self.getCurrentTestID()
-            return self.getName() + msg + ": " 
+            return self.getName() + msg + ": "
         return ""
 
     def getCurrentTestID(self):
         return "%s/%i" % (self.current_test_name,self.tests_completed)
-        
+
 
     def getTestMethods(self):
         self.test_methods=[]
@@ -151,17 +151,6 @@ class UnitTest:
                 msg = "expected True, got False"
             return self.fail(msg)
 
-    def failUnlessRaises(self, excClass, callableObj, *args, **kwargs):
-        try:
-            callableObj(*args, **kwargs)
-        except excClass:
-            return
-        else:
-            if hasattr(excClass,'__name__'): excName = excClass.__name__
-            else: excName = str(excClass)
-            #raise self.failureException, "%s not raised" % excName
-            self.fail("%s not raised" % excName)
-
     def failUnlessEqual(self, first, second, msg=None):
         self.startTest()
         if not first == second:
@@ -190,6 +179,21 @@ class UnitTest:
                 msg=repr(first) + " == " + repr(second) + " within " + repr(places) + " places"
             return self.fail(msg)
 
+    # from 2.7 unittest/case.py
+    def assertIn(self, member, container, msg=None):
+        """Just like self.assertTrue(a in b), but with a nicer default message."""
+        if member not in container:
+            standardMsg = '%s not found in %s' % (repr(member)[:80],
+                                                  repr(container)[:80])
+            self.fail(msg if msg else standardMsg)
+
+    def assertNotIn(self, member, container, msg=None):
+        """Just like self.assertTrue(a not in b), but with a nicer default message."""
+        if member in container:
+            standardMsg = '%s unexpectedly found in %s' % (repr(member)[:80],
+                                                        repr(container)[:80])
+            self.fail(msg if msg else standardMsg)
+
     # based on the Python standard library
     def assertRaises(self, excClass, callableObj, *args, **kwargs):
         """
@@ -203,7 +207,7 @@ class UnitTest:
         self.startTest()
         try:
             callableObj(*args, **kwargs)
-        except excClass, exc:
+        except excClass:
             return
         else:
             if hasattr(excClass, '__name__'):

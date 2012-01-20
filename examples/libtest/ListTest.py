@@ -380,8 +380,18 @@ class ListTest(UnitTest):
             self.assertEqual(l.index(2), 0)
         except ValueError:
             self.fail("ValueError raised when not expected")
- 
-        self.assertRaises(ValueError, l.index, 200000)
+
+        try:
+            l.index(200000)
+        except ValueError, e:
+            print '[%s]' % str(e)
+            self.assertIn(str(e), [
+                "list.index(x): x not in list", # <= 2.6
+                "200000 is not in list", # <= 2.6
+                ], "ValueError exception has incorrect message")
+        else:
+            self.fail("ValueError not raised")
+
 
         l = [[1],[2],[3]]
         self.assertEqual(l.index([2]), 1)
@@ -389,15 +399,15 @@ class ListTest(UnitTest):
     def testIndexClass(self):
 
         l = get_test_letters()
-        self.assertEqual(l[0].letter, 'g', '#413 index __cmp__ class issue') 
-        self.assertEqual(l[1].letter, 'f', '#413 index __cmp__ class issue') 
-        self.assertEqual(l[0][0].letter, 'o', '#413 index __cmp__ class issue') 
-        self.assertEqual(l[1][0].letter, 'r', '#413 index __cmp__ class issue') 
-        self.assertEqual(len(l), 2, '#413 index __cmp__ class issue') 
+        self.assertEqual(l[0].letter, 'g', '#413 index __cmp__ class issue')
+        self.assertEqual(l[1].letter, 'f', '#413 index __cmp__ class issue')
+        self.assertEqual(l[0][0].letter, 'o', '#413 index __cmp__ class issue')
+        self.assertEqual(l[1][0].letter, 'r', '#413 index __cmp__ class issue')
+        self.assertEqual(len(l), 2, '#413 index __cmp__ class issue')
         self.assertEqual(len(l[0]), 1, '#413 index __cmp__ class issue')
-        self.assertEqual(len(l[1]), 1, '#413 index __cmp__ class issue') 
+        self.assertEqual(len(l[1]), 1, '#413 index __cmp__ class issue')
         self.assertEqual(len(l[0][0]), 1, '#413 index __cmp__ class issue')
-        self.assertEqual(len(l[1][0]), 2, '#413 index __cmp__ class issue') 
+        self.assertEqual(len(l[1][0]), 2, '#413 index __cmp__ class issue')
 
     def testAugAssign(self):
         l = [10, 10.0]

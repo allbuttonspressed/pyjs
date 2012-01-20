@@ -361,6 +361,7 @@ class ClassTest(UnitTest):
         self.assertEqual(ExampleChildExplicitConstructor.z, expected_result3, "Did not inherit class var from grandparent")
         
     def testInheritFromType(self):
+
         i_types = [(int, 1), (float, 1.5), (str, "test"), (long, 1),
                    (tuple, (1,2)), (list, [1,2]), (dict, {'1':1}), (set, set([1,2]))]
         for cls, val in i_types:
@@ -378,6 +379,34 @@ class ClassTest(UnitTest):
             except:
                 self.fail("Subclassing type '%s' does not work, issue #623" % cls.__name__)
                 
+
+        class SubclassedString(str): pass
+        class SubclassedInt(int): pass
+        class SubclassedFloat(float): pass
+        try:
+            self.assertEqual(str(SubclassedString("string")), "string", "#484")
+        except:
+            self.fail("Could not instantiate subclassed string, bug #484")
+        try:
+            v = str(SubclassedInt(1))
+            self.assertEqual(v, "1", "bug #484 - %s != '1'" % v)
+        except:
+            self.fail("Could not instantiate subclassed int")
+        try:
+            self.assertEqual(str(SubclassedFloat(1.1)), "1.1", "#484")
+        except:
+            self.fail("Could not instantiate subclassed float")
+        self.assertTrue(isinstance(SubclassedString('abc'), object),
+                        'Issue #670'
+                        ' derived from int/float/str not instance of object')
+        self.assertTrue(isinstance(SubclassedInt(1), object),
+                        'Issue #670'
+                        ' derived from int/float/str not instance of object')
+        self.assertTrue(isinstance(SubclassedFloat(1.1), object),
+                        'Issue #670'
+                        ' derived from int/float/str not instance of object')
+
+
     def testClassMethods(self):
         results = ExampleClass.sampleClassMethod("a")
         self.assertEqual(results[0], ExampleClass, "Expected first parameter to be the class instance")

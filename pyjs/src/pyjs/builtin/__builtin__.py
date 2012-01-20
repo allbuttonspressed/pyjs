@@ -333,7 +333,7 @@ _f = @{{fcall}} = function (module, lineno, obj, base /*, args*/) {
                     }
                     return @{{raise}}($new(@{{TypeError}}, B$str(
                         "unbound method " + f.__name__ + "()" +
-                        " must be called with " + _typeof(o['im_class']) + 
+                        " must be called with " + _typeof(o['im_class']) +
                         " instance as first argument (got nothing instead)")));
                 }
                 break;
@@ -415,7 +415,7 @@ _f = @{{fcall}} = function (module, lineno, obj, base /*, args*/) {
             args.push(star);
         }
         if (module !== null && lineno !== null) {
-            if (typeof f._module != "undefined" && 
+            if (typeof f._module != "undefined" &&
                 f._module !== null &&
                 typeof f._lineno != "undefined" &&
                 f._lineno !== null) {
@@ -513,7 +513,7 @@ _fe = @{{fcallext}} = function (module, lineno, obj, base /*, args, star_args, d
                     }
                     return @{{raise}}($new(@{{TypeError}}, B$str(
                         "unbound method " + f.__name__ + "()" +
-                        " must be called with " + _typeof(o['im_class']) + 
+                        " must be called with " + _typeof(o['im_class']) +
                         " instance as first argument (got nothing instead)")));
                 }
                 break;
@@ -645,7 +645,7 @@ _fe = @{{fcallext}} = function (module, lineno, obj, base /*, args, star_args, d
         }
         dstar = $new(@{{dict}}, dstar);
     }
-    
+
     if (typeof f.func_args != "undefined") {
         var n_args = args.length;
         if (dstar === null && args.length < f.func_args.length) {
@@ -702,7 +702,7 @@ _fe = @{{fcallext}} = function (module, lineno, obj, base /*, args, star_args, d
             args.push(star);
         }
         if (module !== null && lineno !== null) {
-            if (typeof f._module != "undefined" && 
+            if (typeof f._module != "undefined" &&
                 f._module !== null &&
                 typeof f._lineno != "undefined" &&
                 f._lineno !== null) {
@@ -972,7 +972,7 @@ _m = @{{mcall}} = function (module, lineno, obj, method /*, args*/) {
                                 if (typeof o != "undefined") {
                                     break;
                                 }
-                                
+
                             }
                             if (typeof o == "undefined") {
                                 for (var mro_i$ = 0; mro_i$ < mro.length; mro_i$++) {
@@ -1321,7 +1321,7 @@ _m = @{{mcall}} = function (module, lineno, obj, method /*, args*/) {
                     }
                     return @{{raise}}($new(@{{TypeError}}, B$str(
                         "unbound method " + f.__name__ + "()" +
-                        " must be called with " + _typeof(o['im_class']) + 
+                        " must be called with " + _typeof(o['im_class']) +
                         " instance as first argument (got nothing instead)")));
                 }
                 break;
@@ -1403,7 +1403,7 @@ _m = @{{mcall}} = function (module, lineno, obj, method /*, args*/) {
             args.push(star);
         }
         if (module !== null && lineno !== null) {
-            if (typeof f._module != "undefined" && 
+            if (typeof f._module != "undefined" &&
                 f._module !== null &&
                 typeof f._lineno != "undefined" &&
                 f._lineno !== null) {
@@ -1673,7 +1673,7 @@ _me = @{{mcallext}} = function (module, lineno, obj, method /*, args, star_args,
                                 if (typeof o != "undefined") {
                                     break;
                                 }
-                                
+
                             }
                             if (typeof o == "undefined") {
                                 for (var mro_i$ = 0; mro_i$ < mro.length; mro_i$++) {
@@ -2022,7 +2022,7 @@ _me = @{{mcallext}} = function (module, lineno, obj, method /*, args, star_args,
                     }
                     return @{{raise}}($new(@{{TypeError}}, B$str(
                         "unbound method " + f.__name__ + "()" +
-                        " must be called with " + _typeof(o['im_class']) + 
+                        " must be called with " + _typeof(o['im_class']) +
                         " instance as first argument (got nothing instead)")));
                 }
                 break;
@@ -2154,7 +2154,7 @@ _me = @{{mcallext}} = function (module, lineno, obj, method /*, args, star_args,
         }
         dstar = $new(@{{dict}}, dstar);
     }
-    
+
     if (typeof f.func_args != "undefined") {
         var n_args = args.length;
         if (dstar === null && args.length < f.func_args.length) {
@@ -2211,7 +2211,7 @@ _me = @{{mcallext}} = function (module, lineno, obj, method /*, args, star_args,
             args.push(star);
         }
         if (module !== null && lineno !== null) {
-            if (typeof f._module != "undefined" && 
+            if (typeof f._module != "undefined" &&
                 f._module !== null &&
                 typeof f._lineno != "undefined" &&
                 f._lineno !== null) {
@@ -2497,7 +2497,7 @@ var $new = m$['$new'] = @{{$new}} = function (cls/*, args*/) {
                     if (typeof method$ != "undefined") {
                         break;
                     }
-                    
+
                 }
                 if (typeof method$ == "undefined") {
                     for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -2891,7 +2891,7 @@ var $new = m$['$new'] = @{{$new}} = function (cls/*, args*/) {
                         if (typeof method$ != "undefined") {
                             break;
                         }
-                        
+
                     }
                     if (typeof method$ == "undefined") {
                         for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -3379,7 +3379,7 @@ var $newext = @{{$newext}} = func(m$, null, {}, '__call__', 0, ['cls'], null, nu
                     if (typeof method$ != "undefined") {
                         break;
                     }
-                    
+
                 }
                 if (typeof method$ == "undefined") {
                     for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -3773,7 +3773,7 @@ var $newext = @{{$newext}} = func(m$, null, {}, '__call__', 0, ['cls'], null, nu
                         if (typeof method$ != "undefined") {
                             break;
                         }
-                        
+
                     }
                     if (typeof method$ == "undefined") {
                         for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -4065,7 +4065,7 @@ var $newext = @{{$newext}} = func(m$, null, {}, '__call__', 0, ['cls'], null, nu
 
 // Some short-cut functions for specific instances
 function B$bool($v) {
-    
+
     var v = $v.valueOf();
     switch (v) {
         case null:
@@ -4270,7 +4270,7 @@ function B$bool($v) {
                             if (typeof v != "undefined") {
                                 break;
                             }
-                            
+
                         }
                         if (typeof v == "undefined") {
                             for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -4564,7 +4564,7 @@ b$ = @{{B$bool}} = B$bool;
 
 function B$booljs($v) {
     if ($v === null) return false;
-    
+
     var v = $v.valueOf();
     switch (v) {
         case null:
@@ -4769,7 +4769,7 @@ function B$booljs($v) {
                             if (typeof v != "undefined") {
                                 break;
                             }
-                            
+
                         }
                         if (typeof v == "undefined") {
                             for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -5315,7 +5315,7 @@ To create  valid type, we depend on the existance of:
  - the module type (is used in the type creation)
  - the basestring and str type (needed for class __name__)
  - the classmethod type (is used for the class __call__)
-Not that in python the method-wrapper class is used for 
+Not that in python the method-wrapper class is used for
 class.__call__ (but seems to do the same as classmethod)
 
 Therefore we'll do:
@@ -5793,7 +5793,7 @@ func(m$, null, g$, '_getattr', 1, ['obj', 'name'], null, null, null, function($o
                     if (typeof v != "undefined") {
                         break;
                     }
-                    
+
                 }
                 if (typeof v == "undefined") {
                     for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -6277,7 +6277,7 @@ func(m$, null, g$, 'getattr', 1, ['obj', 'name', 'value'], null, null, [null], f
                         if (typeof attr != "undefined") {
                             break;
                         }
-                        
+
                     }
                     if (typeof attr == "undefined") {
                         for (var mro_i$ = 0; mro_i$ < mro.length; mro_i$++) {
@@ -6784,7 +6784,7 @@ func(m$, null, g$, 'hasattr', 1, ['obj', 'name'], null, null, null, function($ob
                     if (typeof v != "undefined") {
                         break;
                     }
-                    
+
                 }
                 if (typeof v == "undefined") {
                     for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -7140,7 +7140,7 @@ func(m$, null, g$, 'setitem', 1, ['obj', 'name', 'value'], null, null, null, fun
                     if (typeof meth != "undefined") {
                         break;
                     }
-                    
+
                 }
                 if (typeof meth == "undefined") {
                     for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -7633,7 +7633,7 @@ func(m$, null, g$, 'setslice', 1, ['obj', 'slice', 'value'], null, null, null, f
                         if (typeof meth != "undefined") {
                             break;
                         }
-                        
+
                     }
                     if (typeof meth == "undefined") {
                         for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -8114,7 +8114,7 @@ func(m$, null, g$, 'delitem', 1, ['obj', 'name'], null, null, null, function($ob
                     if (typeof meth != "undefined") {
                         break;
                     }
-                    
+
                 }
                 if (typeof meth == "undefined") {
                     for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -8608,7 +8608,7 @@ func(m$, null, g$, 'delslice', 1, ['obj', 'name'], null, null, null, function($o
                         if (typeof meth != "undefined") {
                             break;
                         }
-                        
+
                     }
                     if (typeof meth == "undefined") {
                         for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -9089,7 +9089,7 @@ func(m$, null, g$, 'getitem', 1, ['obj', 'name'], null, null, null, function($ob
                     if (typeof meth != "undefined") {
                         break;
                     }
-                    
+
                 }
                 if (typeof meth == "undefined") {
                     for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -9581,7 +9581,7 @@ func(m$, null, g$, 'getslice', 1, ['obj', 'name'], null, null, null, function($o
                         if (typeof meth != "undefined") {
                             break;
                         }
-                        
+
                     }
                     if (typeof meth == "undefined") {
                         for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -10841,9 +10841,9 @@ func(m$, null, @{{dict}}, '__str__', 1, ['self'], null, null, null, function ($s
 func(m$, null, @{{dict}}, '__repr__', 1, ['self'], null, null, null, function ($self) {
     if (typeof $self['$inst'] == 'boolean') {
         var key, value, i,
-            s = "", 
-            obj = $self['__object'], 
-            objH = $self['__object_hash'], 
+            s = "",
+            obj = $self['__object'],
+            objH = $self['__object_hash'],
             hashes = [];
         i = 0;
         for (var h in objH) {
@@ -11505,7 +11505,7 @@ func(m$, null, @{{str}}, '__new__', 0, ['cls', 'value'], null, null, [''], funct
                         if (typeof v != "undefined") {
                             break;
                         }
-                        
+
                     }
                     if (typeof v == "undefined") {
                         for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -12842,7 +12842,7 @@ class int(object):
                                         if (typeof i != "undefined") {
                                             break;
                                         }
-                                        
+
                                     }
                                     if (typeof i == "undefined") {
                                         for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -13275,7 +13275,7 @@ class int(object):
         }
         return $new(@{{float}}, $y);
     });
-    
+
     func(m$, null, f$, '__rtruediv__', 1, ['self', 'y'], null, null, null, function($self, $y) {
         if ($y.__number__ != 0x02) return @{{NotImplemented}};
         $y = $y.__v;
@@ -13285,7 +13285,7 @@ class int(object):
             return $new(@{{int}}, $y);
         }
         return $new(@{{float}}, $y);
-    }); 
+    });
 
     func(m$, null, f$, '__mul__', 1, ['self', 'y'], null, null, null, function($self, $y) {
         if ($y.__number__ != 0x02) return @{{NotImplemented}};
@@ -13367,7 +13367,7 @@ class bool(int):
     JS("""
     f$['__slots__'] = [];
     func(m$, null, f$, '__new__', 0, ['cls', 'value'], null, null, [false], function($cls, $value) {
-        
+
         var v = $value.valueOf();
         switch (v) {
             case null:
@@ -13572,7 +13572,7 @@ class bool(int):
                                 if (typeof v != "undefined") {
                                     break;
                                 }
-                                
+
                             }
                             if (typeof v == "undefined") {
                                 for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -14424,8 +14424,8 @@ JS("""
     }
 
     function l_divmod(v, w, pdiv, pmod) {
-        var div = $l_divmod_div, 
-            mod = $l_divmod_mod; 
+        var div = $l_divmod_div,
+            mod = $l_divmod_mod;
 
         if (long_divrem(v, w, div, mod) < 0)
                 return -1;
@@ -14686,7 +14686,7 @@ JS("""
                                             if (typeof i != "undefined") {
                                                 break;
                                             }
-                                            
+
                                         }
                                         if (typeof i == "undefined") {
                                             for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -15113,7 +15113,7 @@ JS("""
 
     func(m$, null, f$, '__cmp__', 1, ['self', 'b'], null, null, null, function($self, $b) {
         var sign;
- 
+
         if ($self.ob_size != $b.ob_size) {
             if ($self.ob_size < $b.ob_size) return -1;
             return 1;
@@ -15161,7 +15161,7 @@ JS("""
     });
 
     func(m$, null, f$, '__lshift', 0, ['self', 'y'], null, null, null, function($self, $y) {
-        var a, z, wordshift, remshift, oldsize, newsize, 
+        var a, z, wordshift, remshift, oldsize, newsize,
             accum, i, j;
         if ($y < 0) {
             @{{raise}}($new(@{{ValueError}}, B$str("negative shift count")));
@@ -15844,7 +15844,7 @@ JS("""
             }
         }
 
-        if ((c !== null) && negativeOutput && 
+        if ((c !== null) && negativeOutput &&
             (z.ob_size != 0) && (c.ob_size != 0)) {
             z = @{{long}}['$dict']['__sub__'](z, c);
         }
@@ -15901,7 +15901,7 @@ init_constants$(true);
 
 
 func(m$, null, f$, 'op_not', 1, ['object'], null, null, null, function($object) {
-    
+
     var v = $object.valueOf();
     switch (v) {
         case null:
@@ -16106,7 +16106,7 @@ func(m$, null, f$, 'op_not', 1, ['object'], null, null, null, function($object) 
                             if (typeof v != "undefined") {
                                 break;
                             }
-                            
+
                         }
                         if (typeof v == "undefined") {
                             for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -16397,7 +16397,7 @@ func(m$, null, f$, 'op_not', 1, ['object'], null, null, null, function($object) 
     return @{{False}};
 });
 func(m$, null, f$, 'test_not', 1, ['object'], null, null, null, function($object) {
-    
+
     var v = $object.valueOf();
     switch (v) {
         case null:
@@ -16602,7 +16602,7 @@ func(m$, null, f$, 'test_not', 1, ['object'], null, null, null, function($object
                             if (typeof v != "undefined") {
                                 break;
                             }
-                            
+
                         }
                         if (typeof v == "undefined") {
                             for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -16895,7 +16895,7 @@ func(m$, null, f$, 'test_not', 1, ['object'], null, null, null, function($object
 
 func(m$, null, f$, 'op_neg', 1, ['v'], null, null, null, function($v) {
     if (typeof $v != "undefined" && $v !== null) {
-        var f, mro$; 
+        var f, mro$;
         f = [][1];
         var mro$ = $v['__mro__'];
         var _meth_src = $v;
@@ -17082,7 +17082,7 @@ func(m$, null, f$, 'op_neg', 1, ['v'], null, null, null, function($v) {
                         if (typeof f != "undefined") {
                             break;
                         }
-                        
+
                     }
                     if (typeof f == "undefined") {
                         for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -17438,7 +17438,7 @@ func(m$, null, f$, 'op_inv', 1, ['v'], null, null, null, function($v) {
                         if (typeof f != "undefined") {
                             break;
                         }
-                        
+
                     }
                     if (typeof f == "undefined") {
                         for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -17988,7 +17988,7 @@ func(m$, null, f$, 'op_in', 1, ['a', 'b'], null, null, null, function($a, $b) {
                     if (typeof i != "undefined") {
                         break;
                     }
-                    
+
                 }
                 if (typeof i == "undefined") {
                     for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -18281,7 +18281,7 @@ func(m$, null, f$, 'op_in', 1, ['a', 'b'], null, null, null, function($a, $b) {
             return @{{True}};
         }
     }
-    
+
 });
 func(m$, null, f$, 'op_not_in', 1, ['a', 'b'], null, null, null, function($a, $b) {
     var i, mro$;
@@ -18471,7 +18471,7 @@ func(m$, null, f$, 'op_not_in', 1, ['a', 'b'], null, null, null, function($a, $b
                     if (typeof i != "undefined") {
                         break;
                     }
-                    
+
                 }
                 if (typeof i == "undefined") {
                     for (var mro_i$ = 0; mro_i$ < mro$.length; mro_i$++) {
@@ -18764,7 +18764,7 @@ func(m$, null, f$, 'op_not_in', 1, ['a', 'b'], null, null, null, function($a, $b
             return @{{False}};
         }
     }
-    
+
 });
 
 func(m$, null, f$, 'op_add', 1, ['x', 'y', 'i'], null, null, null, function($x, $y, $i) {
@@ -19980,7 +19980,7 @@ class slice(object):
         step = 1 if self.step is None else self.step
         if step > 0:
             start = 0 if self.start is None else self.start
-            stop = n if self.stop is None else self.stop 
+            stop = n if self.stop is None else self.stop
             if start > n:
                 start = n
             elif start < 0:
@@ -19993,7 +19993,7 @@ class slice(object):
                 stop = n
         else:
             start = n - 1 if self.start is None else self.start
-            stop = -1 if self.stop is None else self.stop 
+            stop = -1 if self.stop is None else self.stop
             if stop > 0:
                 if stop > start:
                     stop += n
@@ -20455,9 +20455,9 @@ def locals(obj):
 
 class set(object):
     def __init__(self, _data=None):
-        """ Transform data into an array with [key,value] and add set 
+        """ Transform data into an array with [key,value] and add set
             self.__object
-            Input data can be Array(key, val), iteratable (key,val) or 
+            Input data can be Array(key, val), iteratable (key,val) or
             Object/Function
         """
         JS("""
@@ -20471,15 +20471,15 @@ class set(object):
             }
             return N$;
         }
-        var item, 
-            i, 
+        var item,
+            i,
             n,
             selfObj = @{{self}}.__object = {};
 
-        if (@{{!data}} instanceof Array) { 
+        if (@{{!data}} instanceof Array) {
             // data is already an Array.
             // We deal with the Array of data after this if block.
-        } 
+        }
 
         // We may have some other set-like thing with __object
         else if (typeof @{{!data}}.__object == 'object') {
@@ -20557,8 +20557,8 @@ class set(object):
         if (@{{isSet}}(@{{value}}) == 1) {
             // An instance of set
             // Use frozenset hash
-            var hashes = new Array(), 
-                obj = @{{self}}.__object, 
+            var hashes = new Array(),
+                obj = @{{self}}.__object,
                 i = 0;
             for (var v in obj) {
                 hashes[i++] = v;
@@ -20576,7 +20576,7 @@ class set(object):
     def __iter__(self):
         JS("""
         var items = new Array(),
-            i = 0, 
+            i = 0,
             obj = @{{self}}.__object;
         for (var key in obj) {
             items[i++] = obj[key];
@@ -20889,7 +20889,7 @@ class frozenset(set):
     def __init__(self, _data=None):
         if JS("(!('__object' in @{{self}}))"):
             set.__init__(self, _data)
-        
+
     def __hash__(self):
         JS("""
         var hashes = new Array(), obj = @{{self}}.__object, i = 0;
@@ -20911,7 +20911,7 @@ class frozenset(set):
 
     def discard(self, value):
         raise AttributeError('frozenset is immutable')
-        
+
     def intersection_update(self, other):
         raise AttributeError('frozenset is immutable')
 
@@ -21371,16 +21371,16 @@ func(m$, null, g$, 'len', 1, ['object'], null, null, null, function($object) {
     if (typeof $object == "undefined") {
        @{{raise}}($new(@{{UndefinedValueError}}, B$str("len: object")));
     }
-    if ($object === null) 
+    if ($object === null)
         return @{{int_zero}};
-    if (typeof $object.__array != "undefined") 
+    if (typeof $object.__array != "undefined")
         return $new(@{{int}}, $object.__array.length);
     if ($object.__class__ == @{{str}})
         return $new(@{{int}}, $object.__s.length);
-    if (typeof $object._length != "undefined") 
+    if (typeof $object._length != "undefined")
         return $new(@{{int}}, $object._length);
     if (typeof $object != 'function') {
-        if (typeof $object.length != "undefined") 
+        if (typeof $object.length != "undefined")
             return $new(@{{int}}, $object.length);
     }
     var v = @{{getattr}}($object, '__len__', N$);
@@ -21525,7 +21525,7 @@ func(m$, null, g$, 'dir', 1, ['obj'], null, null, null, function($obj) {
     return properties;
 });
 """)
- 
+
 def filter(obj, method, sequence=None):
     # object context is LOST when a method is passed, hence object must be passed separately
     # to emulate python behaviour, should generate this code inline rather than as a function call
@@ -21737,7 +21737,7 @@ def isIteratable(a):
 
 def isNumber(a):
     JS("""
-    return @{{a}}!== null && @{{a}}.__number__ && 
+    return @{{a}}!== null && @{{a}}.__number__ &&
            (@{{a}}.__number__ != 0x01 || isFinite(@{{a}}));
     """)
 
