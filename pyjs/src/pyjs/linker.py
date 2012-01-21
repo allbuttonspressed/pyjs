@@ -137,7 +137,7 @@ def out_translate(platform, file_names, out_file, module_name,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
                            shell=shell,
-                           cwd=os.path.dirname(file_names[0]),
+                           cwd=pydir,
                            env=os.environ
                            )
         stdout_value, stderr_value = proc.communicate('')
