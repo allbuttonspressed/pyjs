@@ -85,8 +85,7 @@ class TextBox(TextBoxBase):
         DOM.setAttribute(self.getElement(), "max", max)
 
     def setPlaceholder(self, placeholder):
-        if hasattr(self.getElement(), "placeholder"):
-            DOM.setAttribute(self.getElement(), "placeholder", placeholder)
+        DOM.setAttribute(self.getElement(), "placeholder", placeholder)
 
     def setStep(self, step):
         DOM.setAttribute(self.getElement(), "step", step)
