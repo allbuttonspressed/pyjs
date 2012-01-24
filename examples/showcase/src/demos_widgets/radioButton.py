@@ -4,7 +4,7 @@ is given a "group" value; when the user clicks on a radio button, the other
 radio buttons in that group are deselected, and the clicked on radio button is
 selected.
 
-You can use the ``setChecked(checked)`` method to select or deselect a radio
+You can use the ``setChecked(checked)`` where checked is ``True`` or ``False`` method to select or deselect a radio
 button, and you can call ``isChecked()`` to see if a radio button is currently
 selected.  You can also enable or disable a checkbox using
 ``setEnabled(enabled)``.  And finally, you can call ``addClickListener()`` to

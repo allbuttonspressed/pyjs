@@ -1,5 +1,6 @@
 # Copyright 2006 James Tauber and contributors
 # Copyright (C) 2009 Luke Kenneth Casson Leighton <lkcl@lkcl.net>
+# Copyright (C) 2012 Vsevolod Fedorov <vsevolod.fedorov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -84,7 +85,7 @@ class TextBox(TextBoxBase):
         DOM.setAttribute(self.getElement(), "max", max)
 
     def setPlaceholder(self, placeholder):
-        DOM.setIntAttribute(self.getElement(), "placeholder", placeholder)
+        DOM.setAttribute(self.getElement(), "placeholder", placeholder)
 
     def setStep(self, step):
         DOM.setAttribute(self.getElement(), "step", step)
