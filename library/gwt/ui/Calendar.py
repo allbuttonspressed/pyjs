@@ -1,6 +1,7 @@
 ﻿# Date Time Example
 # Copyright (C) 2009 Yit Choong (http://code.google.com/u/yitchoong/)
 # Copyright (C) 2009 Luke Kenneth Casson Leighton <lkcl@lkcl.net>
+# Copyright (C) 2012 Łukasz Mach <maho@pagema.net>
 
 from pyjamas.ui.SimplePanel import SimplePanel
 from pyjamas import Factory

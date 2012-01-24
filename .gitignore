@@ -9,6 +9,5 @@ output
 *.pyo
 .*.sw?
 *.py~
-ve
 
 /stdlib
