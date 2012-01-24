@@ -37,7 +37,7 @@ def main():
     # Load all our demonstrations into memory.
 
     demoInfo = {}
-    for section in ["widgets", "panels"]:
+    for section in ["widgets", "panels", "other"]:
         for fName in os.listdir(os.path.join("src", "demos_" + section)):
             if fName.startswith(".") or not fName.endswith(".py"):
                 continue
@@ -92,8 +92,11 @@ def main():
     for section,name in sortKeys:
         demo = demoInfo[name]
         capName = name[0].upper() + name[1:]
+        prefix = "ui."
+        if demo["section"] == "other":
+            prefix = ""
         s.append('    demos.append({"name" : "' + name + '",')
-        s.append('                  "title" : "ui.' + capName + '",')
+        s.append('                  "title" : "' + prefix + capName + '",')
         s.append('                  "section" : "' + demo['section'] + '",')
         s.append('                  "doc" : """' + demo['doc'] + '""",')
         s.append('                  "src" : """' + demo['htmlSrc'] + '""",')

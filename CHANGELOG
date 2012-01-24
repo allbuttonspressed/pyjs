@@ -84,6 +84,8 @@
 
  * Implement assignment to slices in an assignment list (issue 514),
    by Karl Voigtland
+   
+ * Updates to the Showcase example
 
                     Changes made to Pyjamas since 0.6
                     ---------------------------------
