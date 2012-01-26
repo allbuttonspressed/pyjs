@@ -1935,7 +1935,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             if self.source_tracking:
                 self.w( self.spacing() + "$pyjs.trackstack.pop();$pyjs.track=$pyjs.trackstack.pop();$pyjs.trackstack.push($pyjs.track);")
 
-    def _from(self, node, current_klass, root_level = False):
+    def _from(self, node, current_klass, root_level=False):
         if node.modname == '__pyjamas__':
             # special module to help make pyjamas modules loadable in
             # the python interpreter
@@ -1965,12 +1965,11 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     # Ignoring from __future__ import name[0]
                     pass
             return
-        # XXX: hack for in-function checking, we should have another
-        # object to check our scope
-        absPath = False
+        # TODO: check again if this really works correctly. We've switched to absolute
+        # imports like in Python 3.
+        absPath = True
         modname = node.modname
         if hasattr(node, 'level') and node.level > 0:
-            absPath = True
             if self.relative_import_context is not None:
                 modname = self.relative_import_context.split('.')
                 level = node.level - 1
