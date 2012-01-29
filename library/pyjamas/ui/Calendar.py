@@ -101,7 +101,6 @@ class Calendar(FocusPanel):
         self.setVisible(True)
 
     def drawCurrent(self):
-        #yr, mth, day = time.strftime("%Y-%m-%d").split("-")
         yr, mth, day = self.currentYear, self.currentMonth, self.currentDay 
         self.draw(int(mth), int(yr))
 
@@ -353,8 +352,6 @@ class Calendar(FocusPanel):
         self.setVisible(False)
 
     def drawDate(self, month, year):
-        # if year == self.currentYear and month == self.currentYear():
-            # self.drawCurrent()
         self.currentMonth = month
         self.currentYear = year
         self.draw(self.currentMonth, self.currentYear)
