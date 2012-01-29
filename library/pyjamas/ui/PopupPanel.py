@@ -28,13 +28,22 @@ class PopupPanel(SimplePanel):
     _props = [("modal", "Modal", "Modal", None),
             ]
 
-    def __init__(self, autoHide=False, modal=True, **kwargs):
+    def __init__(self, autoHide=False, modal=True, rootpanel=None, glass=False,
+                **kwargs):
 
         self.popupListeners = []
         self.showing = False
         self.autoHide = autoHide
-        self.glass = None
         kwargs['Modal'] = kwargs.get('Modal', modal)
+
+        if rootpanel is None:
+            rootpanel = RootPanel()
+        self.rootpanel = rootpanel
+
+        if glass:
+            self.setGlassEnabled(True)
+            if 'GlassStyleName' in kwargs:
+                self.setGlassStyleName(kwargs.pop('GlassStyleName'))
 
         if kwargs.has_key('Element'):
             element = kwargs.pop('Element')
@@ -43,6 +52,7 @@ class PopupPanel(SimplePanel):
         DOM.setStyleAttribute(element, "position", "absolute")
 
         SimplePanel.__init__(self, element, **kwargs)
+
 
     @classmethod
     def _getProps(self):
@@ -266,4 +276,4 @@ class PopupPanel(SimplePanel):
         self.rootpanel.add(self)
         self.onShowImpl(self.getElement())
 
-Factory.registerClass('gwt.ui.PopupPanel', 'PopupPanel', PopupPanel)
+Factory.registerClass('pyjamas.ui.PopupPanel', 'PopupPanel', PopupPanel)
