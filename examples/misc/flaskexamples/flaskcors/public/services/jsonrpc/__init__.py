@@ -22,9 +22,12 @@ from threading import  Event,  Lock
 
 from errors import *
 
-from simplejson import JSONDecoder, JSONEncoder
-    
-    
+try:
+    from simplejson import JSONDecoder, JSONEncoder
+except ImportError:
+    from json import JSONDecoder, JSONEncoder
+
+
 class JSONRPCEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, JSONRPCError):
