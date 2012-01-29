@@ -40,10 +40,11 @@ class PopupPanel(SimplePanel):
             rootpanel = RootPanel()
         self.rootpanel = rootpanel
 
-        if glass:
-            self.setGlassEnabled(True)
-            if 'GlassStyleName' in kwargs:
-                self.setGlassStyleName(kwargs.pop('GlassStyleName'))
+        self.glass = glass
+        if self.glass:
+            self.glass = DOM.createDiv()
+            if not 'GlassStyleName' in kwargs:
+                kwargs['GlassStyleName'] = "gwt-PopupPanelGlass"
 
         if kwargs.has_key('Element'):
             element = kwargs.pop('Element')
@@ -52,6 +53,12 @@ class PopupPanel(SimplePanel):
         DOM.setStyleAttribute(element, "position", "absolute")
 
         SimplePanel.__init__(self, element, **kwargs)
+
+        if glass:
+            self.setGlassEnabled(True)
+            if 'GlassStyleName' in kwargs:
+                self.setGlassStyleName(kwargs.pop('GlassStyleName'))
+
 
 
     @classmethod
