@@ -1,5 +1,6 @@
 # Copyright 2006 James Tauber and contributors
 # Copyright (C) 2009 Luke Kenneth Casson Leighton <lkcl@lkcl.net>
+# Copyright (C) 2012 Robert Peters <robertpeters@winterlionsoftware.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -287,10 +288,10 @@ class Tree(Widget):
             width = DOM.getIntAttribute(selectedElem, "offsetWidth")
             height = DOM.getIntAttribute(selectedElem, "offsetHeight")
 
-            DOM.setIntStyleAttribute(self.focusable, "left", left)
-            DOM.setIntStyleAttribute(self.focusable, "top", top)
-            DOM.setIntStyleAttribute(self.focusable, "width", width)
-            DOM.setIntStyleAttribute(self.focusable, "height", height)
+            DOM.setIntStyleAttribute(self.focusable, "left", "%spx" % left)
+            DOM.setIntStyleAttribute(self.focusable, "top", "%spx" % top)
+            DOM.setIntStyleAttribute(self.focusable, "width", "%spx" % width)
+            DOM.setIntStyleAttribute(self.focusable, "height", "%spx" % height)
 
             DOM.scrollIntoView(self.focusable)
             Focus.focus(self.focusable)
