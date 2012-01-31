@@ -7,7 +7,7 @@ body {
     padding: 0;
 }
 
-iframe {
+#__pygwt_historyFrame {
     width: 0;
     height: 0;
     border: 0;
@@ -16,7 +16,7 @@ iframe {
 }
 
 h2 {
-    width: 98.9%;
+    width: 98.7%;
     margin: 0;
     padding: 0.7em 0.2em 0.7em 0.2em;
     border: 3px solid #ffffff;
@@ -25,12 +25,12 @@ h2 {
 }
 
 #logo {
-    margin: 2px 20px 2px 15px;
+    margin: 2px 24px 0px 15px;
     float: left;
 }
 
 #donation {
-    margin: 28px 25px 2px 25px;
+    margin: 15px 25px 2px 25px;
     float: right;
 }
 

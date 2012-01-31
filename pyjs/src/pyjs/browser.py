@@ -40,10 +40,10 @@ else:
 
 
 APP_HTML_TEMPLATE = """\
-<!DOCTYPE html>
 <html>
-<!-- auto-generated html - you should consider editing and
-adapting this to suit your requirements
+<!-- auto-generated html - You should consider editing and adapting this
+ to suit your requirements. No doctype used here to force quirks mode; see
+ wiki for details: http://pyjs.org/wiki/csshellandhowtodealwithit/
 -->
 <head>
 <meta name="pygwt:module" content="%(modulename)s">
