@@ -261,10 +261,14 @@ class Browser:
         setattr(element, "on%s" % event_name, cb._callback)
 
 
-def destroy(window):
-    window.destroy()
+def window_delete_cb(window, event):
     while gtk.events_pending():
         gtk.main_iteration(False)
+    window.unrealize()
+
+
+def window_title_cb(wkwv, wkwf, title):
+    window.set_title(title)
 
 
 def setup(application, appdir=None, width=800, height=600):
@@ -275,10 +279,17 @@ def setup(application, appdir=None, width=800, height=600):
 
     wv = Browser(application, appdir, width, height)
     wv.load_app()
+
+    # Not the most elegant ... but since the top-level window is created and
+    # realized within custom WebView by C and not Python, we do not have a
+    # native reference to the TOPLEVEL window, or the real WebKitWebView
+    # object. So we find it, create a reference, and attach a callback to the
+    # underlying WebKitWebView (no reference needed at this point).
     for window in gtk.window_list_toplevels():
         if window.get_window_type() is gtk.WINDOW_TOPLEVEL:
+            window.child.child.connect('title-changed', window_title_cb)
             break
-    window.connect('destroy', destroy)
+    window.connect('delete-event', window_delete_cb)
 
     while 1:
         if is_loaded():
