@@ -40,6 +40,7 @@ else:
 
 
 APP_HTML_TEMPLATE = """\
+<!DOCTYPE html>
 <html>
 <!-- auto-generated html - you should consider editing and
 adapting this to suit your requirements
@@ -49,9 +50,9 @@ adapting this to suit your requirements
 %(css)s
 <title>%(title)s</title>
 </head>
-<body bgcolor="white">
-<script language="javascript" src="%(bootstrap_file)s"></script>
-<iframe id='__pygwt_historyFrame' style='width:0;height:0;border:0'></iframe>
+<body style="background-color:white">
+<script type="text/javascript" src="%(bootstrap_file)s"></script>
+<iframe id="__pygwt_historyFrame" style="width:0;height:0;border:0"></iframe>
 </body>
 </html>
 """
