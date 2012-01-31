@@ -11,3 +11,4 @@ output
 *.py~
 
 /stdlib
+.idea
