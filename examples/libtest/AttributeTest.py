@@ -42,6 +42,7 @@ class AttributeTest(UnitTest):
         self.assertEqual(func(), "AttributeTest",
                          "getattr does not return correct value'")
 
+        self.assertEqual(getattr(Foo, 'name'), 'Foo', "attribute mapping, bug #521")
         self.assertEqual(1, getattr(Foo, "notthere", 1))
         foo = Foo(1)
         self.assertEqual(foo.v, getattr(foo, "v"))
