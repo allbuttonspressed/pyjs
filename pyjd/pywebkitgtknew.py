@@ -149,6 +149,18 @@ class Browser:
         self._browser = pywebkit.WebView(self.width, self.height, uri)
         self._browser.SetDocumentLoadedCallback(self._loading_stop_cb)
 
+        # Not the most elegant ... but since the top-level window is created and
+        # realized by C and not Python, we do not have a native reference to the
+        # TOPLEVEL window, or the real WebKitWebView object.
+        for w in gtk.window_list_toplevels():
+            if w.get_window_type() is gtk.WINDOW_TOPLEVEL:
+                self._toplevel = w
+                self._view = w.child.child
+                self._view.connect('title-changed', self._title_changed_cb)
+                self._view.connect('icon-loaded', self._icon_loaded_cb)
+                self._toplevel.connect('delete-event', self._toplevel_delete_event_cb)
+                break
+
     def getUri(self):
         return self.application
 
@@ -212,9 +224,9 @@ class Browser:
                 if pbpx > icon[2]:
                     icon = (uri, pb, pbpx)
         if icon[1] is None:
-            window.set_icon_name(icon[0])
+            self._toplevel.set_icon_name(icon[0])
         else:
-            window.set_icon(icon[1])
+            self._toplevel.set_icon(icon[1])
         print '_icon_loaded_cb <%s>' % icon[0]
 
     def _selection_changed_cb(self):
@@ -311,21 +323,10 @@ def setup(application, appdir=None, width=800, height=600):
 
     gobject.threads_init()
 
-    global wv, window
+    global wv
 
     wv = Browser(application, appdir, width, height)
     wv.load_app()
-
-    # Not the most elegant ... but since the top-level window is created and
-    # realized by C and not Python, we do not have a native reference to the
-    # TOPLEVEL window, or the real WebKitWebView object.
-    for window in gtk.window_list_toplevels():
-        if window.get_window_type() is gtk.WINDOW_TOPLEVEL:
-            view = window.child.child
-            view.connect('title-changed', wv._title_changed_cb)
-            view.connect('icon-loaded', wv._icon_loaded_cb)
-            window.connect('delete-event', wv._toplevel_delete_event_cb)
-            break
 
     while 1:
         if is_loaded():
@@ -342,7 +343,7 @@ def run(one_event=False, block=True):
             sys.stdout.flush()
         return gtk.events_pending()
     else:
-        while window.flags() & gtk.REALIZED:
+        while wv._toplevel.flags() & gtk.REALIZED:
             gtk.main_iteration()
             sys.stdout.flush()
 
