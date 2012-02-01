@@ -346,5 +346,3 @@ def run(one_event=False, block=True):
         while wv._toplevel.flags() & gtk.REALIZED:
             gtk.main_iteration()
             sys.stdout.flush()
-
-
