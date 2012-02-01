@@ -162,6 +162,10 @@ class Browser:
         self._view.connect('title-changed', self._title_changed_cb)
         self._view.connect('icon-loaded', self._icon_loaded_cb)
 
+        # Security? Allow file URIs to access the filesystem
+        settings = self._view.get_property('settings')
+        settings.set_property('enable-file-access-from-file-uris', True)
+
     def getUri(self):
         return self.application
 
