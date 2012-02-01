@@ -154,12 +154,13 @@ class Browser:
         # TOPLEVEL window, or the real WebKitWebView object.
         for w in gtk.window_list_toplevels():
             if w.get_window_type() is gtk.WINDOW_TOPLEVEL:
-                self._toplevel = w
-                self._view = w.child.child
-                self._view.connect('title-changed', self._title_changed_cb)
-                self._view.connect('icon-loaded', self._icon_loaded_cb)
-                self._toplevel.connect('delete-event', self._toplevel_delete_event_cb)
                 break
+        self._toplevel = w
+        self._view = w.child.child
+
+        self._toplevel.connect('delete-event', self._toplevel_delete_event_cb)
+        self._view.connect('title-changed', self._title_changed_cb)
+        self._view.connect('icon-loaded', self._icon_loaded_cb)
 
     def getUri(self):
         return self.application
