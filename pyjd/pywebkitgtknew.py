@@ -298,15 +298,13 @@ class Browser:
         #print "addEventListener", element, event_name, cb
         setattr(element, "on%s" % event_name, cb._callback)
 
+    def _toplevel_delete_event_cb(self, window, event):
+        while gtk.events_pending():
+            gtk.main_iteration(False)
+        window.unrealize()
 
-def window_delete_cb(window, event):
-    while gtk.events_pending():
-        gtk.main_iteration(False)
-    window.unrealize()
-
-
-def window_title_cb(wkwv, wkwf, title):
-    window.set_title(title)
+    def _title_changed_cb(self, view, frame, title):
+        view.get_toplevel().set_title(title)
 
 
 def setup(application, appdir=None, width=800, height=600):
@@ -324,10 +322,10 @@ def setup(application, appdir=None, width=800, height=600):
     for window in gtk.window_list_toplevels():
         if window.get_window_type() is gtk.WINDOW_TOPLEVEL:
             view = window.child.child
-            view.connect('title-changed', window_title_cb)
+            view.connect('title-changed', wv._title_changed_cb)
             view.connect('icon-loaded', wv._icon_loaded_cb)
+            window.connect('delete-event', wv._toplevel_delete_event_cb)
             break
-    window.connect('delete-event', window_delete_cb)
 
     while 1:
         if is_loaded():
