@@ -101,6 +101,9 @@ import gtk
 import gobject
 import pywebkitgtk as pywebkit
 
+from urllib import urlopen
+from urlparse import urljoin
+
 def module_load(m):
     minst = None
     exec """\
@@ -177,7 +180,42 @@ class Browser:
         self.init_app()
 
     def _icon_loaded_cb(self, view, icon_uri):
-        print "icon loaded"
+        current = view.get_property('uri')
+        dom = wv.getDomDocument()
+        icon = (gtk.STOCK_DIALOG_QUESTION, None, 0)
+        found = set()
+        found.add(icon_uri)
+        found.add(urljoin(current, '/favicon.ico'))
+        scanner = {'href': dom.querySelectorAll('head link[rel~=icon][href],' +
+                                                'head link[rel|=apple-touch-icon][href]'),
+                   'content': dom.querySelectorAll('head meta[itemprop=image][content]')}
+        for attr in scanner.keys():
+            for i in xrange(scanner[attr].length):
+                uri = getattr(scanner[attr].item(i), attr)
+                if len(uri) == 0:
+                    continue
+                found.add(urljoin(current, uri))
+        for uri in found:
+            fp = urlopen(uri)
+            if fp.code != 200:
+                continue
+            i = fp.info()
+            if i.maintype == 'image' and 'content-length' in i:
+                try:
+                    ldr = gtk.gdk.PixbufLoader()
+                    ldr.write(fp.read(int(i['content-length'])))
+                    ldr.close()
+                except:
+                    continue
+                pb = ldr.get_pixbuf()
+                pbpx = pb.get_height() * pb.get_width()
+                if pbpx > icon[2]:
+                    icon = (uri, pb, pbpx)
+        if icon[1] is None:
+            window.set_icon_name(icon[0])
+        else:
+            window.set_icon(icon[1])
+        print '_icon_loaded_cb <%s>' % icon[0]
 
     def _selection_changed_cb(self):
         print "selection changed"
@@ -281,13 +319,13 @@ def setup(application, appdir=None, width=800, height=600):
     wv.load_app()
 
     # Not the most elegant ... but since the top-level window is created and
-    # realized within custom WebView by C and not Python, we do not have a
-    # native reference to the TOPLEVEL window, or the real WebKitWebView
-    # object. So we find it, create a reference, and attach a callback to the
-    # underlying WebKitWebView (no reference needed at this point).
+    # realized by C and not Python, we do not have a native reference to the
+    # TOPLEVEL window, or the real WebKitWebView object.
     for window in gtk.window_list_toplevels():
         if window.get_window_type() is gtk.WINDOW_TOPLEVEL:
-            window.child.child.connect('title-changed', window_title_cb)
+            view = window.child.child
+            view.connect('title-changed', window_title_cb)
+            view.connect('icon-loaded', wv._icon_loaded_cb)
             break
     window.connect('delete-event', window_delete_cb)
 
