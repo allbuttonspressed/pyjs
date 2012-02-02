@@ -265,7 +265,7 @@ class BrowserLinker(linker.BaseLinker):
         dynamic_app_libs = skip_unlinked(dynamic_app_libs)
         static_js_libs = skip_unlinked(static_js_libs)
         static_app_libs = skip_unlinked(static_app_libs)
-        
+
         dynamic_modules = self.unique_list_values(available_modules + [js_modname(lib) for lib in dynamic_js_libs])
         available_modules = self.unique_list_values(available_modules + early_static_app_libs + dynamic_modules)
         if len(dynamic_modules) > 0:
@@ -465,7 +465,7 @@ def build_script():
         )
 
     parser.add_option(
-        "--bootstrap-file", 
+        "--bootstrap-file",
         dest="bootstrap_file",
         help="Specify the bootstrap code. (Used when application html file is generated)."
         )
