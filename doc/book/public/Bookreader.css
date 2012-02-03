@@ -1,22 +1,49 @@
 body {
-  background-color: white;
-  color: black;
-  font-family: Arial, sans-serif;
-  font-size: smaller;
-  margin: 0px;
-  padding: 0px;
+    background-color: white;
+    color: black;
+    font-family: Arial, sans-serif;
+    font-size: smaller;
+    margin: 0;
+    padding: 0;
+}
+
+#__pygwt_historyFrame {
+    width: 0;
+    height: 0;
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+h2 {
+    width: 98.7%;
+    margin: 0;
+    padding: 0.7em 0.2em 0.7em 0.2em;
+    border: 3px solid #ffffff;
+    background-color: rgb(150, 50, 200);
+    text-align: center;
+}
+
+#logo {
+    margin: 2px 24px 0px 15px;
+    float: left;
+}
+
+#donation {
+    margin: 15px 25px 2px 25px;
+    float: right;
 }
 
 code {
-  font-size: small;
+    font-size: small;
 }
 
 a {
-  color: darkblue;
+    color: darkblue;
 }
 
 a:visited {
-  color: darkblue;
+    color: darkblue;
 }
 
 .gwt-BorderedPanel {

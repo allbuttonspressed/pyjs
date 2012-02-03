@@ -190,7 +190,7 @@ for (;;) {
                 }
                 return @{{raise}}($new(@{{TypeError}}, B$str(
                     "unbound method " + f.__name__ + "()" +
-                    " must be called with " + _typeof(o['im_class']) + 
+                    " must be called with " + _typeof(o['im_class']) +
                     " instance as first argument (got nothing instead)")));
             }
             break;
@@ -385,7 +385,7 @@ if (typeof f.func_args != "undefined") {
         args.push(star);
     }
     if (module !== null && lineno !== null) {
-        if (typeof f._module != "undefined" && 
+        if (typeof f._module != "undefined" &&
             f._module !== null &&
             typeof f._lineno != "undefined" &&
             f._lineno !== null) {
@@ -626,7 +626,7 @@ ${3, bind_method, ga, ${src}, ${src}, ${src}['__class__']}$
                 if (typeof ${dst} != "undefined") {
                     break;
                 }
-                
+
             }
             if (typeof ${dst} == "undefined") {
                 for (var mro_i$ = 0; mro_i$ < ${mro}.length; mro_i$++) {
@@ -877,7 +877,7 @@ for (;;) {
 return ${val2};""" % locals(), locals())
 
     def repl_op_arithmetic(self, op, opname, x, y, i, opfunc=None):
-        
+
         jsop = op
         if opfunc is None:
             opnumber = "x_v %s y_v" % op

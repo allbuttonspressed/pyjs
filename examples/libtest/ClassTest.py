@@ -369,6 +369,16 @@ class ClassTest(UnitTest):
             self.assertEqual(str(SubclassedFloat(1.1)), "1.1", "#484")
         except:
             self.fail("Could not instantiate subclassed float")
+        self.assertTrue(isinstance(SubclassedString('abc'), object),
+                        'Issue #670'
+                        ' derived from int/float/str not instance of object')
+        self.assertTrue(isinstance(SubclassedInt(1), object),
+                        'Issue #670'
+                        ' derived from int/float/str not instance of object')
+        self.assertTrue(isinstance(SubclassedFloat(1.1), object),
+                        'Issue #670'
+                        ' derived from int/float/str not instance of object')
+
 
     def testClassMethods(self):
         results = ExampleClass.sampleClassMethod("a")

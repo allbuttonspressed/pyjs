@@ -435,7 +435,7 @@ To create  valid type, we depend on the existance of:
  - the module type (is used in the type creation)
  - the basestring and str type (needed for class __name__)
  - the classmethod type (is used for the class __call__)
-Not that in python the method-wrapper class is used for 
+Not that in python the method-wrapper class is used for
 class.__call__ (but seems to do the same as classmethod)
 
 Therefore we'll do:
@@ -1535,9 +1535,9 @@ func(${0,module}$, null, @{{dict}}, '__str__', ${0, function}$, ['self'], null, 
 func(${0,module}$, null, @{{dict}}, '__repr__', ${0, function}$, ['self'], null, null, null, function ($self) {
     if (typeof $self['$inst'] == 'boolean') {
         var key, value, i,
-            s = "", 
-            obj = $self['__object'], 
-            objH = $self['__object_hash'], 
+            s = "",
+            obj = $self['__object'],
+            objH = $self['__object_hash'],
             hashes = [];
         i = 0;
         for (var h in objH) {
@@ -3115,7 +3115,7 @@ ${6, getattribute, mro$, i, value, '__int__'}$
         }
         return $new(@{{float}}, $y);
     });
-    
+
     func(${0,module}$, null, ${0,funcbase}$, '__rtruediv__', ${0, function}$, ['self', 'y'], null, null, null, function($self, $y) {
         if ($y.__number__ != 0x02) return @{{NotImplemented}};
         $y = $y.__v;
@@ -3125,7 +3125,7 @@ ${6, getattribute, mro$, i, value, '__int__'}$
             return $new(@{{int}}, $y);
         }
         return $new(@{{float}}, $y);
-    }); 
+    });
 
     func(${0,module}$, null, ${0,funcbase}$, '__mul__', ${0, function}$, ['self', 'y'], null, null, null, function($self, $y) {
         if ($y.__number__ != 0x02) return @{{NotImplemented}};
@@ -3771,8 +3771,8 @@ JS("""
     }
 
     function l_divmod(v, w, pdiv, pmod) {
-        var div = $l_divmod_div, 
-            mod = $l_divmod_mod; 
+        var div = $l_divmod_div,
+            mod = $l_divmod_mod;
 
         if (long_divrem(v, w, div, mod) < 0)
                 return -1;
@@ -4113,7 +4113,7 @@ ${7, getattribute, mro$, i, value, '__long__'}$
 
     func(${0,module}$, null, ${0,funcbase}$, '__cmp__', ${0, function}$, ['self', 'b'], null, null, null, function($self, $b) {
         var sign;
- 
+
         if ($self.ob_size != $b.ob_size) {
             if ($self.ob_size < $b.ob_size) return -1;
             return 1;
@@ -4161,7 +4161,7 @@ ${7, getattribute, mro$, i, value, '__long__'}$
     });
 
     func(${0,module}$, null, ${0,funcbase}$, '__lshift', ${0, jsmethod}$, ['self', 'y'], null, null, null, function($self, $y) {
-        var a, z, wordshift, remshift, oldsize, newsize, 
+        var a, z, wordshift, remshift, oldsize, newsize,
             accum, i, j;
         if ($y < 0) {
             @{{raise}}($new(@{{ValueError}}, B$str("negative shift count")));
@@ -4844,7 +4844,7 @@ ${7, getattribute, mro$, i, value, '__long__'}$
             }
         }
 
-        if ((c !== null) && negativeOutput && 
+        if ((c !== null) && negativeOutput &&
             (z.ob_size != 0) && (c.ob_size != 0)) {
             z = @{{long}}['$dict']['__sub__'](z, c);
         }
@@ -4909,7 +4909,7 @@ ${1, new_bool, $object, false, true}$
 
 func(${0,module}$, null, ${0,funcbase}$, 'op_neg', ${0, function}$, ['v'], null, null, null, function($v) {
     if (typeof $v != "undefined" && $v !== null) {
-        var f, mro$; 
+        var f, mro$;
 ${2, getattribute, mro$, f, $v, '__neg__'}$
         if (typeof f == 'function') return f($v);
     }
@@ -5403,7 +5403,7 @@ class slice(object):
         step = 1 if self.step is None else self.step
         if step > 0:
             start = 0 if self.start is None else self.start
-            stop = n if self.stop is None else self.stop 
+            stop = n if self.stop is None else self.stop
             if start > n:
                 start = n
             elif start < 0:
@@ -5416,7 +5416,7 @@ class slice(object):
                 stop = n
         else:
             start = n - 1 if self.start is None else self.start
-            stop = -1 if self.stop is None else self.stop 
+            stop = -1 if self.stop is None else self.stop
             if stop > 0:
                 if stop > start:
                     stop += n
@@ -5838,9 +5838,9 @@ def locals(obj):
 
 class set(object):
     def __init__(self, _data=None):
-        """ Transform data into an array with [key,value] and add set 
+        """ Transform data into an array with [key,value] and add set
             self.__object
-            Input data can be Array(key, val), iteratable (key,val) or 
+            Input data can be Array(key, val), iteratable (key,val) or
             Object/Function
         """
         JS("""
@@ -5854,15 +5854,15 @@ class set(object):
             }
             return ${0,None}$;
         }
-        var item, 
-            i, 
+        var item,
+            i,
             n,
             selfObj = @{{self}}.__object = {};
 
-        if (@{{!data}} instanceof Array) { 
+        if (@{{!data}} instanceof Array) {
             // data is already an Array.
             // We deal with the Array of data after this if block.
-        } 
+        }
 
         // We may have some other set-like thing with __object
         else if (typeof @{{!data}}.__object == 'object') {
@@ -5940,8 +5940,8 @@ class set(object):
         if (@{{isSet}}(@{{value}}) == 1) {
             // An instance of set
             // Use frozenset hash
-            var hashes = new Array(), 
-                obj = @{{self}}.__object, 
+            var hashes = new Array(),
+                obj = @{{self}}.__object,
                 i = 0;
             for (var v in obj) {
                 hashes[i++] = v;
@@ -5959,7 +5959,7 @@ class set(object):
     def __iter__(self):
         JS("""
         var items = new Array(),
-            i = 0, 
+            i = 0,
             obj = @{{self}}.__object;
         for (var key in obj) {
             items[i++] = obj[key];
@@ -6272,7 +6272,7 @@ class frozenset(set):
     def __init__(self, _data=None):
         if JS("(!('__object' in @{{self}}))"):
             set.__init__(self, _data)
-        
+
     def __hash__(self):
         JS("""
         var hashes = new Array(), obj = @{{self}}.__object, i = 0;
@@ -6294,7 +6294,7 @@ class frozenset(set):
 
     def discard(self, value):
         raise AttributeError('frozenset is immutable')
-        
+
     def intersection_update(self, other):
         raise AttributeError('frozenset is immutable')
 
@@ -6635,16 +6635,16 @@ func(${0,module}$, null, ${0,g}$, 'len', 1, ['object'], null, null, null, functi
     if (typeof $object == "undefined") {
        @{{raise}}($new(@{{UndefinedValueError}}, B$str("len: object")));
     }
-    if ($object === null) 
+    if ($object === null)
         return @{{int_zero}};
-    if (typeof $object.__array != "undefined") 
+    if (typeof $object.__array != "undefined")
         return $new(@{{int}}, $object.__array.length);
     if ($object.__class__ == @{{str}})
         return $new(@{{int}}, $object.__s.length);
-    if (typeof $object._length != "undefined") 
+    if (typeof $object._length != "undefined")
         return $new(@{{int}}, $object._length);
     if (typeof $object != 'function') {
-        if (typeof $object.length != "undefined") 
+        if (typeof $object.length != "undefined")
             return $new(@{{int}}, $object.length);
     }
     var v = @{{getattr}}($object, '__len__', ${0,None}$);
@@ -6789,7 +6789,7 @@ func(${0,module}$, null, ${0,g}$, 'dir', 1, ['obj'], null, null, null, function(
     return properties;
 });
 """)
- 
+
 def filter(obj, method, sequence=None):
     # object context is LOST when a method is passed, hence object must be passed separately
     # to emulate python behaviour, should generate this code inline rather than as a function call
@@ -7001,7 +7001,7 @@ def isIteratable(a):
 
 def isNumber(a):
     JS("""
-    return @{{a}}!== null && @{{a}}.__number__ && 
+    return @{{a}}!== null && @{{a}}.__number__ &&
            (@{{a}}.__number__ != 0x01 || isFinite(@{{a}}));
     """)
 

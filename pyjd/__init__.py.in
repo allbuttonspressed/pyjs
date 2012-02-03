@@ -55,3 +55,24 @@ sys.path = [os.path.join(pyjdinitpth, 'pygtkweb', 'library')] + sys.path
 import importers
 importers._test_revamp()
 
+setup_callbacks = []
+
+def add_setup_callback(cb):
+    setup_callbacks.append(cb)
+
+run_callbacks = []
+
+def add_pre_run_callback(cb):
+    run_callbacks.append(cb)
+
+_run = run
+def run(*args, **kwargs):
+    for cb in run_callbacks:
+        cb()
+    _run(*args, **kwargs)
+
+_setup = setup
+def setup(*args, **kwargs):
+    _setup(*args, **kwargs)
+    for cb in setup_callbacks:
+        cb()

@@ -6,8 +6,16 @@ rules below, and you'll do ok with this multi-project project:
   is that the latest repository code MUST work, for production environments
   to be able to use it.
 
+* other than that, please feel free to announce on the list "i'm going to do
+  xyz, any objections or input" but otherwise just happily take the initiative.
+  if however you are not an experienced developer then feel free to ask at
+  each stage before proceeding.
+
 * obey PEP8 where it's sensible to do so.  there's a program called pep8.py
-  which automatically checks stuff.
+  which automatically checks stuff.  one rule we have to break is to remain
+  consistent with GWT function names - it's just... tough luck :)  that,
+  and properties in pyjs are too expensive, we have to use the silly
+  get{Property} and set{Property} function names.  oh well.
 
 * please add yourself to copyright and CREDITS.  if kindly committing someone
   else's patch, please add them rather than yourself, of course.
@@ -49,7 +57,7 @@ rules below, and you'll do ok with this multi-project project:
   now compiles native on 64-bit. 
 
   also: compiler-related additions and changes _must_ be accompanied by
-  a unit test (hence the reason why libtest:must be run, under so many
+  a unit test (hence the reason why libtest must be run, under so many
   different environments).
 
 * commits must be "single purpose".  if you're thinking of using the word

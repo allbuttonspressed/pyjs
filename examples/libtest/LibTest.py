@@ -18,6 +18,7 @@ from BuiltinTest import BuiltinTest
 from GeneratorTest import GeneratorTest
 from LongTest import LongTest
 from CompileTest import CompileTest
+from TemplateStringTest import TemplateStringTest
 
 if 1L << 31 > 0:
     has_long_type = True
@@ -50,6 +51,7 @@ from RandomModuleTest import RandomModuleTest
 from ReModuleTest import ReModuleTest
 from CsvModuleTest import CsvModuleTest
 from StringIOModuleTest import StringIOModuleTest
+from HashableTest import HashableTest
 
 from RunTests import RunTests
 
@@ -66,6 +68,7 @@ def main():
     t.add(ExceptionTest)
     t.add(ClassTest)
     t.add(StringTest)
+    t.add(TemplateStringTest)
     t.add(SetTest)
     t.add(FrozenSetTest)
     t.add(ArgsTest)
@@ -89,6 +92,7 @@ def main():
     t.add(ReModuleTest)
     t.add(RandomModuleTest)
     t.add(CsvModuleTest)
+    t.add(HashableTest)
 
     if IN_BROWSER:
         t.add(JSOTest)

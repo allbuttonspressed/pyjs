@@ -9,5 +9,7 @@ output
 *.pyc
 *.pyo
 .*.sw?
+*.py~
 
 /stdlib
+.idea

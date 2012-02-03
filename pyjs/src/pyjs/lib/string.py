@@ -99,51 +99,35 @@ class _multimap:
             return self._secondary[key]
 
 
-class _TemplateMetaclass(type):
-    pattern = r"""
-    %(delim)s(?:
-      (?P<escaped>%(delim)s) |   # Escape sequence of two delimiters
-      (?P<named>%(id)s)      |   # delimiter and a Python identifier
-      {(?P<braced>%(id)s)}   |   # delimiter and a braced identifier
-      (?P<invalid>)              # Other ill-formed delimiter exprs
-    )
-    """
-
-    def __init__(cls, name, bases, dct):
-        super(_TemplateMetaclass, cls).__init__(name, bases, dct)
-        if 'pattern' in dct:
-            pattern = cls.pattern
-        else:
-            pattern = _TemplateMetaclass.pattern % {
-                'delim' : _re.escape(cls.delimiter),
-                'id'    : cls.idpattern,
-                }
-        cls.pattern = _re.compile(pattern, _re.IGNORECASE | _re.VERBOSE)
-
-
+# workaround for Issue #658
+# drop use of __metaclass__, pyjamas support incomplete
+# drop the _re.VERBOSE flag, not supported by JS
+# drop the (?P<name>...) construction in the regex, not supported by JS
+# escape delimiter manually, _re.escape() does not work
 class Template:
-    """A string class for supporting $-substitutions."""
-    __metaclass__ = _TemplateMetaclass
-
-    delimiter = '$'
+    """A string class for supporting $-substitutions.
+    Modify the class attributes below to change the behaviour"""
+    delimiter = r'$'    #!$%^*@#~?|+ all work, &=/ do not
     idpattern = r'[_a-z][_a-z0-9]*'
+    regexp = r'%(delim)s(?:(%(delim)s)|(%(id)s)|{(%(id)s)}|())'
 
     def __init__(self, template):
+        self._definePattern()
         self.template = template
+
+    def _definePattern(self):
+        regexp = self.regexp % {
+                    'delim' : '\\' + self.delimiter, # was _re.escape(delimiter)
+                    'id'    : self.idpattern
+                    }
+        self.pattern = _re.compile(regexp, _re.IGNORECASE )
 
     # Search for $$, $identifier, ${identifier}, and any bare $'s
 
     def _invalid(self, mo):
-        i = mo.start('invalid')
-        lines = self.template[:i].splitlines(True)
-        if not lines:
-            colno = 1
-            lineno = 1
-        else:
-            colno = i - len(''.join(lines[:-1]))
-            lineno = len(lines)
-        raise ValueError('Invalid placeholder in string: line %d, col %d' %
-                         (lineno, colno))
+        i = mo.start()
+        j = min(i+10,len(self.template))
+        raise ValueError('Invalid placeholder in string: ' + self.template[i:j])
 
     def substitute(self, *args, **kws):
         if len(args) > 1:
@@ -157,15 +141,16 @@ class Template:
         # Helper function for .sub()
         def convert(mo):
             # Check the most common path first.
-            named = mo.group('named') or mo.group('braced')
+            #named = mo.group('named') or mo.group('braced')
+            named = mo.group(2) or mo.group(3)
             if named is not None:
                 val = mapping[named]
                 # We use this idiom instead of str() because the latter will
                 # fail if val is a Unicode containing non-ASCII characters.
                 return '%s' % (val,)
-            if mo.group('escaped') is not None:
+            if mo.group(1) is not None:
                 return self.delimiter
-            if mo.group('invalid') is not None:
+            if mo.group(4) is not None:
                 self._invalid(mo)
             raise ValueError('Unrecognized named group in pattern',
                              self.pattern)
@@ -182,7 +167,7 @@ class Template:
             mapping = args[0]
         # Helper function for .sub()
         def convert(mo):
-            named = mo.group('named')
+            named = mo.group(2)
             if named is not None:
                 try:
                     # We use this idiom instead of str() because the latter
@@ -190,15 +175,15 @@ class Template:
                     return '%s' % (mapping[named],)
                 except KeyError:
                     return self.delimiter + named
-            braced = mo.group('braced')
+            braced = mo.group(3)
             if braced is not None:
                 try:
                     return '%s' % (mapping[braced],)
                 except KeyError:
                     return self.delimiter + '{' + braced + '}'
-            if mo.group('escaped') is not None:
+            if mo.group(1) is not None:
                 return self.delimiter
-            if mo.group('invalid') is not None:
+            if mo.group(4) is not None:
                 return self.delimiter
             raise ValueError('Unrecognized named group in pattern',
                              self.pattern)

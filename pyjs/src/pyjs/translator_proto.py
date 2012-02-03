@@ -251,6 +251,7 @@ PYJSLIB_BUILTIN_FUNCTIONS=frozenset((
     "enumerate",
     "filter",
     "float",
+    "format",
     "getattr",
     "hasattr",
     "hash",

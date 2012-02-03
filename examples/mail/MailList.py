@@ -52,6 +52,9 @@ class MailList(Composite):
         self.initTable()
         self.update()
 
+    def onCellDoubleClicked(self, sender, row, cell):
+    	pass
+
     def onCellClicked(self, sender, row, cell):
         # Select the row that was clicked (-1 to account for header row).
         if (row > 0):

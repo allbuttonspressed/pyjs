@@ -41,17 +41,18 @@ else:
 
 APP_HTML_TEMPLATE = """\
 <html>
-<!-- auto-generated html - you should consider editing and
-adapting this to suit your requirements
+<!-- auto-generated html - You should consider editing and adapting this
+ to suit your requirements. No doctype used here to force quirks mode; see
+ wiki for details: http://pyjs.org/wiki/csshellandhowtodealwithit/
 -->
 <head>
 <meta name="pygwt:module" content="%(modulename)s">
 %(css)s
 <title>%(title)s</title>
 </head>
-<body bgcolor="white">
-<script language="javascript" src="%(bootstrap_file)s"></script>
-<iframe id='__pygwt_historyFrame' style='width:0;height:0;border:0'></iframe>
+<body style="background-color:white">
+<script type="text/javascript" src="%(bootstrap_file)s"></script>
+<iframe id="__pygwt_historyFrame" style="width:0;height:0;border:0"></iframe>
 </body>
 </html>
 """
@@ -264,7 +265,7 @@ class BrowserLinker(linker.BaseLinker):
         dynamic_app_libs = skip_unlinked(dynamic_app_libs)
         static_js_libs = skip_unlinked(static_js_libs)
         static_app_libs = skip_unlinked(static_app_libs)
-        
+
         dynamic_modules = self.unique_list_values(available_modules + [js_modname(lib) for lib in dynamic_js_libs])
         available_modules = self.unique_list_values(available_modules + early_static_app_libs + dynamic_modules)
         if len(dynamic_modules) > 0:
@@ -273,7 +274,7 @@ class BrowserLinker(linker.BaseLinker):
             dynamic_modules = "[]"
         appscript = "<script><!--\n$wnd.__pygwt_modController.init($pyjs.appname, window)\n$wnd.__pygwt_modController.load($pyjs.appname, [\n'%s'\n])\n--></script>"
         jsscript = """<script type="text/javascript" src="%(path)s" onload="$pyjs.script_onload('%(modname)s')" onreadystatechange="$pyjs.script_onreadystate('%(modname)s')"></script>"""
-        dynamic_app_libs = appscript % "',\n'".join([lib[len_ouput_dir:] for lib in dynamic_app_libs])
+        dynamic_app_libs = appscript % "',\n'".join([lib[len_ouput_dir:].replace('\\', '/') for lib in dynamic_app_libs])
         dynamic_js_libs = '\n'.join([jsscript % {'path': lib, 'modname': js_modname(lib)} for lib in dynamic_js_libs])
         early_static_app_libs = static_code(early_static_app_libs)
         static_app_libs = static_code(static_app_libs)
@@ -464,7 +465,7 @@ def build_script():
         )
 
     parser.add_option(
-        "--bootstrap-file", 
+        "--bootstrap-file",
         dest="bootstrap_file",
         help="Specify the bootstrap code. (Used when application html file is generated)."
         )

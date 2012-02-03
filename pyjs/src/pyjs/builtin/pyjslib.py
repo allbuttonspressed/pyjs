@@ -99,7 +99,7 @@ def _create_class(clsname, bases=None, methods=None):
 
 def type(clsname, bases=None, methods=None):
     if bases is None and methods is None:
-        # First check for str and bool, since these are not implemented 
+        # First check for str and bool, since these are not implemented
         # as real classes, but instances do have a __class__ method
         if isinstance(clsname, str):
             return str
@@ -405,7 +405,7 @@ def op_eq(a,b):
     }
 
     if (@{{a}} === @{{b}}) {
-        if (@{{a}}.__is_instance__ === false && 
+        if (@{{a}}.__is_instance__ === false &&
             @{{b}}.__is_instance__ === false) {
             return true;
         }
@@ -505,7 +505,7 @@ def op_usub(v):
 
 def __op_add(x, y):
     JS("""
-        return (typeof (@{{x}})==typeof (@{{y}}) && 
+        return (typeof (@{{x}})==typeof (@{{y}}) &&
                 (typeof @{{x}}=='number'||typeof @{{x}}=='string')?
                 @{{x}}+@{{y}}:
                 @{{op_add}}(@{{x}},@{{y}}));
@@ -548,7 +548,7 @@ def op_add(x, y):
 
 def __op_sub(x, y):
     JS("""
-        return (typeof (@{{x}})==typeof (@{{y}}) && 
+        return (typeof (@{{x}})==typeof (@{{y}}) &&
                 (typeof @{{x}}=='number'||typeof @{{x}}=='string')?
                 @{{x}}-@{{y}}:
                 @{{op_sub}}(@{{x}},@{{y}}));
@@ -1356,6 +1356,23 @@ String.prototype.count = function(sub, start, end) {
     }
     return count;
 }
+
+String.prototype.format = function() {
+    var args = $p['tuple']($pyjs_array_slice.call(arguments,0,arguments.length-1));
+
+    var kw = arguments.length >= 1 ? arguments[arguments.length-1] : arguments[arguments.length];
+    if (typeof kw != 'object' || kw.__name__ != 'dict' || typeof kw.$pyjs_is_kwarg == 'undefined') {
+        if (typeof kw != 'undefined') args.__array.push(kw);
+        kw = arguments[arguments.length+1];
+    } else {
+        delete kw['$pyjs_is_kwarg'];
+    }
+    if (typeof kw == 'undefined') {
+        kw = $p['__empty_dict']();
+    }
+    return $p['_string_format'](this, args, kw);
+}
+String.prototype.format.__args__ = ['args', ['kw']];
 
 String.prototype.join = function(data) {
     var text="";
@@ -2708,7 +2725,7 @@ JS("""
                 // Not 0, and base not a power of 2.
                 var scratch, pin, scratch_idx, pin_idx;
                 var powbase = base, power = 1, size = size_a;
-               
+
                 while (1) {
                     var newpow = powbase * base;
                     if (newpow >>> PyLong_SHIFT)  /* doesn't fit in a digit */
@@ -3012,8 +3029,8 @@ JS("""
     }
 
     function l_divmod(v, w, pdiv, pmod) {
-        var div = $l_divmod_div, 
-            mod = $l_divmod_mod; 
+        var div = $l_divmod_div,
+            mod = $l_divmod_mod;
 
         if (long_divrem(v, w, div, mod) < 0)
                 return -1;
@@ -3360,7 +3377,7 @@ JS("""
 
     $long.__cmp__ = function (b) {
         var sign;
- 
+
         if (this.ob_size != b.ob_size) {
             if (this.ob_size < b.ob_size) return -1;
             return 1;
@@ -3408,7 +3425,7 @@ JS("""
     };
 
     $long.__lshift = function (y) {
-        var a, z, wordshift, remshift, oldsize, newsize, 
+        var a, z, wordshift, remshift, oldsize, newsize,
             accum, i, j;
         if (y < 0) {
             throw @{{ValueError}}('negative shift count');
@@ -4086,7 +4103,7 @@ JS("""
             }
         }
 
-        if ((c !== null) && negativeOutput && 
+        if ((c !== null) && negativeOutput &&
             (z.ob_size != 0) && (c.ob_size != 0)) {
             z = z.__sub__(c);
         }
@@ -4883,7 +4900,7 @@ class dict:
 JS("@{{dict}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type dict>'; };")
 
 # __empty_dict is used in kwargs initialization
-# There must me a temporary __new__ and __init__ function used to prevent infinite 
+# There must me a temporary __new__ and __init__ function used to prevent infinite
 # recursion
 def __empty_dict():
     JS("""
@@ -4951,8 +4968,8 @@ class BaseSet(object):
         if isSet(value) == 1: # An instance of set
             # Use frozenset hash
             JS("""
-            var hashes = new Array(), 
-                obj = @{{self}}.__object, 
+            var hashes = new Array(),
+                obj = @{{self}}.__object,
                 i = 0;
             for (var v in obj) {
                 hashes[i++] = v;
@@ -4966,7 +4983,7 @@ class BaseSet(object):
     def __iter__(self):
         JS("""
         var items = new Array(),
-            i = 0, 
+            i = 0,
             obj = @{{self}}.__object;
         for (var key in obj) {
             items[i++] = obj[key];
@@ -5041,7 +5058,7 @@ class BaseSet(object):
         }
 """)
         return new_set
-    
+
     def difference(self, other):
         """ Return the difference of two sets as a new set.
             (i.e. all elements that are in this set but not the other.)
@@ -5159,9 +5176,9 @@ class BaseSet(object):
 
 class set(BaseSet):
     def __init__(self, _data=None):
-        """ Transform data into an array with [key,value] and add set 
+        """ Transform data into an array with [key,value] and add set
             self.__object
-            Input data can be Array(key, val), iteratable (key,val) or 
+            Input data can be Array(key, val), iteratable (key,val) or
             Object/Function
         """
         if _data is None:
@@ -5179,15 +5196,15 @@ class set(BaseSet):
             }
             return null;""")
         JS("""
-        var item, 
-            i, 
+        var item,
+            i,
             n,
             selfObj = @{{self}}.__object = {};
 
-        if (@{{!data}}.constructor === Array) { 
+        if (@{{!data}}.constructor === Array) {
         // data is already an Array.
         // We deal with the Array of data after this if block.
-          } 
+          }
           
           // We may have some other set-like thing with __object
           else if (typeof @{{!data}}.__object == 'object') {
@@ -5196,7 +5213,7 @@ class set(BaseSet):
                 selfObj[sKey] = dataObj[sKey];
             }
             return null;
-          } 
+          }
           
           // Something with an __iter__ method
           else if (typeof @{{!data}}.__iter__ == 'function') {
@@ -5366,9 +5383,9 @@ JS("@{{set}}.toString = function() { return this.__is_instance__ ? this.__repr__
 
 class frozenset(BaseSet):
     def __new__(cls, _data=None):
-        """ Transform data into an array with [key,value] and add set 
+        """ Transform data into an array with [key,value] and add set
             self.__object
-            Input data can be Array(key, val), iteratable (key,val) or 
+            Input data can be Array(key, val), iteratable (key,val) or
             Object/Function
         """
         self = super(frozenset, cls).__new__(cls, _data)
@@ -5376,7 +5393,7 @@ class frozenset(BaseSet):
             data = JS("[]")
         else:
             data = _data
-        
+
         if isSet(_data):
             JS("""
             @{{self}}.__object = {};
@@ -5387,15 +5404,15 @@ class frozenset(BaseSet):
             }
             return @{{self}};""")
         JS("""
-        var item, 
-            i, 
+        var item,
+            i,
             n,
             selfObj = @{{self}}.__object = {};
 
-        if (@{{!data}}.constructor === Array) { 
+        if (@{{!data}}.constructor === Array) {
         // data is already an Array.
         // We deal with the Array of data after this if block.
-          } 
+          }
           
           // We may have some other set-like thing with __object
           else if (typeof @{{!data}}.__object == 'object') {
@@ -5404,7 +5421,7 @@ class frozenset(BaseSet):
                 selfObj[sKey] = dataObj[sKey];
             }
             return @{{self}};
-          } 
+          }
           
           // Something with an __iter__ method
           else if (typeof @{{!data}}.__iter__ == 'function') {
@@ -5412,7 +5429,7 @@ class frozenset(BaseSet):
             // It has an __array member to iterate over. Make that our data.
             if (typeof @{{!data}}.__array == 'object') {
                 data = @{{!data}}.__array;
-                } 
+                }
             else {
                 // Several ways to deal with the __iter__ method
                 var iter = @{{!data}}.__iter__();
@@ -5828,11 +5845,11 @@ def len(object):
     if (typeof @{{object}}== 'undefined') {
         throw @{{UndefinedValueError}}("obj");
     }
-    if (@{{object}}=== null) 
+    if (@{{object}}=== null)
         return @{{v}};
-    else if (typeof @{{object}}.__array != 'undefined') 
+    else if (typeof @{{object}}.__array != 'undefined')
         @{{v}} = @{{object}}.__array.length;
-    else if (typeof @{{object}}.__len__ == 'function') 
+    else if (typeof @{{object}}.__len__ == 'function')
         @{{v}} = @{{object}}.__len__();
     else if (typeof @{{object}}.length != 'undefined')
         @{{v}} = @{{object}}.length;
@@ -5862,7 +5879,7 @@ def isinstance(object_, classinfo):
                 if (@{{object_}}.__number__ == 0x02) {
                     return true;
                 }
-                if (isFinite(@{{object_}}) && 
+                if (isFinite(@{{object_}}) &&
                     Math.ceil(@{{object_}}) == @{{object_}}) {
                     return true;
                 }
@@ -5917,7 +5934,7 @@ def _isinstance(object_, classinfo):
 def issubclass(class_, classinfo):
     if JS(""" typeof @{{class_}} == 'undefined' || @{{class_}} === null || @{{class_}}.__is_instance__ !== false """):
         raise TypeError("arg 1 must be a class")
-        
+
     if isinstance(classinfo, tuple):
         for ci in classinfo:
             if issubclass(class_, ci):
@@ -5930,7 +5947,7 @@ def issubclass(class_, classinfo):
 
 def _issubtype(object_, classinfo):
     JS("""
-    if (   @{{object_}}.__is_instance__ === null 
+    if (   @{{object_}}.__is_instance__ === null
         || @{{classinfo}}.__is_instance__ === null) {
         return false;
     }
@@ -5958,11 +5975,11 @@ def __getattr_check(attr, attr_left, attr_right, attrstr,
             var $pyjs__testval;
             var v, vl; /* hmm.... */
             if (bound_methods || descriptors) {
-                pyjs__testval = (v=(vl=attr_left)[attr_right]) == null || 
-                                ((vl.__is_instance__) && 
+                pyjs__testval = (v=(vl=attr_left)[attr_right]) == null ||
+                                ((vl.__is_instance__) &&
                                  typeof v == 'function');
                 if (descriptors) {
-                    pyjs_testval = pyjs_testval || 
+                    pyjs_testval = pyjs_testval ||
                             (typeof v['__get__'] == 'function');
                 }
                 pyjs__testval = (pyjs__testval ?
@@ -6560,7 +6577,7 @@ def isIteratable(a):
 
 def isNumber(a):
     JS("""
-    return @{{a}}!== null && @{{a}}.__number__ && 
+    return @{{a}}!== null && @{{a}}.__number__ &&
            (@{{a}}.__number__ != 0x01 || isFinite(@{{a}}));
     """)
 
@@ -6719,6 +6736,8 @@ def sprintf(strng, args):
                 subst = String(parseFloat(param).toFixed(precision)).toUpperCase();
                 break;
             case 'g':
+                // FIXME: Issue 672 should return double digit exponent
+                // probably can remove code in formatd after that
                 if (precision === null && flags.indexOf('#') >= 0) {
                     precision = 6;
                 }
@@ -6889,7 +6908,7 @@ def _globals(module):
     for name in dir(module):
         d[name] = JS("@{{module}}[@{{name}}]")
     return d
-    
+
 def debugReport(msg):
     JS("""
     @{{printFunc}}([@{{msg}}], true);
@@ -7035,6 +7054,1130 @@ def any(iterable):
             return True
     return False
 
+### begin from pypy 2.7.1 string formatter (newformat.py)
+# Adaptation of the str format() method from pypy 2.7.1
+# Copyright (C) 2011, Anthon van der Neut <a.van.der.neut@ruamel.eu>
+
+
+class StringBuilder(object):
+    def __init__(self):
+        self.l = []
+        self.tp = str
+
+    def append(self, s):
+        #assert isinstance(s, self.tp)
+        self.l.append(s)
+
+    def append_slice(self, s, start, end):
+        ## these asserts give problems in pyjs
+        #assert isinstance(s, str)
+        #assert 0 <= start <= end <= len(s)
+        self.l.append(s[start:end])
+
+    def append_multiple_char(self, c, times):
+        #assert isinstance(c, self.tp)
+        self.l.append(c * times)
+
+    def build(self):
+        return self.tp("").join(self.l)
+
+#@specialize.argtype(1)
+def _parse_int(s, start, end):
+    """Parse a number and check for overflows"""
+    result = 0
+    i = start
+    while i < end:
+        c = ord(s[i])
+        if ord("0") <= c <= ord("9"):
+            try:
+                result = result * 10
+                if result > 1000000000: # this is not going to overflow in CPython
+                    raise OverflowError
+            except OverflowError:
+                msg = "too many decimal digits in format string"
+                raise ValueError(msg)
+            result += c - ord("0")
+        else:
+            break
+        i += 1
+    if i == start:
+        result = -1
+    return result, i
+
+class TemplateFormatter(object):
+
+    # Auto number state
+    ANS_INIT = 1
+    ANS_AUTO = 2
+    ANS_MANUAL = 3
+
+    def __init__(self, space, template):
+        self.space = space
+        self.empty = ""
+        self.template = template
+        self.parser_list_w = None # used to be a class variable
+
+    def build(self, args, kw):
+        self.args, self.kwargs = args, kw
+        self.auto_numbering = 0
+        self.auto_numbering_state = self.ANS_INIT
+        return self._build_string(0, len(self.template), 2)
+
+    def _build_string(self, start, end, level):
+        out = StringBuilder()
+        if not level:
+            raise ValueError("Recursion depth exceeded")
+        level -= 1
+        s = self.template
+        return self._do_build_string(start, end, level, out, s)
+
+    def _do_build_string(self, start, end, level, out, s):
+        last_literal = i = start
+        while i < end:
+            c = s[i]
+            i += 1
+            if c == "{" or c == "}":
+                at_end = i == end
+                # Find escaped "{" and "}"
+                markup_follows = True
+                if c == "}":
+                    if at_end or s[i] != "}":
+                        raise ValueError("Single '}'")
+                    i += 1
+                    markup_follows = False
+                if c == "{":
+                    if at_end:
+                        raise ValueError("Single '{'")
+                    if s[i] == "{":
+                        i += 1
+                        markup_follows = False
+                # Attach literal data
+                out.append_slice(s, last_literal, i - 1)
+                if not markup_follows:
+                    last_literal = i
+                    continue
+                nested = 1
+                field_start = i
+                recursive = False
+                while i < end:
+                    c = s[i]
+                    if c == "{":
+                        recursive = True
+                        nested += 1
+                    elif c == "}":
+                        nested -= 1
+                        if not nested:
+                            break
+                    i += 1
+                if nested:
+                    raise ValueError("Unmatched '{'")
+                rendered = self._render_field(field_start, i, recursive, level)
+                out.append(rendered)
+                i += 1
+                last_literal = i
+
+        out.append_slice(s, last_literal, end)
+        return out.build()
+
+    # This is only ever called if we're already unrolling _do_build_string
+    def _parse_field(self, start, end):
+        s = self.template
+        # Find ":" or "!"
+        i = start
+        while i < end:
+            c = s[i]
+            if c == ":" or c == "!":
+                end_name = i
+                if c == "!":
+                    i += 1
+                    if i == end:
+                        w_msg = "expected conversion"
+                        raise ValueError(w_msg)
+                    conversion = s[i]
+                    i += 1
+                    if i < end:
+                        if s[i] != ':':
+                            w_msg = "expected ':' after format specifier"
+                            raise ValueError(w_msg)
+                        i += 1
+                else:
+                    conversion = None
+                    i += 1
+                return s[start:end_name], conversion, i
+            i += 1
+        return s[start:end], None, end
+
+    def _get_argument(self, name):
+        # First, find the argument.
+        i = 0
+        end = len(name)
+        while i < end:
+            c = name[i]
+            if c == "[" or c == ".":
+                break
+            i += 1
+        empty = not i
+        if empty:
+            index = -1
+        else:
+            index, stop = _parse_int(name, 0, i)
+            if stop != i:
+                index = -1
+        use_numeric = empty or index != -1
+        if self.auto_numbering_state == self.ANS_INIT and use_numeric:
+            if empty:
+                self.auto_numbering_state = self.ANS_AUTO
+            else:
+                self.auto_numbering_state = self.ANS_MANUAL
+        if use_numeric:
+            if self.auto_numbering_state == self.ANS_MANUAL:
+                if empty:
+                    msg = "switching from manual to automatic numbering"
+                    raise ValueError(msg)
+            elif not empty:
+                msg = "switching from automatic to manual numbering"
+                raise ValueError(msg)
+        if empty:
+            index = self.auto_numbering
+            self.auto_numbering += 1
+        if index == -1:
+            kwarg = name[:i]
+            arg_key = kwarg
+            try:
+                w_arg = self.kwargs[arg_key]
+            except KeyError:
+                raise KeyError(arg_key)
+        else:
+            try:
+                w_arg = self.args[index]
+            except IndexError:
+                w_msg = "index out of range"
+                raise IndexError(w_msg)
+            except:
+                raise
+        return self._resolve_lookups(w_arg, name, i, end)
+
+    def _resolve_lookups(self, w_obj, name, start, end):
+        # Resolve attribute and item lookups.
+        i = start
+        while i < end:
+            c = name[i]
+            if c == ".":
+                i += 1
+                start = i
+                while i < end:
+                    c = name[i]
+                    if c == "[" or c == ".":
+                        break
+                    i += 1
+                if start == i:
+                    w_msg = "Empty attribute in format string"
+                    raise ValueError(w_msg)
+                w_attr = name[start:i]
+                if w_obj is not None:
+                    w_obj = getattr(w_obj, w_attr)
+                else:
+                    self.parser_list_w.append(self.space.newtuple([
+                        self.space.w_True, w_attr]))
+            elif c == "[":
+                got_bracket = False
+                i += 1
+                start = i
+                while i < end:
+                    c = name[i]
+                    if c == "]":
+                        got_bracket = True
+                        break
+                    i += 1
+                if not got_bracket:
+                    raise ValueError("Missing ']'")
+                if name[start] == '{':
+                    # CPython raise TypeError on '{0[{1}]}', pyjs converts
+                    raise TypeError('no replacement on fieldname')
+                index, reached = _parse_int(name, start, i)
+                if index != -1 and reached == i:
+                    w_item = index
+                else:
+                    w_item = name[start:i]
+                i += 1 # Skip "]"
+                if w_obj is not None:
+                    w_obj = w_obj[w_item]
+                else:
+                    self.parser_list_w.append(self.space.newtuple([
+                        self.space.w_False, w_item]))
+            else:
+                msg = "Only '[' and '.' may follow ']'"
+                raise ValueError(msg)
+        return w_obj
+
+    def formatter_field_name_split(self):
+        name = self.template
+        i = 0
+        end = len(name)
+        while i < end:
+            c = name[i]
+            if c == "[" or c == ".":
+                break
+            i += 1
+        if i == 0:
+            index = -1
+        else:
+            index, stop = _parse_int(name, 0, i)
+            if stop != i:
+                index = -1
+        if index >= 0:
+            w_first = index
+        else:
+            w_first = name[:i]
+        #
+        self.parser_list_w = []
+        self._resolve_lookups(None, name, i, end)
+        #
+        return self.space.newtuple([w_first,
+                               self.space.iter(self.space.newlist(self.parser_list_w))])
+
+    def _convert(self, w_obj, conversion):
+        conv = conversion[0]
+        if conv == "r":
+            return repr(w_obj)
+        elif conv == "s":
+            return str(w_obj)
+        else:
+            raise ValueError("invalid conversion")
+
+    def _render_field(self, start, end, recursive, level):
+        name, conversion, spec_start = self._parse_field(start, end)
+        spec = self.template[spec_start:end]
+        # when used from formatter_parser()
+        if self.parser_list_w is not None:
+            if level == 1:    # ignore recursive calls
+                startm1 = start - 1
+                assert startm1 >= self.last_end
+                w_entry = self.space.newtuple([
+                    self.template[self.last_end:startm1],
+                    name,
+                    spec,
+                    conversion])
+                self.parser_list_w.append(w_entry)
+                self.last_end = end + 1
+            return self.empty
+        #
+        w_obj = self._get_argument(name)
+        if conversion is not None:
+            w_obj = self._convert(w_obj, conversion)
+        if recursive:
+            spec = self._build_string(spec_start, end, level)
+        w_rendered = self.space.format(w_obj, spec)
+        return str(w_rendered)
+
+    def formatter_parser(self):
+        self.parser_list_w = []
+        self.last_end = 0
+        self._build_string(0, len(self.template), 2)
+        #
+        if self.last_end < len(self.template):
+            w_lastentry = self.space.newtuple([
+                self.template[self.last_end:],
+                self.space.w_None,
+                self.space.w_None,
+                self.space.w_None])
+            self.parser_list_w.append(w_lastentry)
+        return self.space.iter(self.space.newlist(self.parser_list_w))
+
+
+class NumberSpec(object):
+    pass
+
+class BaseFormatter(object):
+
+    def format_int_or_long(self, w_num, kind):
+        raise NotImplementedError
+
+    def format_float(self, w_num):
+        raise NotImplementedError
+
+    def format_complex(self, w_num):
+        raise NotImplementedError
+
+
+INT_KIND = 1
+LONG_KIND = 2
+
+NO_LOCALE = 1
+DEFAULT_LOCALE = 2
+CURRENT_LOCALE = 3
+
+
+class Formatter(BaseFormatter):
+    """__format__ implementation for builtin types."""
+
+    _grouped_digits = None
+
+    def __init__(self, space, spec):
+        self.space = space
+        self.empty = ""
+        self.spec = spec
+
+    def _is_alignment(self, c):
+        return (c == "<" or
+                c == ">" or
+                c == "=" or
+                c == "^")
+
+    def _is_sign(self, c):
+        return (c == " " or
+                c == "+" or
+                c == "-")
+
+    def _parse_spec(self, default_type, default_align):
+        self._fill_char = self._lit("\0")[0]
+        self._align = default_align
+        self._alternate = False
+        self._sign = "\0"
+        self._thousands_sep = False
+        self._precision = -1
+        the_type = default_type
+        spec = self.spec
+        if not spec:
+            return True
+        length = len(spec)
+        i = 0
+        got_align = True
+        if length - i >= 2 and self._is_alignment(spec[i + 1]):
+            self._align = spec[i + 1]
+            self._fill_char = spec[i]
+            i += 2
+        elif length - i >= 1 and self._is_alignment(spec[i]):
+            self._align = spec[i]
+            i += 1
+        else:
+            got_align = False
+        if length - i >= 1 and self._is_sign(spec[i]):
+            self._sign = spec[i]
+            i += 1
+        if length - i >= 1 and spec[i] == "#":
+            self._alternate = True
+            i += 1
+        if self._fill_char == "\0" and length - i >= 1 and spec[i] == "0":
+            self._fill_char = self._lit("0")[0]
+            if not got_align:
+                self._align = "="
+            i += 1
+        start_i = i
+        self._width, i = _parse_int(spec, i, length)
+        if length != i and spec[i] == ",":
+            self._thousands_sep = True
+            i += 1
+        if length != i and spec[i] == ".":
+            i += 1
+            self._precision, i = _parse_int(spec, i, length)
+            if self._precision == -1:
+                raise ValueError("no precision given")
+        if length - i > 1:
+            raise ValueError("invalid format spec")
+        if length - i == 1:
+            presentation_type = spec[i]
+            the_type = presentation_type
+            i += 1
+        self._type = the_type
+        if self._thousands_sep:
+            tp = self._type
+            if (tp == "d" or
+                tp == "e" or
+                tp == "f" or
+                tp == "g" or
+                tp == "E" or
+                tp == "G" or
+                tp == "%" or
+                tp == "F" or
+                tp == "\0"):
+                # ok
+                pass
+            else:
+                raise ValueError("invalid type with ','")
+        return False
+
+    def _calc_padding(self, string, length):
+        """compute left and right padding, return total width of string"""
+        if self._width != -1 and length < self._width:
+            total = self._width
+        else:
+            total = length
+        align = self._align
+        if align == ">":
+            left = total - length
+        elif align == "^":
+            left = (total - length) / 2
+        elif align == "<" or align == "=":
+            left = 0
+        else:
+            raise AssertionError("shouldn't be here")
+        right = total - length - left
+        self._left_pad = left
+        self._right_pad = right
+        return total
+
+    def _lit(self, s):
+        return s
+
+    def _pad(self, string):
+        builder = self._builder()
+        builder.append_multiple_char(self._fill_char, self._left_pad)
+        builder.append(string)
+        builder.append_multiple_char(self._fill_char, self._right_pad)
+        return builder.build()
+
+    def _builder(self):
+        return StringBuilder()
+
+    def _unknown_presentation(self, tp):
+        msg = "unknown presentation for %s: '%s'"
+        w_msg = msg  % (tp, self._type)
+        raise ValueError(w_msg)
+
+    def format_string(self, string):
+        if self._parse_spec("s", "<"):
+            return string
+        if self._type != "s":
+            self._unknown_presentation("string")
+        if self._sign != "\0":
+            msg = "Sign not allowed in string format specifier"
+            raise ValueError(msg)
+        if self._alternate:
+            msg = "Alternate form not allowed in string format specifier"
+            raise ValueError(msg)
+        if self._align == "=":
+            msg = "'=' alignment not allowed in string format specifier"
+            raise ValueError(msg)
+        length = len(string)
+        precision = self._precision
+        if precision != -1 and length >= precision:
+            assert precision >= 0
+            length = precision
+            string = string[:precision]
+        if self._fill_char == "\0":
+            self._fill_char = self._lit(" ")[0]
+        self._calc_padding(string, length)
+        return self._pad(string)
+
+    def _get_locale(self, tp):
+        if tp == "n":
+            dec, thousands, grouping = numeric_formatting()
+        elif self._thousands_sep:
+            dec = "."
+            thousands = ","
+            grouping = "\3\0"
+        else:
+            dec = "."
+            thousands = ""
+            grouping = "\256"
+        self._loc_dec = dec
+        self._loc_thousands = thousands
+        self._loc_grouping = grouping
+
+    def _calc_num_width(self, n_prefix, sign_char, to_number, n_number,
+                        n_remainder, has_dec, digits):
+        """Calculate widths of all parts of formatted number.
+
+        Output will look like:
+
+            <lpadding> <sign> <prefix> <spadding> <grouped_digits> <decimal>
+            <remainder> <rpadding>
+
+        sign is computed from self._sign, and the sign of the number
+        prefix is given
+        digits is known
+        """
+        spec = NumberSpec()
+        spec.n_digits = n_number - n_remainder - has_dec
+        spec.n_prefix = n_prefix
+        spec.n_lpadding = 0
+        spec.n_decimal = int(has_dec)
+        spec.n_remainder = n_remainder
+        spec.n_spadding = 0
+        spec.n_rpadding = 0
+        spec.n_min_width = 0
+        spec.n_total = 0
+        spec.sign = "\0"
+        spec.n_sign = 0
+        sign = self._sign
+        if sign == "+":
+            spec.n_sign = 1
+            spec.sign = "-" if sign_char == "-" else "+"
+        elif sign == " ":
+            spec.n_sign = 1
+            spec.sign = "-" if sign_char == "-" else " "
+        elif sign_char == "-":
+            spec.n_sign = 1
+            spec.sign = "-"
+        extra_length = (spec.n_sign + spec.n_prefix + spec.n_decimal +
+                        spec.n_remainder) # Not padding or digits
+        if self._fill_char == "0" and self._align == "=":
+            spec.n_min_width = self._width - extra_length
+        if self._loc_thousands:
+            self._group_digits(spec, digits[to_number:])
+            n_grouped_digits = len(self._grouped_digits)
+        else:
+            n_grouped_digits = spec.n_digits
+        n_padding = self._width - (extra_length + n_grouped_digits)
+        if n_padding > 0:
+            align = self._align
+            if align == "<":
+                spec.n_rpadding = n_padding
+            elif align == ">":
+                spec.n_lpadding = n_padding
+            elif align == "^":
+                spec.n_lpadding = n_padding // 2
+                spec.n_rpadding = n_padding - spec.n_lpadding
+            elif align == "=":
+                spec.n_spadding = n_padding
+            else:
+                raise AssertionError("shouldn't reach")
+        spec.n_total = spec.n_lpadding + spec.n_sign + spec.n_prefix + \
+                       spec.n_spadding + n_grouped_digits + \
+                       spec.n_decimal + spec.n_remainder + spec.n_rpadding
+        return spec
+
+    def _fill_digits(self, buf, digits, d_state, n_chars, n_zeros,
+                     thousands_sep):
+        if thousands_sep:
+            for c in thousands_sep:
+                buf.append(c)
+        for i in range(d_state - 1, d_state - n_chars - 1, -1):
+            buf.append(digits[i])
+        for i in range(n_zeros):
+            buf.append("0")
+
+    def _group_digits(self, spec, digits):
+        buf = []
+        grouping = self._loc_grouping
+        min_width = spec.n_min_width
+        grouping_state = 0
+        count = 0
+        left = spec.n_digits
+        n_ts = len(self._loc_thousands)
+        need_separator = False
+        done = False
+        groupings = len(grouping)
+        previous = 0
+        while True:
+            group = ord(grouping[grouping_state])
+            if group > 0:
+                if group == 256:
+                    break
+                grouping_state += 1
+                previous = group
+            else:
+                group = previous
+            final_grouping = min(group, max(left, max(min_width, 1)))
+            n_zeros = max(0, final_grouping - left)
+            n_chars = max(0, min(left, final_grouping))
+            ts = self._loc_thousands if need_separator else None
+            self._fill_digits(buf, digits, left, n_chars, n_zeros, ts)
+            need_separator = True
+            left -= n_chars
+            min_width -= final_grouping
+            if left <= 0 and min_width <= 0:
+                done = True
+                break
+            min_width -= n_ts
+        if not done:
+            group = max(max(left, min_width), 1)
+            n_zeros = max(0, group - left)
+            n_chars = max(0, min(left, group))
+            ts = self._loc_thousands if need_separator else None
+            self._fill_digits(buf, digits, left, n_chars, n_zeros, ts)
+        buf.reverse()
+        self._grouped_digits = self.empty.join(buf)
+
+    def _upcase_string(self, s):
+        buf = []
+        for c in s:
+            index = ord(c)
+            if ord("a") <= index <= ord("z"):
+                c = chr(index - 32)
+            buf.append(c)
+        return self.empty.join(buf)
+
+
+    def _fill_number(self, spec, num, to_digits, to_prefix, fill_char,
+                     to_remainder, upper, grouped_digits=None):
+        out = self._builder()
+        if spec.n_lpadding:
+            out.append_multiple_char(fill_char[0], spec.n_lpadding)
+        if spec.n_sign:
+            sign = spec.sign
+            out.append(sign)
+        if spec.n_prefix:
+            pref = num[to_prefix:to_prefix + spec.n_prefix]
+            if upper:
+                pref = self._upcase_string(pref)
+            out.append(pref)
+        if spec.n_spadding:
+            out.append_multiple_char(fill_char[0], spec.n_spadding)
+        if spec.n_digits != 0:
+            if self._loc_thousands:
+                if grouped_digits is not None:
+                    digits = grouped_digits
+                else:
+                    digits = self._grouped_digits
+                    assert digits is not None
+            else:
+                stop = to_digits + spec.n_digits
+                assert stop >= 0
+                digits = num[to_digits:stop]
+            if upper:
+                digits = self._upcase_string(digits)
+            out.append(digits)
+        if spec.n_decimal:
+            out.append(".")
+        if spec.n_remainder:
+            out.append(num[to_remainder:])
+        if spec.n_rpadding:
+            out.append_multiple_char(fill_char[0], spec.n_rpadding)
+        #if complex, need to call twice - just retun the buffer
+        return out.build()
+
+    def _format_int_or_long(self, w_num, kind):
+        if self._precision != -1:
+            msg = "precision not allowed in integer type"
+            raise ValueError(msg)
+        sign_char = "\0"
+        tp = self._type
+        if tp == "c":
+            if self._sign != "\0":
+                msg = "sign not allowed with 'c' presentation type"
+                raise ValueError(msg)
+            value = w_num
+            result = chr(value)
+            n_digits = 1
+            n_remainder = 1
+            to_remainder = 0
+            n_prefix = 0
+            to_prefix = 0
+            to_numeric = 0
+        else:
+            if tp == "b":
+                base = 2
+                skip_leading = 2
+            elif tp == "o":
+                base = 8
+                skip_leading = 2
+            elif tp == "x" or tp == "X":
+                base = 16
+                skip_leading = 2
+            elif tp == "n" or tp == "d":
+                base = 10
+                skip_leading = 0
+            else:
+                raise AssertionError("shouldn't reach")
+            if kind == INT_KIND:
+                result = self._int_to_base(base, w_num)
+            else:
+                result = self._int_to_base(base, w_num)
+            n_prefix = skip_leading if self._alternate else 0
+            to_prefix = 0
+            if result[0] == "-":
+                sign_char = "-"
+                skip_leading += 1
+                to_prefix += 1
+            n_digits = len(result) - skip_leading
+            n_remainder = 0
+            to_remainder = 0
+            to_numeric = skip_leading
+        self._get_locale(tp)
+        spec = self._calc_num_width(n_prefix, sign_char, to_numeric, n_digits,
+                                    n_remainder, False, result)
+        fill = self._lit(" ") if self._fill_char == "\0" else self._fill_char
+        upper = self._type == "X"
+        return self._fill_number(spec, result, to_numeric,
+                                 to_prefix, fill, to_remainder, upper)
+
+    def _int_to_base(self, base, value):
+        if base == 10:
+            return str(value)
+        # This part is slow.
+        negative = value < 0
+        value = abs(value)
+        buf = ["\0"] * (8 * 8 + 6) # Too much on 32 bit, but who cares?
+        i = len(buf) - 1
+        while True:
+            div = value // base
+            mod = value - div * base
+            digit = abs(mod)
+            digit += ord("0") if digit < 10 else ord("a") - 10
+            buf[i] = chr(digit)
+            value = div
+            i -= 1
+            if not value:
+                break
+        if base == 2:
+            buf[i] = "b"
+            buf[i - 1] = "0"
+        elif base == 8:
+            buf[i] = "o"
+            buf[i - 1] = "0"
+        elif base == 16:
+            buf[i] = "x"
+            buf[i - 1] = "0"
+        else:
+            buf[i] = "#"
+            buf[i - 1] = chr(ord("0") + base % 10)
+            if base > 10:
+                buf[i - 2] = chr(ord("0") + base // 10)
+                i -= 1
+        i -= 1
+        if negative:
+            i -= 1
+            buf[i] = "-"
+        assert i >= 0
+        return self.empty.join(buf[i:])
+
+    def format_int_or_long(self, w_num, kind):
+        if self._parse_spec("d", ">"):
+            return self.space.str(w_num)
+        tp = self._type
+        if (tp == "b" or
+            tp == "c" or
+            tp == "d" or
+            tp == "o" or
+            tp == "x" or
+            tp == "X" or
+            tp == "n"):
+            return self._format_int_or_long(w_num, kind)
+        elif (tp == "e" or
+              tp == "E" or
+              tp == "f" or
+              tp == "F" or
+              tp == "g" or
+              tp == "G" or
+              tp == "%"):
+            w_float = float(w_num)
+            return self._format_float(w_float)
+        else:
+            self._unknown_presentation("int" if kind == INT_KIND else "long")
+
+    def _parse_number(self, s, i):
+        """Determine if s has a decimal point, and the index of the first #
+        after the decimal, or the end of the number."""
+        length = len(s)
+        while i < length and "0" <= s[i] <= "9":
+            i += 1
+        rest = i
+        dec_point = i < length and s[i] == "."
+        if dec_point:
+            rest += 1
+        #differs from CPython method - CPython sets n_remainder
+        return dec_point, rest
+
+    def _format_float(self, w_float):
+        """helper for format_float"""
+        flags = 0
+        default_precision = 6
+        if self._alternate:
+            msg = "alternate form not allowed in float formats"
+            raise ValueError(msg)
+        tp = self._type
+        self._get_locale(tp)
+        if tp == "\0":
+            tp = "g"
+            default_precision = 12
+            flags |= DTSF_ADD_DOT_0
+        elif tp == "n":
+            tp = "g"
+        value = float(w_float)
+        if tp == "%":
+            tp = "f"
+            value *= 100
+            add_pct = True
+        else:
+            add_pct = False
+        if self._precision == -1:
+            self._precision = default_precision
+        result = formatd(value, tp, self._precision, flags)
+        if add_pct:
+            result += "%"
+        n_digits = len(result)
+        if result[0] == "-":
+            sign = "-"
+            to_number = 1
+            n_digits -= 1
+        else:
+            sign = "\0"
+            to_number = 0
+        have_dec_point, to_remainder = self._parse_number(result, to_number)
+        n_remainder = len(result) - to_remainder
+        digits = result
+        spec = self._calc_num_width(0, sign, to_number, n_digits,
+                                    n_remainder, have_dec_point, digits)
+        fill = self._lit(" ") if self._fill_char == "\0" else self._fill_char
+        return self._fill_number(spec, digits, to_number, 0,
+                                  fill, to_remainder, False)
+
+    def format_float(self, w_float):
+        if self._parse_spec("\0", ">"):
+            return self.space.str(w_float)
+        tp = self._type
+        if (tp == "\0" or
+            tp == "e" or
+            tp == "E" or
+            tp == "f" or
+            tp == "F" or
+            tp == "g" or
+            tp == "G" or
+            tp == "n" or
+            tp == "%"):
+            return self._format_float(w_float)
+        self._unknown_presentation("float")
+
+    def _format_complex(self, w_complex):
+        tp = self._type
+        self._get_locale(tp)
+        default_precision = 6
+        if self._align == "=":
+            # '=' alignment is invalid
+            msg = ("'=' alignment flag is not allowed in"
+                   " complex format specifier")
+            raise ValueError(msg)
+        if self._fill_char == "0":
+            #zero padding is invalid
+            msg = "Zero padding is not allowed in complex format specifier"
+            raise ValueError(msg)
+        if self._alternate:
+            #alternate is invalid
+            msg = "Alternate form %s not allowed in complex format specifier"
+            raise ValueError(msg % (self._alternate))
+        skip_re = 0
+        add_parens = 0
+        if tp == "\0":
+            #should mirror str() output
+            tp = "g"
+            default_precision = 12
+            #test if real part is non-zero
+            if (w_complex.realval == 0 and
+                copysign(1., w_complex.realval) == 1.):
+                skip_re = 1
+            else:
+                add_parens = 1
+
+        if tp == "n":
+            #same as 'g' except for locale, taken care of later
+            tp = "g"
+
+        #check if precision not set
+        if self._precision == -1:
+            self._precision = default_precision
+
+        #might want to switch to double_to_string from formatd
+        #in CPython it's named 're' - clashes with re module
+        re_num = formatd(w_complex.realval, tp, self._precision)
+        im_num = formatd(w_complex.imagval, tp, self._precision)
+        n_re_digits = len(re_num)
+        n_im_digits = len(im_num)
+
+        to_real_number = 0
+        to_imag_number = 0
+        re_sign = im_sign = ''
+        #if a sign character is in the output, remember it and skip
+        if re_num[0] == "-":
+            re_sign = "-"
+            to_real_number = 1
+            n_re_digits -= 1
+        if im_num[0] == "-":
+            im_sign = "-"
+            to_imag_number = 1
+            n_im_digits -= 1
+
+        #turn off padding - do it after number composition
+        #calc_num_width uses self._width, so assign to temporary variable,
+        #calculate width of real and imag parts, then reassign padding, align
+        tmp_fill_char = self._fill_char
+        tmp_align = self._align
+        tmp_width = self._width
+        self._fill_char = "\0"
+        self._align = "<"
+        self._width = -1
+
+        #determine if we have remainder, might include dec or exponent or both
+        re_have_dec, re_remainder_ptr = self._parse_number(re_num,
+                                                           to_real_number)
+        im_have_dec, im_remainder_ptr = self._parse_number(im_num,
+                                                           to_imag_number)
+
+        #set remainder, in CPython _parse_number sets this
+        #using n_re_digits causes tests to fail
+        re_n_remainder = len(re_num) - re_remainder_ptr
+        im_n_remainder = len(im_num) - im_remainder_ptr
+        re_spec = self._calc_num_width(0, re_sign, to_real_number, n_re_digits,
+                                       re_n_remainder, re_have_dec,
+                                       re_num)
+
+        #capture grouped digits b/c _fill_number reads from self._grouped_digits
+        #self._grouped_digits will get overwritten in imaginary calc_num_width
+        re_grouped_digits = self._grouped_digits
+        if not skip_re:
+            self._sign = "+"
+        im_spec = self._calc_num_width(0, im_sign, to_imag_number, n_im_digits,
+                                       im_n_remainder, im_have_dec,
+                                       im_num)
+
+        im_grouped_digits = self._grouped_digits
+        if skip_re:
+            re_spec.n_total = 0
+
+        #reassign width, alignment, fill character
+        self._align = tmp_align
+        self._width = tmp_width
+        self._fill_char = tmp_fill_char
+
+        #compute L and R padding - stored in self._left_pad and self._right_pad
+        self._calc_padding(self.empty, re_spec.n_total + im_spec.n_total + 1 +
+                                       add_parens * 2)
+
+        out = self._builder()
+        fill = self._fill_char
+        if fill == "\0":
+            fill = self._lit(" ")[0]
+
+        #compose the string
+        #add left padding
+        out.append_multiple_char(fill, self._left_pad)
+        if add_parens:
+            out.append(self._lit('(')[0])
+
+        #if the no. has a real component, add it
+        if not skip_re:
+            out.append(self._fill_number(re_spec, re_num, to_real_number, 0,
+                                         fill, re_remainder_ptr, False,
+                                         re_grouped_digits))
+
+        #add imaginary component
+        out.append(self._fill_number(im_spec, im_num, to_imag_number, 0,
+                                     fill, im_remainder_ptr, False,
+                                     im_grouped_digits))
+
+        #add 'j' character
+        out.append(self._lit('j')[0])
+
+        if add_parens:
+            out.append(self._lit(')')[0])
+
+        #add right padding
+        out.append_multiple_char(fill, self._right_pad)
+
+        return out.build()
+
+
+    def format_complex(self, w_complex):
+        """return the string representation of a complex number"""
+        #parse format specification, set associated variables
+        if self._parse_spec("\0", ">"):
+            return self.space.str(w_complex)
+        tp = self._type
+        if (tp == "\0" or
+            tp == "e" or
+            tp == "E" or
+            tp == "f" or
+            tp == "F" or
+            tp == "g" or
+            tp == "G" or
+            tp == "n"):
+            return self._format_complex(w_complex)
+        self._unknown_presentation("complex")
+
+class StringFormatSpace(object):
+    def format(self, w_obj, spec):
+        # added test on int, float, basestring CPython has __format__ for them
+        if isinstance(w_obj, object) and \
+           not isinstance(w_obj, (int, float, basestring)):
+            if hasattr(w_obj, '__format__'):
+                return w_obj.__format__(spec)
+        if not spec:
+            return w_obj
+        fmt = Formatter(self, spec)
+        if isinstance(w_obj, basestring):
+            return fmt.format_string(w_obj)
+        elif isinstance(w_obj, int):
+            return fmt.format_int_or_long(w_obj, spec)
+        elif isinstance(w_obj, float):
+            return fmt.format_float(w_obj)
+        if isinstance(w_obj, object):
+            if hasattr(w_obj, '__str__'):
+                return fmt.format_string(w_obj.__str__())
+        print 'type not implemented'
+        return w_obj
+
+
+DTSF_STR_PRECISION = 12
+
+DTSF_SIGN      = 0x1
+DTSF_ADD_DOT_0 = 0x2
+DTSF_ALT       = 0x4
+
+DIST_FINITE   = 1
+DIST_NAN      = 2
+DIST_INFINITY = 3
+
+# Equivalent to CPython's PyOS_double_to_string
+def formatd(x, code, precision, flags=0):
+    if flags & DTSF_ALT:
+        alt = '#'
+    else:
+        alt = ''
+
+    if code == 'r':
+        fmt = "%r"
+    else:
+        fmt = "%%%s.%d%s" % (alt, precision, code)
+    s = fmt % (x,)
+
+    if flags & DTSF_ADD_DOT_0:
+        # We want float numbers to be recognizable as such,
+        # i.e., they should contain a decimal point or an exponent.
+        # However, %g may print the number as an integer;
+        # in such cases, we append ".0" to the string.
+        idx = len(s)
+        for idx in range(len(s),0, -1):
+            c = s[idx-1]
+            # this is to solve Issue #672
+            if c in 'eE':
+                if s[idx] in '+-':
+                    idx += 1
+                s = s[:idx] + '%02d' % (int(s[idx:]))
+                break
+            if c in '.eE':
+                break
+        else:
+            if len(s) < precision:
+                s += '.0'
+            else: # for numbers truncated by javascripts toPrecision()
+                sign = '+'
+                if x < 1:
+                    sign = '-'
+                s = '%s.%se%s%02d' % (s[0], s[1:], sign, len(s) - 1)
+    elif code == 'r' and s.endswith('.0'):
+        s = s[:-2]
+
+    return s
+
+def numeric_formatting():
+    # return decimal, thousands and grouping
+    return '.', ',', "\3\0"
+
+def _string_format(s, args=[], kw={}):
+    space = StringFormatSpace()
+    fm = TemplateFormatter(space, s)
+    res = fm.build(args, kw)
+    return res
+
+def format(val, spec=''):
+    args = [val]
+    space = StringFormatSpace()
+    return str(space.format(val, spec))
+
+
+### end from pypy 2.7.1 string formatter (newformat.py)
+
 __iter_prepare = JS("""function(iter, reuse_tuple) {
 
     if (typeof iter == 'undefined') {
@@ -7086,3 +8229,4 @@ def __import__(name, globals={}, locals={}, fromlist=[], level=-1):
 
 import sys # needed for debug option
 import dynamic # needed for ___import___
+
