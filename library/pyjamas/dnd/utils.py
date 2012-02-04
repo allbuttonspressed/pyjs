@@ -86,10 +86,11 @@ def getTargetInChildren(element, x, y):
     Return None if not found.
     """
     return_elt = None
-    for elt in DOM.IterWalkChildren(element):
-        hit = isIn(elt, x, y)
-        if hit:
-            return_elt = elt
+    if DOM.getChildCount(element) > 0:
+        for elt in DOM.IterWalkChildren(element):
+            hit = isIn(elt, x, y)
+            if hit:
+                return_elt = elt
     return return_elt
 
 def getElementUnderMouse(widget, x,y):
