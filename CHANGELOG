@@ -1,6 +1,10 @@
                     Changes made to Pyjamas since 0.8pre1
                     ---------------------------------
 
+ * use new platform override scheme {module}.{platformname}.py so that
+   platform override files live in the same subdirectory as the actual
+   file it's overriding
+
  * moved JSONParser.py to json.py (in standard modules) because it is
    effectively identical, and confusing to try to indicate that JSONParser.py
    is somehow different or "special".
