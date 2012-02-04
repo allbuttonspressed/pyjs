@@ -1,3 +1,5 @@
+# TODO: make this more json module compliant (exceptions etc.)
+
 from __pyjamas__ import JS
 import math
 
@@ -219,4 +221,8 @@ class JSONParser:
         """)
     
         
-        
+parser = JSONParser()
+dumps = getattr(parser, 'encode')
+loads = getattr(parser, 'decodeAsObject')
+JSONDecodeException = None
+
