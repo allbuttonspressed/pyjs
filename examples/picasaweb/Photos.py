@@ -18,7 +18,7 @@ from pyjamas.ui.Grid import Grid
 from pyjamas.ui.Composite import Composite
 from pyjamas.Timer import Timer
 from pyjamas import DOM
-from pyjamas.JSONParser import JSONParser
+import json
 from __pyjamas__ import JS
 
 class Photos(Composite):
@@ -173,7 +173,7 @@ class Photos(Composite):
             self.grid.setWidget(int(i/cols), i%cols, vp)
 
     def parsePhotos(self, items):
-        photo_list = JSONParser().jsObjectToPyObject(items)
+        photo_list = json.loads(items)
         self.photos = []
         for i in range(len(photo_list)):
             index = "%s" % i
@@ -183,7 +183,7 @@ class Photos(Composite):
             self.photos.append(aphoto)
 
     def parseAlbums(self, items):
-        album_list = JSONParser().jsObjectToPyObject(items)
+        album_list = json.loads(items)
         self.albums = []
         for i in range(len(album_list)):
             index = "%s" % i

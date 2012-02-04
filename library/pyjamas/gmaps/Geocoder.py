@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from __pyjamas__ import JS
-from pyjamas.JSONParser import JSONParser
 
 from pyjamas.gmaps.Utils import translateGmapsObject, dictToJs #, gmapsPyObjectToJs
 

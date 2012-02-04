@@ -46,7 +46,7 @@ from pyjamas.JSONParser import JSONParser
 from pyjamas import Window
 import random
 
-json = JSONParser()
+import json
 
 class DNDDemos(VerticalPanel):
     def __init__(self):
@@ -742,7 +742,7 @@ class DropWidget6(DropWidget, DragContainer, AddablePanel):
         clientY = event.clientY
         absx = clientX + Window.getScrollLeft()
         absy = clientY + Window.getScrollTop()
-        package = json.encode({"text": DOM.getInnerText(target),
+        package = json.dumps({"text": DOM.getInnerText(target),
                                "offsetX": absx - DOM.getAbsoluteLeft(target),
                                "offsetY": absy - DOM.getAbsoluteTop(target)})
         dt.setData('text', package)
@@ -783,7 +783,7 @@ class DropWidget6(DropWidget, DragContainer, AddablePanel):
     def onDrop(self, event):
         dt = event.dataTransfer
         text = dt.getData('text')
-        package = json.decode(text)
+        package = json.loads(text)
         x = DOM.eventGetClientX(event)
         y = DOM.eventGetClientY(event)
         scrollY = Window.getScrollTop()
