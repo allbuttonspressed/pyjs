@@ -16,13 +16,10 @@
 import pyjd
 from pyjamas.ui import HasVerticalAlignment
 from pyjamas.Timer import Timer
-from pyjamas.Window import alert
-from pyjamas.dnd.utils import eventCoordinates
-from pyjamas.ui.DragHandler import DragHandler
 
 from datetime import datetime
 
-from __pyjamas__ import doc, wnd
+from __pyjamas__ import doc
 
 from pyjamas.ui.Widget import Widget
 from pyjamas import DOM
@@ -32,7 +29,6 @@ from pyjamas.ui.HTML import HTML
 from pyjamas.ui.RootPanel import RootPanel
 from pyjamas.ui.VerticalPanel import VerticalPanel
 from pyjamas.ui.HorizontalPanel import HorizontalPanel
-from pyjamas.ui.AbsolutePanel import AbsolutePanel
 
 from pyjamas.Canvas.GWTCanvas import GWTCanvas
 import pyjamas.Canvas.Color as Color
@@ -42,9 +38,7 @@ from pyjamas.ui.DragWidget import DragWidget, DragContainer
 from pyjamas.ui.DropWidget import DropWidget
 from pyjamas.ui.Panel import Panel
 from pyjamas.dnd import getTypes
-from pyjamas.JSONParser import JSONParser
 from pyjamas import Window
-import random
 
 import json
 
