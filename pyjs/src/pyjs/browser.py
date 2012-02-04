@@ -265,7 +265,7 @@ class BrowserLinker(linker.BaseLinker):
         dynamic_app_libs = skip_unlinked(dynamic_app_libs)
         static_js_libs = skip_unlinked(static_js_libs)
         static_app_libs = skip_unlinked(static_app_libs)
-        
+
         dynamic_modules = self.unique_list_values(available_modules + [js_modname(lib) for lib in dynamic_js_libs])
         available_modules = self.unique_list_values(available_modules + early_static_app_libs + dynamic_modules)
         if len(dynamic_modules) > 0:
@@ -274,7 +274,7 @@ class BrowserLinker(linker.BaseLinker):
             dynamic_modules = "[]"
         appscript = "<script><!--\n$wnd.__pygwt_modController.init($pyjs.appname, window)\n$wnd.__pygwt_modController.load($pyjs.appname, [\n'%s'\n])\n--></script>"
         jsscript = """<script type="text/javascript" src="%(path)s" onload="$pyjs.script_onload('%(modname)s')" onreadystatechange="$pyjs.script_onreadystate('%(modname)s')"></script>"""
-        dynamic_app_libs = appscript % "',\n'".join([lib[len_ouput_dir:] for lib in dynamic_app_libs])
+        dynamic_app_libs = appscript % "',\n'".join([lib[len_ouput_dir:].replace('\\', '/') for lib in dynamic_app_libs])
         dynamic_js_libs = '\n'.join([jsscript % {'path': lib, 'modname': js_modname(lib)} for lib in dynamic_js_libs])
         early_static_app_libs = static_code(early_static_app_libs)
         static_app_libs = static_code(static_app_libs)
@@ -465,7 +465,7 @@ def build_script():
         )
 
     parser.add_option(
-        "--bootstrap-file", 
+        "--bootstrap-file",
         dest="bootstrap_file",
         help="Specify the bootstrap code. (Used when application html file is generated)."
         )
