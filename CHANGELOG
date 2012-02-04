@@ -1,5 +1,9 @@
-                    Changes made to Pyjamas since 0.7
+                    Changes made to Pyjamas since 0.8pre1
                     ---------------------------------
+
+ * moved JSONParser.py to json.py (in standard modules) because it is
+   effectively identical, and confusing to try to indicate that JSONParser.py
+   is somehow different or "special".
 
  * DateField - show Calendar for typed-in month, not always current, 
     By Maho (Łukasz Mach)
@@ -11,6 +15,9 @@
  * pyjs/src/pyjs/lib/string.py workaround Issue #658, mods to Template
    class so that template strings substitution works.
    By Phil Charlesworth
+
+                    Changes made to Pyjamas since 0.7
+                    ---------------------------------
 
  * Added simple sys.stdout and sys.stderr objects. The print statement
    now uses sys.stdout for printing. You can intercept print statements
