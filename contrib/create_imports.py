@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Create imports for gwt to import from pyjamas in stead of gwt"""
+"""Create imports for gwt to import from pyjamas instead of gwt"""
 
 import sys
 import os

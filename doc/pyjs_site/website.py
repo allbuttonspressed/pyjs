@@ -79,6 +79,7 @@ class Tabs:
 
         DeferredCommand.add(self)
 
+         
     def execute(self):
         self.onWindowResized(Window.getClientWidth(), Window.getClientHeight())
 

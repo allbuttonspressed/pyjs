@@ -5,6 +5,8 @@ IN_BROWSER = sys.platform in ['mozilla', 'ie6', 'opera', 'oldmoz', 'safari']
 IN_JS = sys.platform in ['mozilla', 'ie6', 'opera', 'oldmoz',
                          'safari', 'spidermonkey', 'pyv8']
 
+PY27_BEHAVIOUR = not IN_JS and sys.version_info[0:2] >= (2,7)
+
 if IN_BROWSER:
     from pyjamas.Timer import Timer
 
@@ -36,7 +38,7 @@ class UnitTest:
             try:
                 test_method()
             except Exception,e:
-                self.fail("uncaught exception:" + str(e))
+                self.fail("uncaught exception: " + str(e))
         except:
             self.fail("uncaught javascript exception")
         self.tearDown()
@@ -145,6 +147,8 @@ class UnitTest:
     def failUnless(self, expr, msg=None):
         self.startTest()
         if not expr:
+            if not msg:
+                msg = "expected True, got False"
             return self.fail(msg)
 
     def failUnlessEqual(self, first, second, msg=None):

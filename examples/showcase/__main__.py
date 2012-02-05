@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import sys
+try:
+    sys.argv.remove("--download") # quick and dirty fix for the globally distributed --download argument
+except ValueError:
+    pass
 import os
 head = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(head))
@@ -9,7 +13,7 @@ import compile
 sys.path.pop(0)
 oldpath = os.getcwd()
 os.chdir(head)
-compile.main()
+compile.main() # here we process everything
 os.chdir(oldpath)
 del(oldpath)
 

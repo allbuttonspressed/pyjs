@@ -164,7 +164,7 @@ this is raised at runtime.
 Multifile Linking
 =================
 
-In order to be able to debug scripts in e.g. Firebug it is usefull to
+In order to be able to debug scripts in e.g. Firebug it is useful to
 have smaller script files, the multifile option does this by writing
 script tags into the generated cache.html file.
 

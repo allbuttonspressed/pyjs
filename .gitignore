@@ -10,5 +10,10 @@ output
 .*.sw?
 *.py~
 
-/stdlib
 .idea
+/stdlib
+
+/dev/parts
+/dev/eggs
+*PureMVC_Python*
+

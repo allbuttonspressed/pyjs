@@ -10,6 +10,7 @@
     finally open a web browser window to show the compiled application.
 
 """
+import subprocess
 import cStringIO
 import os
 import os.path
@@ -113,7 +114,7 @@ def main():
     options = " ".join(sys.argv[1:])
     # Compile the application using Pyjamas.
     if sys.platform == "win32":
-        stmt = (os.path.join(PATH_TO_PYJAMAS, 'bin', 'pyjsbuild.py') +
+        stmt = (sys.executable + " " + os.path.join(PATH_TO_PYJAMAS, 'bin', 'pyjsbuild.py') +
                 " " + options +
                 " -o " + os.path.join(here,'output') + " " +
                 " -I " + os.path.join(here, 'src') + " " +
@@ -125,7 +126,10 @@ def main():
                 " -I " + os.path.join(here, 'src') + " " +
                 'Showcase' +
                 " > /dev/null")
-    if os.system(stmt) != 0: return
+
+    e = subprocess.Popen(stmt, shell=True)
+    retcode = e.wait()
+    if retcode != 0: return
 
     # Finally, launch a web browser to show the compiled application.
 
