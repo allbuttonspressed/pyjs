@@ -55,7 +55,7 @@ def onClosed():
 
 # TODO: call fireClosingAndCatch
 def onClosing():
-    fireClosingImpl()
+    return fireClosingImpl()
 
 # TODO: call fireResizedAndCatch
 def onResize():
