@@ -115,16 +115,24 @@ def getAbsoluteLeft(elem):
     scrollLeft = doc().documentElement.scrollLeft
     if scrollLeft == 0:
         scrollLeft = doc().body.scrollLeft
-    
+
     return (elem.getBoundingClientRect().left + scrollLeft) - 2
 
 def getAbsoluteTop(elem):
     scrollTop = doc().documentElement.scrollTop
     if scrollTop == 0:
         scrollTop = doc().body.scrollTop
-    
+
     return (elem.getBoundingClientRect().top +  scrollTop) - 2
 
+def getAttribute(elem, attr):
+    return getattr(elem, attr)
+
+def getElemAttribute(elem, attr):
+    mf = get_main_frame()
+    if not elem.hasAttribute(attr):
+        return getattr(elem, mf.mash_attrib(attr))
+    return elem.getAttribute(attr)
 
 def getChild(elem, index):
     return elem.children.item(index)

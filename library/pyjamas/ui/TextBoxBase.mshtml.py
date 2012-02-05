@@ -33,3 +33,6 @@ class TextBoxBase(FocusWidget):
     def getText(self):
         return DOM.getAttribute(self.getElement(), "value") or ""
 
+    def setText(self, text):
+        DOM.setAttribute(self.getElement(), "value", text)
+
