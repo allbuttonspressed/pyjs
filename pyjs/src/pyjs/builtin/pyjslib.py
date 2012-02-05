@@ -1186,6 +1186,10 @@ String.prototype.isupper = function() {
     return (this.match(/[a-z]/g) === null);
 };
 
+String.prototype.islower = function() {
+    return (this.match(/[A-Z]/g) === null);
+};
+
 String.prototype.__replace=String.prototype.replace;
 
 String.prototype.$$replace = function(old, replace, count) {
