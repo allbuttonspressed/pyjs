@@ -77,7 +77,7 @@ pyjdsh = """#!/bin/sh
 
 PYJAMAS_HOME="%(pyjspth)s"
 PYJAMAS_SITE="%(pyjssitepth)s"
-if [ "Q${PYTHONPATH}" == "Q" ] ; then
+if [ "Q${PYTHONPATH}" = "Q" ] ; then
     export PYTHONPATH="${PYJAMAS_HOME}:${PYJAMAS_SITE}"
 else
     export PYTHONPATH="${PYJAMAS_HOME}:${PYJAMAS_SITE}:${PYTHONPATH}"
