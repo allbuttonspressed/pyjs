@@ -117,7 +117,7 @@ def out_translate(platform, file_names, out_file, module_name,
                     platform = "[%s] " % platform
                 else:
                     platform = ''
-                print "Translating %s:" % platform, file_name
+                print "PKLTranslating %s:" % platform, file_name
                 do_translate = True
                 break
     if not incremental or do_translate:
@@ -276,6 +276,7 @@ class BaseLinker(object):
                     if pn not in all_names:
                         all_names.append(pn)
             all_names.append(mn)
+        #print "MODULES OF", parent_file, ":", module_names
         paths = self.path
         parent_base = None
         abs_name = None
@@ -295,9 +296,11 @@ class BaseLinker(object):
             if not p:
                 p = module_path(mn, paths)
             if not p:
+                if "generic" in mn:
+                    print "Module %r not found, sys.path is %r" % (mn, paths)
                 continue
-                raise RuntimeError, "Module %r not found. Dep of %r" % (
-                    mn, self.dependencies)
+                #raise RuntimeError, "Module %r not found. Dep of %r" % (
+                #    mn, self.dependencies)
             if mn==self.top_module:
                 self.top_module_path = p
             override_paths=[]
@@ -354,7 +357,7 @@ class BaseLinker(object):
                 deps = []
                 self.dependencies[out_file] = deps
             else:
-                logging.info('Translating module:%s platform:%s out:%r' % (
+                logging.info('MYTranslating module:%s platform:%s out:%r' % (
                     module_name, platform or '-', out_file))
                 deps, js_libs = self.translator_func(platform,
                                                      [file_path] +  overrides,

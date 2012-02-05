@@ -741,10 +741,8 @@ class BuiltinTest(UnitTest):
             def __format__(self, format_spec):
                 if format_spec == 'd':
                     return 'G(' + self.x + ')'
-                if not hasattr(object, "__format__"):
-                    self.fail("#674")
                 return object.__format__(self, format_spec)
-
+                    
         class Galt:
             def __init__(self, x):
                 self.x = x
@@ -848,15 +846,17 @@ class BuiltinTest(UnitTest):
         self.assertEqual('{0}'.format([1]), '[1]')
         self.assertEqual('{0}'.format(E('data')), 'E(data)')
         self.assertEqual('{0:d}'.format(G('data')), 'G(data)')
-        self.assertEqual('{0!s}'.format(G('data')), 'string is data')
+        self.assertEqual('{0!s}'.format(G('dat1')), 'string is dat1')
 
-        self.assertEqual('{0:^10}'.format(E('data')), ' E(data)  ')
-        self.assertEqual('{0:^10s}'.format(E('data')), ' E(data)  ')
-        self.assertEqual('{0:>15s}'.format(Galt('data')), ' string is data')
+        self.assertEqual('{0:^10}'.format(E('dat2')), ' E(dat2)  ')
+        self.assertEqual('{0:^10s}'.format(E('dat3')), ' E(dat3)  ')
+        self.assertEqual('{0:>15s}'.format(Galt('dat4')), ' string is dat4')
         # if Issue #674 is fixed the following should no longer throw an
         # exception (classified as known issue), then Galt can be changed to G and Galt removed
-        self.assertEqual('{0:>15s}'.format(G('data')), ' string is data')
-
+        try:
+            self.assertEqual('{0:>15s}'.format(G('dat5')), ' string is dat5')
+        except:
+            self.fail("object.__format__ missing#674")
 
 
         self.assertEqual("{0:date: %Y-%m-%d}".format(

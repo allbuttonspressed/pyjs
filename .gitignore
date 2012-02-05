@@ -13,14 +13,3 @@ output
 /dev/parts
 /dev/eggs
 *PureMVC_Python*
-examples/*.js
-examples/*/*.js
-examples/*/*/*.js
-examples/*/*/*/*.js
-examples/*/*/*/*/*.js
-pyjs/src/pyjs/builtin/*.js
-pyjs/src/pyjs/lib/*.js
-pyjs/src/pyjs/lib/*/*.js
-library/*.js
-library/*/*.js
-library/*/*/*.js

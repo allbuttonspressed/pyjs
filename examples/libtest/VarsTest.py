@@ -80,15 +80,15 @@ class VarsTest(UnitTest.UnitTest):
         
         [a,b,c] = [1,2,3]
         self.assertEqual([a,b,c], [1,2,3])
-        [a,b,c] = 1,2,3
-        self.assertEqual([a,b,c], [1,2,3])
+        [a,b,c] = 4,5,6
+        self.assertEqual([a,b,c], [4,5,6])
         
         # XXX: Parser fails on this!
         """ 
         a,b,c = {1,2,3}
         """
-        a,b,c = set([1,2,3])
-        self.assertEqual([a,b,c], [1,2,3])
+        a,b,c = set([7,8,9])
+        self.assertEqual(set([a,b,c]), set([7,8,9])) # NO ORDERING in sets
 
     def testUnpackInLoop(self):
         l = [[1, 2],[1, 2]]
