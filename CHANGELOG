@@ -1,6 +1,8 @@
                     Changes made to Pyjamas since 0.8pre1
                     ---------------------------------
 
+ * added server-side jsonrpc cherrypy helper, thanks to Rene Maurer
+
  * use new platform override scheme {module}.{platformname}.py so that
    platform override files live in the same subdirectory as the actual
    file it's overriding

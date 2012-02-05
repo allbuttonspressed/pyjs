@@ -96,6 +96,7 @@ if __name__ == '__main__':
                 "pyjs.jsonrpc.mongrel2",
                 "pyjs.jsonrpc.django",
                 "pyjs.jsonrpc.web2py",
+                "pyjs.jsonrpc.cherrypy",
                 "pyjd"],
         package_dir = {'pyjs': os.path.join('pyjs', 'src', 'pyjs'),
                        'pyjs.jsonrpc': os.path.join('pyjs', 'jsonrpc'),
@@ -105,6 +106,8 @@ if __name__ == '__main__':
                                 os.path.join('pyjs', 'jsonrpc', 'mongrel2'),
                        'pyjs.jsonrpc.django':
                                 os.path.join('pyjs', 'jsonrpc', 'django'),
+                       'pyjs.jsonrpc.cherrypy':
+                                os.path.join('pyjs', 'jsonrpc', 'cherrypy'),
                        'pyjs.jsonrpc.web2py':
                                 os.path.join('pyjs', 'jsonrpc', 'web2py'),
                        'pyjd': 'pyjd'},
