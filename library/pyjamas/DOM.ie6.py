@@ -1,3 +1,7 @@
+# Copyright (C) 2006 James Tauber and contributors
+# Copyright (C) 2009, 2010, 2012 Luke Kenneth Casson Leighton <lkcl@lkcl.net>
+# Copyright (C) 2011 Rasiel@fliper.cc
+
 def init():
     JS("""
     // Set up event dispatchers.
@@ -47,6 +51,14 @@ def compare(elem1, elem2):
 
 def createInputRadio(group):
     JS("""
+    ua = navigator.userAgent.toLowerCase();
+    if (ua.indexOf('msie 9.0') != -1) {
+        var elem = $doc.createElement("INPUT");
+        elem.type = 'radio';
+        elem.name = @{{group}};
+        return elem
+    }
+
     return $doc.createElement("<INPUT type='RADIO' name='" + @{{group}} + "'>");
     """)
 
