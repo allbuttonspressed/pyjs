@@ -132,9 +132,10 @@ def out_translate(platform, file_names, out_file, module_name,
             file_names = map(lambda x: x.replace(" ", r"\ "), file_names)
             opts.append(out_file.replace(" ", r"\ "))
             shell=True
-        translator_opts = get_translator_opts(translator_args)
-        opts +=  translator_opts + file_names
+
+        opts += get_translator_opts(translator_args) + file_names
         opts = [pyjs.PYTHON] + [os.path.join(pydir, translate_cmd)] + translate_cmd_opts + opts
+
         pyjscompile_cmd = '"%s"' % '" "'.join(opts)
         
         proc = subprocess.Popen(pyjscompile_cmd,
@@ -142,7 +143,7 @@ def out_translate(platform, file_names, out_file, module_name,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
                            shell=shell,
-                           cwd=os.path.dirname(file_names[0]),
+                           cwd=pydir,
                            env=os.environ
                            )
         stdout_value, stderr_value = proc.communicate('')
@@ -161,7 +162,9 @@ def out_translate(platform, file_names, out_file, module_name,
     return deps, js_libs
     
 _path_cache= {}
-def module_path(name, path):
+def module_path(name, path, platform=None):
+    if name == '__pyjamas__' or name == '__javascript__':
+        platform = None
     global _path_cache
     candidates = []
     packages = {}
@@ -170,6 +173,9 @@ def module_path(name, path):
         parts = [name]
     else:
         parts = name.split('.')
+        if platform:
+            parts[-1] = "%s.%s" % (parts[-1], platform)
+            name = "%s/%s" % (name, platform)
     if not name in _path_cache:
         _path_cache[name] = {}
     for p in path:
@@ -177,28 +183,38 @@ def module_path(name, path):
             if _path_cache[name][p] is None:
                 continue
             return _path_cache[name][p]
-        tail = []
-        for pn in parts:
-            tail.append(pn)
-            mn = '.'.join(tail)
-            cp = os.path.join(*([p] + tail))
-            if mn in _path_cache:
-                cache = _path_cache[mn]
+        if platform:
+            cp = os.path.join(*([p] + parts))
+            if name in _path_cache:
+                cache = _path_cache[name]
             else:
                 cache = {}
-                _path_cache[mn] = cache
-            if p in cache:
-                if cache[p] is None:
-                    break
-            elif os.path.isdir(cp) and os.path.exists(
-                os.path.join(cp, '__init__.py')):
-                cache[p] = os.path.join(cp, '__init__.py')
-            elif os.path.exists(cp + '.py'):
+                _path_cache[name] = cache
+            if os.path.exists(cp + '.py'):
                 cache[p] = cp + '.py'
-            elif pn.endswith('.js') and os.path.exists(cp):
-                cache[p] = cp
-            else:
-                cache[p] = None
+        else:
+            tail = []
+            for pn in parts:
+                tail.append(pn)
+                mn = '.'.join(tail)
+                cp = os.path.join(*([p] + tail))
+                if mn in _path_cache:
+                    cache = _path_cache[mn]
+                else:
+                    cache = {}
+                    _path_cache[mn] = cache
+                if p in cache:
+                    if cache[p] is None:
+                        break
+                elif os.path.isdir(cp) and os.path.exists(
+                    os.path.join(cp, '__init__.py')):
+                    cache[p] = os.path.join(cp, '__init__.py')
+                elif os.path.exists(cp + '.py'):
+                    cache[p] = cp + '.py'
+                elif pn.endswith('.js') and os.path.exists(cp):
+                    cache[p] = cp
+                else:
+                    cache[p] = None
         if p in _path_cache[name] and not _path_cache[name][p] is None:
             return _path_cache[name][p]
         _path_cache[name][p] = None
@@ -306,8 +322,7 @@ class BaseLinker(object):
             override_paths=[]
             if platform:
                 for pl in self.platform_parents.get(platform, []) + [platform]:
-                    override_path = module_path('__%s__.%s' % (pl, mn),
-                                                paths)
+                    override_path = module_path(mn, paths, pl)
                     # prevent package overrides
                     if override_path and not override_path.endswith('__init__.py'):
                         override_paths.append(override_path)

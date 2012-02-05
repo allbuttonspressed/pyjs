@@ -8,8 +8,12 @@ output
 *.pyc
 *.pyo
 .*.sw?
+*.py~
+
+.idea
 /stdlib
 
 /dev/parts
 /dev/eggs
 *PureMVC_Python*
+

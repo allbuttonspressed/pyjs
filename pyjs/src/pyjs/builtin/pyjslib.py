@@ -1238,6 +1238,10 @@ String.prototype.isupper = function() {
     return (this.match(/[a-z]/g) === null);
 };
 
+String.prototype.islower = function() {
+    return (this.match(/[A-Z]/g) === null);
+};
+
 String.prototype.__replace=String.prototype.replace;
 
 String.prototype.$$replace = function(old, replace, count) {
@@ -5979,19 +5983,17 @@ def getattr(obj, name, default_value=None):
         }
         return @{{default_value}};
     }
-    var mapped_name = @{{name}};
-    if (typeof @{{obj}}[@{{name}}] == 'undefined') {
-        mapped_name = '$$' + @{{name}};
-        if (typeof @{{obj}}[mapped_name] == 'undefined' || attrib_remap.indexOf(@{{name}}) < 0) {
-            if (arguments.length != 3) {
-                if (@{{obj}}.__is_instance__ === true &&
-                        typeof @{{obj}}.__getattr__ == 'function') {
-                    return @{{obj}}.__getattr__(@{{name}});
-                }
-                throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
+    var mapped_name = attrib_remap.indexOf(@{{name}}) < 0 ? @{{name}}:
+                        '$$'+@{{name}};
+    if (typeof @{{obj}}[mapped_name] == 'undefined') {
+        if (arguments.length != 3) {
+            if (@{{obj}}.__is_instance__ === true &&
+                    typeof @{{obj}}.__getattr__ == 'function') {
+                return @{{obj}}.__getattr__(@{{name}});
             }
-            return @{{default_value}};
+            throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
         }
+        return @{{default_value}};
     }
     var method = @{{obj}}[mapped_name];
     if (method === null) return method;

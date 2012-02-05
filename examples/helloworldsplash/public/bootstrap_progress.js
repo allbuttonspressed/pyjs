@@ -350,7 +350,7 @@ function __pygwt_earlyUser() {
         progressBar: elem('div'),
         status: elem('div')
     }
-    splash.logo.setAttribute('src', 'progress.gif')
+    splash.logo.setAttribute('src', 'pyjamas.png')
 
     var draw = {
         exec: function(outOfInterval) {

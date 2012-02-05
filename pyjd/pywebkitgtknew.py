@@ -101,6 +101,9 @@ import gtk
 import gobject
 import pywebkitgtk as pywebkit
 
+from urllib import urlopen
+from urlparse import urljoin
+
 def module_load(m):
     minst = None
     exec """\
@@ -146,6 +149,23 @@ class Browser:
         self._browser = pywebkit.WebView(self.width, self.height, uri)
         self._browser.SetDocumentLoadedCallback(self._loading_stop_cb)
 
+        # Not the most elegant ... but since the top-level window is created and
+        # realized by C and not Python, we do not have a native reference to the
+        # TOPLEVEL window, or the real WebKitWebView object.
+        for w in gtk.window_list_toplevels():
+            if w.get_window_type() is gtk.WINDOW_TOPLEVEL:
+                break
+        self._toplevel = w
+        self._view = w.child.child
+
+        self._toplevel.connect('delete-event', self._toplevel_delete_event_cb)
+        self._view.connect('title-changed', self._title_changed_cb)
+        self._view.connect('icon-loaded', self._icon_loaded_cb)
+
+        # Security? Allow file URIs to access the filesystem
+        settings = self._view.get_property('settings')
+        settings.set_property('enable-file-access-from-file-uris', True)
+
     def getUri(self):
         return self.application
 
@@ -177,7 +197,42 @@ class Browser:
         self.init_app()
 
     def _icon_loaded_cb(self, view, icon_uri):
-        print "icon loaded"
+        current = view.get_property('uri')
+        dom = wv.getDomDocument()
+        icon = (gtk.STOCK_DIALOG_QUESTION, None, 0)
+        found = set()
+        found.add(icon_uri)
+        found.add(urljoin(current, '/favicon.ico'))
+        scanner = {'href': dom.querySelectorAll('head link[rel~=icon][href],' +
+                                                'head link[rel|=apple-touch-icon][href]'),
+                   'content': dom.querySelectorAll('head meta[itemprop=image][content]')}
+        for attr in scanner.keys():
+            for i in xrange(scanner[attr].length):
+                uri = getattr(scanner[attr].item(i), attr)
+                if len(uri) == 0:
+                    continue
+                found.add(urljoin(current, uri))
+        for uri in found:
+            fp = urlopen(uri)
+            if fp.code != 200:
+                continue
+            i = fp.info()
+            if i.maintype == 'image' and 'content-length' in i:
+                try:
+                    ldr = gtk.gdk.PixbufLoader()
+                    ldr.write(fp.read(int(i['content-length'])))
+                    ldr.close()
+                except:
+                    continue
+                pb = ldr.get_pixbuf()
+                pbpx = pb.get_height() * pb.get_width()
+                if pbpx > icon[2]:
+                    icon = (uri, pb, pbpx)
+        if icon[1] is None:
+            self._toplevel.set_icon_name(icon[0])
+        else:
+            self._toplevel.set_icon(icon[1])
+        print '_icon_loaded_cb <%s>' % icon[0]
 
     def _selection_changed_cb(self):
         print "selection changed"
@@ -260,25 +315,23 @@ class Browser:
         #print "addEventListener", element, event_name, cb
         setattr(element, "on%s" % event_name, cb._callback)
 
+    def _toplevel_delete_event_cb(self, window, event):
+        while gtk.events_pending():
+            gtk.main_iteration(False)
+        window.unrealize()
 
-def destroy(window):
-    window.destroy()
-    while gtk.events_pending():
-        gtk.main_iteration(False)
+    def _title_changed_cb(self, view, frame, title):
+        view.get_toplevel().set_title(title)
 
 
 def setup(application, appdir=None, width=800, height=600):
 
     gobject.threads_init()
 
-    global wv, window
+    global wv
 
     wv = Browser(application, appdir, width, height)
     wv.load_app()
-    for window in gtk.window_list_toplevels():
-        if window.get_window_type() is gtk.WINDOW_TOPLEVEL:
-            break
-    window.connect('destroy', destroy)
 
     while 1:
         if is_loaded():
@@ -295,8 +348,6 @@ def run(one_event=False, block=True):
             sys.stdout.flush()
         return gtk.events_pending()
     else:
-        while window.flags() & gtk.REALIZED:
+        while wv._toplevel.flags() & gtk.REALIZED:
             gtk.main_iteration()
             sys.stdout.flush()
-
-

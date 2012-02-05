@@ -32,20 +32,25 @@ class Foo:
 class AttributeTest(UnitTest):
 
     def testHasattr(self):
-        self.assertEqual(hasattr(self, "getName"), True, "AttrTest should have method 'getName'")
-        self.assertEqual(hasattr(self, "blah"), False, "AttrTest has no method 'getName'")
-        self.assertEqual(hasattr("", "find"), True, "str should have method 'find', bug #483")
-        
-        if sys.version_info < (2, 6):
-            return 
-        self.assertEqual(hasattr(1.0, "real"), True, "float should have attribute 'real', bug #483")
-        self.assertEqual(hasattr(1, "real"), True, "int should have attribute 'real', bug #483") 
+        self.assertEqual(hasattr(self, "getName"), True, 
+                        "AttrTest should have method 'getName'")
+        self.assertEqual(hasattr(self, "blah"), False, 
+                        "AttrTest has no method 'getName'")
+        self.assertEqual(hasattr("", "find"), True, 
+                        "str should have method 'find', bug #483")
+        self.assertEqual(hasattr(1.0, "real"), True, 
+                        "float should have attribute 'real', bug #483")
+        self.assertEqual(hasattr(1, "real"), True, 
+                        "int should have attribute 'real', bug #483") 
+
 
     def testGetattr(self):
         func = getattr(self, "getName")
         self.assertEqual(func(), "AttributeTest",
                          "getattr does not return correct value'")
 
+        self.assertEqual(getattr(Foo, 'name'),
+                        'Foo', "attribute mapping, bug #521")
         self.assertEqual(1, getattr(Foo, "notthere", 1))
         foo = Foo(1)
         self.assertEqual(foo.v, getattr(foo, "v"))

@@ -1,8 +1,27 @@
-                    Changes made to Pyjamas since 0.7
+                    Changes made to Pyjamas since 0.8pre1
                     ---------------------------------
+
+ * use new platform override scheme {module}.{platformname}.py so that
+   platform override files live in the same subdirectory as the actual
+   file it's overriding
+
+ * moved JSONParser.py to json.py (in standard modules) because it is
+   effectively identical, and confusing to try to indicate that JSONParser.py
+   is somehow different or "special".
+
+ * DateField - show Calendar for typed-in month, not always current, 
+    By Maho (Łukasz Mach)
+ 
+ * pyjs/src/pyjs/linker.py workaround Issue #677, reverted cwd=pydir
+   so that compile works on Mac with python in /opt/local
+   By Michael Yang
+
  * pyjs/src/pyjs/lib/string.py workaround Issue #658, mods to Template
    class so that template strings substitution works.
    By Phil Charlesworth
+
+                    Changes made to Pyjamas since 0.7
+                    ---------------------------------
 
  * Added simple sys.stdout and sys.stderr objects. The print statement
    now uses sys.stdout for printing. You can intercept print statements
@@ -80,6 +99,8 @@
 
  * Implement assignment to slices in an assignment list (issue 514),
    by Karl Voigtland
+   
+ * Updates to the Showcase example
 
                     Changes made to Pyjamas since 0.6
                     ---------------------------------

@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
-TARGETS = [
-    'Hello.py',
-]
+TARGETS = {
+    'Hello.py': {'options': ['--multi-file']},
+}
 
 
 PACKAGE = {
