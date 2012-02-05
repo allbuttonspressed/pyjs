@@ -7,7 +7,7 @@
 # Example usage:
 #
 # import cherrypy
-# from jsonrpc import JSONRPCService
+# from pyjs.jsonrpc.cherrypy.jsonrpc import JSONRPCService
 #
 # class EchoService(JSONRPCService):
 #
@@ -26,7 +26,7 @@
 import os
 import cherrypy
 from cherrypy import log
-from pyjs.jsonrpc.jsonrpc import JSONRPCServiceBase
+from pyjs.jsonrpc import JSONRPCServiceBase
 
 class JSONRPCService(JSONRPCServiceBase):
 
