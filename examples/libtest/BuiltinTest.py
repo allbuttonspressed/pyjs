@@ -292,6 +292,11 @@ class BuiltinTest(UnitTest):
         self.assertTrue(CLS is imports.loccls.CLS, "CLS is imports.loccls.CLS")
         self.assertTrue(CLS is imports.upcls.CLS, "CLS is imports.upcls.CLS")
 
+    def testImport(self): 
+
+        self.fail("Bug #XXX - from X import .. not completely implemented, only considering modules")
+        return
+        
         from imports import __doc__ as imports_doc
         self.assertEqual(imports.__doc__, imports_doc, "Module object must have __doc__ attribute")
         from imports import __name__ as imports_name
@@ -1080,4 +1085,3 @@ class BuiltinTest(UnitTest):
         self.assertEquals(format(1234, "010,"), "00,001,234")
 
     ### end from pypy test_newformat.py
-

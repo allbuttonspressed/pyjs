@@ -38,6 +38,9 @@ class WithTest(UnitTest.UnitTest):
             z = v
         self.assertEqual(z, 10)
         
+        self.fail("Bug #XXX - With statement fails for unknown reason")
+        return
+
         d = self.Dummy(gobble=True) # Fails for unknown reason
         with d:
             raise Exception()

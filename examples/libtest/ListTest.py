@@ -93,11 +93,7 @@ class ListTest(UnitTest):
         value[3:] = [21,22,23]
         self.assertTrue(value == [1, 11, 12, 21, 22, 23], "%s == [1, 11, 12, 21, 22, 23]" % value)
         
-        a = range(20)
-        a[slice(2,10,3)] = [1,2,3]
-        self.assertEqual(a, [0, 1, 1, 3, 4, 2, 6, 7, 3,
-                             9, 10, 11, 12, 13, 14, 15,
-                             16, 17, 18, 19])
+
 
     def testMultipleSliceSet(self):
         """Test assignment to a slice in an assignment list (issue 514)."""
@@ -459,7 +455,18 @@ class ListTest(UnitTest):
         l = [{'monkey':1}, {'patch':1}, {'fish':1}, {'chips':1}]
         self.assertTrue({'fish':1} in l, "{'fish':1} in l")
         
-    def testExtendedSlicing(self):
+    def testExtendedSlicing(self): 
+        
+        self.fail("Bug #xxx - need better __setitem__ implementation for builtin lists")
+        return
+        
+        # slice object
+        a = range(20)
+        a[slice(2,10,3)] = [1,2,3]
+        self.assertEqual(a, [0, 1, 1, 3, 4, 2, 6, 7, 3,
+                             9, 10, 11, 12, 13, 14, 15,
+                             16, 17, 18, 19])
+        
         # deletion
         a = [0,1,2,3,4]
         del a[::2]

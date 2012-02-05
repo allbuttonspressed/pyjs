@@ -117,7 +117,7 @@ def out_translate(platform, file_names, out_file, module_name,
                     platform = "[%s] " % platform
                 else:
                     platform = ''
-                print "PKLTranslating %s:" % platform, file_name
+                print "Translating file %s:" % platform, file_name
                 do_translate = True
                 break
     if not incremental or do_translate:

@@ -4585,9 +4585,13 @@ function(){
         if node.upper != None:
             upper = self.expr(node.upper, current_klass)
         if node.flags == "OP_APPLY":
-            return  "@{{slice}}(" + self.expr(node.expr, current_klass) + ", " + lower + ", " + upper + ")"
+            return self.pyjslib_name("__getslice", args=[
+                self.expr(node.expr, current_klass), lower, upper
+            ])
         elif node.flags == "OP_DELETE":
-            return  "@{{__delslice}}(" + self.expr(node.expr, current_klass) + ", " + lower + ", " + upper + ");"
+            return self.pyjslib_name("__delslice", args=[
+                self.expr(node.expr, current_klass), lower, upper
+            ])
         else:
             raise TranslationError(
                 "unsupported flag (in _slice)", node, self.module_name)
