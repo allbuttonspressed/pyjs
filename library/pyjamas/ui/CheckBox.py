@@ -53,9 +53,7 @@ class CheckBox(ButtonBase):
         element = ka.pop('Element', None) or DOM.createSpan()
         ButtonBase.__init__(self, element, **ka)
 
-        self.unsinkEvents(Event.FOCUSEVENTS | Event.ONCLICK)
-        DOM.sinkEvents(self.inputElem, Event.FOCUSEVENTS | Event.ONCLICK |
-                       DOM.getEventsSunk(self.inputElem))
+        self.sinkEvents(Event.FOCUSEVENTS | Event.ONCLICK)
 
         DOM.appendChild(self.getElement(), self.inputElem)
         DOM.appendChild(self.getElement(), self.labelElem)
