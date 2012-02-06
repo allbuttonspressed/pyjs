@@ -39,6 +39,14 @@ class CheckBox(ButtonBase):
     def _getProps(self):
         return ButtonBase._getProps() + self._props
 
+    
+    def sinkEvents(self, eventBitsToAdd):
+        """ Unlike other widgets the CheckBox sinks on its inputElement,
+            not its wrapper
+        """
+        eventBitsToAdd |= DOM.getEventsSunk(self.inputElem)
+        DOM.sinkEvents(self.inputElem, eventBitsToAdd)
+
     def initElement(self, element, **ka):
         self.inputElem = element
         self.labelElem = DOM.createLabel()
