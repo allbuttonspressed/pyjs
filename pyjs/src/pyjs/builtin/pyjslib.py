@@ -6125,7 +6125,14 @@ def dir(obj):
         throw @{{UndefinedValueError}}("obj");
     }
     var properties=@{{list}}();
-    for (var property in @{{obj}}) properties.append(property);
+    for (var property in @{{obj}}) {
+        if (property.substring(0,2) == '$$') {
+            // handle back mapping of name
+            properties.append(property.substring(2));
+        } else if (attrib_remap.indexOf(property) < 0) {
+            properties.append(property);
+        }
+    }
     return properties;
     """)
 
