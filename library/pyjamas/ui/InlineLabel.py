@@ -24,4 +24,4 @@ class InlineLabel(Label):
         kwargs['Element'] = DOM.createSpan()
         Label.__init__(self, text, wordWrap, **kwargs)
         
-Factory.registerClass('pyjamas.ui.InlineLabel', InlineLabel)
+Factory.registerClass('pyjamas.ui.InlineLabel', 'InlineLabel', InlineLabel)

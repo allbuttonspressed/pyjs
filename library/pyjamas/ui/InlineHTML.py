@@ -24,4 +24,4 @@ class InlineHTML(HTML):
         kwargs['Element'] = DOM.createSpan()
         HTML.__init__(self, html, wordWrap, **kwargs)
         
-Factory.registerClass('pyjamas.ui.InlineHTML', InlineHTML)
+Factory.registerClass('pyjamas.ui.InlineHTML', 'InlineHTML', InlineHTML)
