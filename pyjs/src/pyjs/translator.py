@@ -37,16 +37,12 @@ def main():
     (options, args) = parser.parse_args()
 
     if len(args)<1:
-        parser.error("incorrect number of arguments")
+        parser.error("incorrect number of arguments in %s" % repr(sys.argv))
 
-    if name == 'dict':
-        compiler = None
-    else:
-        compiler = import_compiler(options.internal_ast)
 
     if not options.output:
         parser.error("No output file specified")
-    if options.output == '-':
+    if options.output != '-':
         options.output = os.path.abspath(options.output)
 
     file_names = map(os.path.abspath, args)
@@ -55,7 +51,7 @@ def main():
             print >> sys.stderr, "Input file not found %s" % fn
             sys.exit(1)
 
-    imports, js = translate(compiler, file_names, options.output,
+    imports, js = translate(file_names, options.output,
               options.module_name,
               **get_compile_options(options))
     if options.list_imports:

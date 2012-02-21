@@ -45,6 +45,8 @@ translator_opts = [ 'debug',
         'list_imports',
         'translator',
     ]
+non_boolean_opts = ['translator']
+assert set(non_boolean_opts) < set(translator_opts)
 
 def is_modified(in_file,out_file):
     modified = False
@@ -62,7 +64,9 @@ def get_translator_opts(args):
     for k in translator_opts:
         if args.has_key(k):
             nk = k.replace("_", "-")
-            if args[k]:
+            if k in non_boolean_opts:
+                opts.append("--%s=%s" % (nk, args[k]))
+            elif args[k]:
                 opts.append("--%s" % nk)
             elif k != 'list_imports':
                 opts.append("--no-%s" % nk)
@@ -113,7 +117,7 @@ def out_translate(platform, file_names, out_file, module_name,
                     platform = "[%s] " % platform
                 else:
                     platform = ''
-                print "Translating %s:" % platform, file_name
+                print "Translating file %s:" % platform, file_name
                 do_translate = True
                 break
     if not incremental or do_translate:
@@ -128,10 +132,12 @@ def out_translate(platform, file_names, out_file, module_name,
             file_names = map(lambda x: x.replace(" ", r"\ "), file_names)
             opts.append(out_file.replace(" ", r"\ "))
             shell=True
+
         opts += get_translator_opts(translator_args) + file_names
-        opts = [pyjs.PYTHON] + [translate_cmd] + translate_cmd_opts + opts
+        opts = [pyjs.PYTHON] + [os.path.join(pydir, translate_cmd)] + translate_cmd_opts + opts
+
         pyjscompile_cmd = '"%s"' % '" "'.join(opts)
-        #print pyjscompile_cmd - use this to create Makefile code-fragment
+        
         proc = subprocess.Popen(pyjscompile_cmd,
                            stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
@@ -156,7 +162,9 @@ def out_translate(platform, file_names, out_file, module_name,
     return deps, js_libs
     
 _path_cache= {}
-def module_path(name, path):
+def module_path(name, path, platform=None):
+    if name == '__pyjamas__' or name == '__javascript__':
+        platform = None
     global _path_cache
     candidates = []
     packages = {}
@@ -165,6 +173,9 @@ def module_path(name, path):
         parts = [name]
     else:
         parts = name.split('.')
+        if platform:
+            parts[-1] = "%s.%s" % (parts[-1], platform)
+            name = "%s/%s" % (name, platform)
     if not name in _path_cache:
         _path_cache[name] = {}
     for p in path:
@@ -172,28 +183,38 @@ def module_path(name, path):
             if _path_cache[name][p] is None:
                 continue
             return _path_cache[name][p]
-        tail = []
-        for pn in parts:
-            tail.append(pn)
-            mn = '.'.join(tail)
-            cp = os.path.join(*([p] + tail))
-            if mn in _path_cache:
-                cache = _path_cache[mn]
+        if platform:
+            cp = os.path.join(*([p] + parts))
+            if name in _path_cache:
+                cache = _path_cache[name]
             else:
                 cache = {}
-                _path_cache[mn] = cache
-            if p in cache:
-                if cache[p] is None:
-                    break
-            elif os.path.isdir(cp) and os.path.exists(
-                os.path.join(cp, '__init__.py')):
-                cache[p] = os.path.join(cp, '__init__.py')
-            elif os.path.exists(cp + '.py'):
+                _path_cache[name] = cache
+            if os.path.exists(cp + '.py'):
                 cache[p] = cp + '.py'
-            elif pn.endswith('.js') and os.path.exists(cp):
-                cache[p] = cp
-            else:
-                cache[p] = None
+        else:
+            tail = []
+            for pn in parts:
+                tail.append(pn)
+                mn = '.'.join(tail)
+                cp = os.path.join(*([p] + tail))
+                if mn in _path_cache:
+                    cache = _path_cache[mn]
+                else:
+                    cache = {}
+                    _path_cache[mn] = cache
+                if p in cache:
+                    if cache[p] is None:
+                        break
+                elif os.path.isdir(cp) and os.path.exists(
+                    os.path.join(cp, '__init__.py')):
+                    cache[p] = os.path.join(cp, '__init__.py')
+                elif os.path.exists(cp + '.py'):
+                    cache[p] = cp + '.py'
+                elif pn.endswith('.js') and os.path.exists(cp):
+                    cache[p] = cp
+                else:
+                    cache[p] = None
         if p in _path_cache[name] and not _path_cache[name][p] is None:
             return _path_cache[name][p]
         _path_cache[name][p] = None
@@ -271,6 +292,7 @@ class BaseLinker(object):
                     if pn not in all_names:
                         all_names.append(pn)
             all_names.append(mn)
+        #print "MODULES OF", parent_file, ":", module_names
         paths = self.path
         parent_base = None
         abs_name = None
@@ -290,16 +312,17 @@ class BaseLinker(object):
             if not p:
                 p = module_path(mn, paths)
             if not p:
+                if "generic" in mn:
+                    print "Module %r not found, sys.path is %r" % (mn, paths)
                 continue
-                raise RuntimeError, "Module %r not found. Dep of %r" % (
-                    mn, self.dependencies)
+                #raise RuntimeError, "Module %r not found. Dep of %r" % (
+                #    mn, self.dependencies)
             if mn==self.top_module:
                 self.top_module_path = p
             override_paths=[]
             if platform:
                 for pl in self.platform_parents.get(platform, []) + [platform]:
-                    override_path = module_path('__%s__.%s' % (pl, mn),
-                                                paths)
+                    override_path = module_path(mn, paths, pl)
                     # prevent package overrides
                     if override_path and not override_path.endswith('__init__.py'):
                         override_paths.append(override_path)
@@ -349,7 +372,7 @@ class BaseLinker(object):
                 deps = []
                 self.dependencies[out_file] = deps
             else:
-                logging.info('Translating module:%s platform:%s out:%r' % (
+                logging.info('MYTranslating module:%s platform:%s out:%r' % (
                     module_name, platform or '-', out_file))
                 deps, js_libs = self.translator_func(platform,
                                                      [file_path] +  overrides,

@@ -756,6 +756,14 @@ class ArgsTest(UnitTest):
             self.assertEquals(values[2], 3)
         except TypeError:
             self.fail('foo() takes exactly 4 arguments (5 given), bug #503')
+    
+    def testArgsUnpack(self):
+        def func(a, (b, c), d):
+            return a + b + c + d
+        try:
+            self.assertEqual(func(1, (2, 3), 4), 10, 'Function args unpacking not supported, #527')
+        except:
+            self.fail('Bug #527 Function args unpacking not supported')
 
 
 def foo(a, b, c):

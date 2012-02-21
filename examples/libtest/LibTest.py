@@ -1,4 +1,4 @@
-from UnitTest import IN_BROWSER, IN_JS, IN_BROWSER
+from UnitTest import IN_BROWSER, IN_JS
 from LoopTest import LoopTest
 from NoInlineCodeTest import NoInlineCodeTest
 from StringTest import StringTest
@@ -97,6 +97,13 @@ def main():
     if IN_BROWSER:
         t.add(JSOTest)
         t.add(WindowTest)
+        
+    if sys.version_info >= (2, 7):
+        from Syntax27Test import Syntax27Test
+        t.add(Syntax27Test)
+        
+        from WithTest import WithTest
+        t.add(WithTest)
 
     t.start_test()
 

@@ -1,4 +1,4 @@
-import os
+import os, sys
 from pyjs import linker
 from pyjs import translator
 from pyjs import util
@@ -153,7 +153,7 @@ def build_script():
     linker.add_linker_options(parser)
     options, args = parser.parse_args()
     if len(args) != 1:
-        parser.error("incorrect number of arguments")
+        parser.error("incorrect number of arguments in %s" % repr(sys.argv))
 
     top_module = args[0]
     for d in options.library_dirs:

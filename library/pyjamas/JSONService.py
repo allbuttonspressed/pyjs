@@ -10,22 +10,12 @@
 import sys
 from HTTPRequest import HTTPRequest
 
-# jeeeez...
 try:
     # included in python 2.6...
     from json import dumps, loads
 except ImportError:
-    try:
-        # recommended library (python 2.5)
-        from simplejson import dumps, loads
-    except ImportError:
-        # who's the pyjs daddy?
-        from pyjamas.JSONParser import JSONParser
-        parser = JSONParser()
-        dumps = getattr(parser, 'encode')
-        loads = getattr(parser, 'decodeAsObject')
-        JSONDecodeException = None
-
+    # recommended library (python 2.5)
+    from simplejson import dumps, loads
 
 class JSONServiceError(Exception):
     pass

@@ -37,7 +37,7 @@ _c_suffixes = filter(lambda x: x[2] == imp.C_EXTENSION, imp.get_suffixes())
 
 from modcompile import PlatformParser, Module
 
-pp = PlatformParser('platform', verbose=False)
+pp = PlatformParser(verbose=False)
 pp.platform =  pyjd.engine
 parser = PlatformParser(verbose=False, chain_plat=pp)
 

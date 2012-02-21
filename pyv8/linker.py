@@ -38,7 +38,7 @@ $pyjs.__last_exception__ = null;
  * prepare app system vars
  */
 $pyjs.platform = 'pyv8';
-$pyjs.appname = '%(app_name)s';
+$pyjs.appname = %(app_name)r;
 $pyjs.loadpath = './';
 
 pyv8_load(%(module_files)s);
@@ -68,7 +68,7 @@ pyv8_load(%(js_lib_files)s);
 """
 
 def tostrlist(l):
-    l = map(lambda x: "'%s'" % x, l)
+    l = map(lambda x: repr(x), l)
     return "[%s]" % ', '.join(l)
 
 class PyV8Linker(linker.BaseLinker):
@@ -83,6 +83,29 @@ class PyV8Linker(linker.BaseLinker):
     def __init__(self, *args, **kwargs):
         kwargs['platforms'] = [PLATFORM]
         super(PyV8Linker, self).__init__(*args, **kwargs)
+        self.translator_func = self._translator_func
+    
+    def _translator_func(self, platform, file_names, out_file, module_name,
+                         translator_args, incremental):
+        cached = False
+        if os.path.exists(out_file):
+            djs = os.path.getmtime(out_file)
+            cached = True
+            for fn in file_names:
+                if not os.path.exists(fn):
+                    cached = False
+                    break
+                dpy = os.path.getmtime(fn)
+                if dpy > djs:
+                    cached = False
+                    break
+        if cached:
+            deps, js_libs = linker.parse_outfile(out_file)
+            return deps, js_libs
+        deps, js_libs = linker.out_translate(platform, file_names, out_file, 
+                                             module_name, translator_args,
+                                             incremental)
+        return deps, js_libs        
 
     def visit_start(self):
         super(PyV8Linker, self).visit_start()

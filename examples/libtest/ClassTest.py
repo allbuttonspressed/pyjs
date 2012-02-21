@@ -353,6 +353,25 @@ class ClassTest(UnitTest):
         self.assertEqual(ExampleChildExplicitConstructor.z, expected_result3, "Did not inherit class var from grandparent")
         
     def testInheritFromType(self):
+
+        i_types = [(int, 1), (float, 1.5), (str, "test"), (long, 1),
+                   (tuple, (1,2)), (list, [1,2]), (dict, {'1':1}), (set, set([1,2]))]
+        for cls, val in i_types:
+            try:
+                class subclassed_type(cls):
+                    def test_inh_method(self):
+                        return 1
+                subclassed_type.__name__ = cls.__name__
+                inst = subclassed_type(val)
+                self.assertEqual(inst, val, "Subclasses of type '%s' are not instantiated properly, issue #623" % cls.__name__)
+                self.assertEqual(inst.test_inh_method(), 1, "Methods of subclasses of type '%s' fail, issue #623" % cls.__name__)
+                self.assertEqual(str(inst), str(val), "__str__ of subclasses of type '%s' fail, issue #623" % cls.__name__)
+                self.assertEqual(type(inst), subclassed_type, "Subclasses of type '%s' have wrong type, issue #623" % cls.__name__)
+                self.assertTrue(isinstance(inst, subclassed_type), "Subclasses of type '%s' have wrong type, issue #623" % cls.__name__)                
+            except:
+                self.fail("Subclassing type '%s' does not work, issue #623" % cls.__name__)
+                
+
         class SubclassedString(str): pass
         class SubclassedInt(int): pass
         class SubclassedFloat(float): pass
@@ -442,12 +461,8 @@ class ClassTest(UnitTest):
         try:
             m = ExampleClass.oldIdiomStaticMethod("middle")
             self.assertEqual(m, "beforemiddleafter")
-        except TypeError:
-            self.fail("Issue #415 - Old idiom for static methods improperly checks first argument type")
         except:
-            exc = sys.exc_info()
-            self.fail("Issue #415?: %s" % exc[1])
-            print sys.trackstackstr()
+            self.fail("Issue #415 - staticmethod(method) idiom does not work")
 
     def test_method_alias(self):
         class C(object):
@@ -978,6 +993,31 @@ class ClassTest(UnitTest):
             if "fnc() takes exactly 2 arguments (1 given)" in msg:
                 msg = "bug #318 - " + msg
                 self.fail("Bug #580 : %s " % msg)
+
+    def testExpressionInherit(self):
+        class X(object):
+            def m1(self):
+                return 1
+        class Y(object):
+            def m2(self):
+                return 2
+
+        cl = [list, X, Y]
+        class T(cl[0]):
+            pass
+        self.assertEqual(T([1]), [1])
+        
+        class T(cl[1], cl[2]):
+            pass
+        t = T()
+        self.assertEqual(t.m1(), 1)
+        self.assertEqual(t.m2(), 2)
+        
+        class T2(type(t)):
+            pass
+        t2 = T2()
+        self.assertEqual(t2.m1(), 1)
+        self.assertEqual(t2.m2(), 2)        
 
 class PassMeAClass(object):
     def __init__(self):

@@ -84,7 +84,7 @@ class PlatformParser:
 
     def generatePlatformFilename(self, file_name):
         (module_name, extension) = os.path.splitext(os.path.basename(file_name))
-        platform_file_name = module_name + self.platform + extension
+        platform_file_name = module_name + "." + self.platform + extension
 
         return os.path.join(os.path.dirname(file_name), self.platform_dir, platform_file_name)
 

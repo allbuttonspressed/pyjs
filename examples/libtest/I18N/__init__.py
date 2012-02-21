@@ -10,6 +10,7 @@ i18n = I18N()
 locale = 'en'
 domains = []
 
+import sys
 import domain
 domains.append('domain')
 import domain.subdomain

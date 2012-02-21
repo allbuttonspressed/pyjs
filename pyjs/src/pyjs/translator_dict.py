@@ -15,6 +15,9 @@ def sym_type(name):
 def new_node(name):
     return Node(sym_type(name), [])
 
+# use this now!
+import pycompiler as compiler
+from pycompiler.visitor import ASTVisitor
 
 import __Pyjamas__
 from __Future__ import __Future__
@@ -3139,7 +3142,7 @@ else:
 
 TranslationError = Translator.TranslationError
 
-def translate(compiler, sources, output_file, module_name=None, **kw):
+def translate(sources, output_file, module_name=None, **kw):
     global TranslationError
     kw = dict(all_compile_options, **kw)
     list_imports = kw.get('list_imports', False)

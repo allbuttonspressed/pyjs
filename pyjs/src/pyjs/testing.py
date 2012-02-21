@@ -1,3 +1,5 @@
+# for spidermonkey ?
+
 import os
 
 SYSTEM_FILES = set(

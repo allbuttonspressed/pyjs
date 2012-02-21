@@ -107,7 +107,7 @@ class EventTest(Caption1Events):
 
 
 if __name__ == '__main__':
-    pyjd.setup("public/Builder.html?fred=foo#me")
+    pyjd.setup("http://127.0.0.1/examples/builder/public/Builder.html?fred=foo#me")
     et = EventTest()
     HTTPUILoader(et).load("builder.xml")
     

@@ -1,4 +1,4 @@
-from UnitTest import UnitTest
+from UnitTest import UnitTest, PY27_BEHAVIOUR
 
 try:
     builtin_value = builtin.value
@@ -292,12 +292,31 @@ class BuiltinTest(UnitTest):
         self.assertTrue(CLS is imports.loccls.CLS, "CLS is imports.loccls.CLS")
         self.assertTrue(CLS is imports.upcls.CLS, "CLS is imports.upcls.CLS")
 
+    def testImport(self): 
+
+        self.fail("Bug #XXX - from X import .. not completely implemented, only considering modules")
+        return
+        
+        from imports import __doc__ as imports_doc
+        self.assertEqual(imports.__doc__, imports_doc, "Module object must have __doc__ attribute")
+        from imports import __name__ as imports_name
+        self.assertEqual(imports.__name__, imports_name)
+
         # from ... import * tests, issue #615
         self.assertEqual(imports.all_masked, False, "from ... import * should respect __all__, #615")
         self.assertEqual(imports.all_override, True, "Should override globals, #615")
         self.assertEqual(imports.all_import1, 1)
         self.assertEqual(imports.all_import2, 3)
         self.assertEqual(imports.all_import3, 3)
+        
+        
+        # import builtins module
+        import __builtin__
+        self.assertEqual(__builtin__.dict, dict, "__builtin__.dict != dict")
+        
+        from __builtin__ import dict as dict_bltin
+        self.assertEqual(dict_bltin, dict, "__builtin__.dict != dict")
+
 
     def testBitOperations(self):
         self.assertEqual(1 << 2 - 1, 2, "shift error 1")
@@ -400,6 +419,10 @@ class BuiltinTest(UnitTest):
         self.assertEqual(r, [])
         r = range(-6, -2, -1)
         self.assertEqual(r, [])
+        r = range(2, 1, 2)
+        self.assertEqual(r, [])
+        r = range(0, 2, 2)
+        self.assertEqual(r, [0])
 
     def testXRange(self):
         r = [i for i in xrange(3)]
@@ -465,7 +488,38 @@ class BuiltinTest(UnitTest):
             e = 2
         self.assertEqual(i, 0)
         self.assertEqual(e, 1)
-
+        
+        class X(object):
+            pass
+        x = X()
+        x.a = 1
+        for x.a in [3,4,5]:
+            pass
+        self.assertEqual(x.a, 5)
+                
+        d = {}
+        for d['zz'] in [1,2,3]:
+            pass
+        self.assertEqual(d, {'zz': 3})
+        
+        l = [1]
+        for l[0] in [1,2,3]:
+            pass
+        self.assertEqual(l, [3])
+        
+        l = [1,3,4]
+        for l[1:2] in [[5,6,7]]:
+            pass
+        self.assertEqual(l, [1, 5, 6, 7, 4])
+        
+        x = ((1, 2), 3, (4, 5))
+        for (a, b), c, (d, e) in [x]*5:
+            pass
+        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
+        
+        for [[a, b], c, [d, e]] in [x]*5:
+            pass
+        self.assertEqual([a, b, c, d, e], [1,2,3,4,5])
 
     def testIter(self):
 
@@ -582,11 +636,7 @@ class BuiltinTest(UnitTest):
         self.assertEqual(s1, s2)
         self.assertNotEqual(s1, s3, "slice() is mis-used, issue #582")
         # members
-        try:
-            s = slice(1)
-        except Exception, e:
-            self.fail("slice() is mis-used, issue #582")
-            return False
+        s = slice(1)
         self.assertEqual(s.start, None)
         self.assertEqual(s.stop, 1)
         self.assertEqual(s.step, None)
@@ -696,9 +746,8 @@ class BuiltinTest(UnitTest):
             def __format__(self, format_spec):
                 if format_spec == 'd':
                     return 'G(' + self.x + ')'
-                # Issue #674
                 return object.__format__(self, format_spec)
-
+                    
         class Galt:
             def __init__(self, x):
                 self.x = x
@@ -802,15 +851,17 @@ class BuiltinTest(UnitTest):
         self.assertEqual('{0}'.format([1]), '[1]')
         self.assertEqual('{0}'.format(E('data')), 'E(data)')
         self.assertEqual('{0:d}'.format(G('data')), 'G(data)')
-        self.assertEqual('{0!s}'.format(G('data')), 'string is data')
+        self.assertEqual('{0!s}'.format(G('dat1')), 'string is dat1')
 
-        self.assertEqual('{0:^10}'.format(E('data')), ' E(data)  ')
-        self.assertEqual('{0:^10s}'.format(E('data')), ' E(data)  ')
-        self.assertEqual('{0:>15s}'.format(Galt('data')), ' string is data')
+        self.assertEqual('{0:^10}'.format(E('dat2')), ' E(dat2)  ')
+        self.assertEqual('{0:^10s}'.format(E('dat3')), ' E(dat3)  ')
+        self.assertEqual('{0:>15s}'.format(Galt('dat4')), ' string is dat4')
         # if Issue #674 is fixed the following should no longer throw an
-        # exception, then Galt can be changed to G and Galt removed
-        self.assertRaises(Exception, format, G('data'), ':>15s')
-
+        # exception (classified as known issue), then Galt can be changed to G and Galt removed
+        try:
+            self.assertEqual('{0:>15s}'.format(G('dat5')), ' string is dat5')
+        except:
+            self.fail("object.__format__ missing#674")
 
 
         self.assertEqual("{0:date: %Y-%m-%d}".format(
@@ -1034,4 +1085,3 @@ class BuiltinTest(UnitTest):
         self.assertEquals(format(1234, "010,"), "00,001,234")
 
     ### end from pypy test_newformat.py
-

@@ -34,7 +34,7 @@ class REPL(object):
         
     def translate(self, src):
         output = StringIO()
-        tree = self.compiler.parse(src)
+        tree = self.compiler.parse(src + "\n")
         t = InteractiveTranslator(self.compiler,
                        'main', 'main', src, tree, output,
                        **self.translator_arguments)
@@ -208,8 +208,6 @@ class InteractiveTranslator(translator.Translator):
                  module_name, module_file_name, src, mod, output,
                  dynamic=0, findFile=None, **kw):
 
-        translator.monkey_patch_broken_transformer(compiler)
-
         self.compiler = compiler
         self.ast = compiler.ast
         self.js_module_name = self.jsname("variable", module_name)
@@ -309,6 +307,8 @@ class InteractiveTranslator(translator.Translator):
                 self._raise(child, None)
             elif isinstance(child, self.ast.Stmt):
                 self._stmt(child, None, True)
+            elif isinstance(child, self.ast.With):
+                self._with(child, None)
             elif isinstance(child, self.ast.AssAttr):
                 self._assattr(child, None)
             elif isinstance(child, self.ast.AssName):
@@ -319,7 +319,7 @@ class InteractiveTranslator(translator.Translator):
             elif isinstance(child, self.ast.Slice):
                 self.w( self.spacing() + self._slice(child, None))
             else:
-                raise TranslationError(
+                raise translator.TranslationError(
                     "unsupported type (in __init__)",
                     child, self.module_name)
 
