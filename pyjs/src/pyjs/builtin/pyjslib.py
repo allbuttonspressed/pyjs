@@ -190,6 +190,31 @@ class object:
             @{{self}}[@{{name}}] = @{{value}};
         }
         """)
+
+# The __str__ method is not defined as 'def __str__(self):', since
+# we might get all kind of weird invocations. The __str__ is sometimes
+# called from toString()
+object.__str__ = JS("""function (self) {
+    if (typeof self == 'undefined') {
+        self = this;
+    }
+    var s;
+    if (self.__is_instance__ === true) {
+        s = "instance of ";
+    } else if (self.__is_instance__ === false) {
+        s = "class ";
+    } else {
+        s = "javascript " + typeof self + " ";
+    }
+    if (self.__module__) {
+        s += self.__module__ + ".";
+    }
+    if (typeof self.__name__ != 'undefined') {
+        return s + self.__name__;
+    }
+    return s + "<unknown>";
+}""")
+
 # fake __mro__ to look like an instance of type `tuple`
 JS("@{{object}}.__mro__ = {__array: [@{{object}}]};")
 JS("@{{type}}.__module__ = @{{object}}.__module__;")
@@ -384,30 +409,6 @@ JS("$pyjs_module_type.__class__ = @{{type}};")
 JS("$pyjs_module_type.__mro__ = @{{tuple}}([$pyjs_module_type, @{{object}}]);")
 
 JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type tuple>'; };")
-
-# The __str__ method is not defined as 'def __str__(self):', since
-# we might get all kind of weird invocations. The __str__ is sometimes
-# called from toString()
-object.__str__ = JS("""function (self) {
-    if (typeof self == 'undefined') {
-        self = this;
-    }
-    var s;
-    if (self.__is_instance__ === true) {
-        s = "instance of ";
-    } else if (self.__is_instance__ === false) {
-        s = "class ";
-    } else {
-        s = "javascript " + typeof self + " ";
-    }
-    if (self.__module__) {
-        s += self.__module__ + ".";
-    }
-    if (typeof self.__name__ != 'undefined') {
-        return s + self.__name__;
-    }
-    return s + "<unknown>";
-}""")
 
 class basestring(object):
     pass
