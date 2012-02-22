@@ -3069,7 +3069,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         return lhs
     
 
-    def _assigns_list(self, v, current_klass, expr): # DANIEL KLUEV VERSION 
+    def _assigns_list(self, v, current_klass, expr, kind=None): # DANIEL KLUEV VERSION
         """
         Handles all kinds of assignments for Assign, For and so on.
         
@@ -3088,6 +3088,17 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             else:
                 raise TranslationError(
                     "unsupported flag (in _assign)", v, self.module_name)
+            if self.getattr_support and not self.descriptors:
+                # getattr support implies the use of setattr
+                desc_setattr = ("%(setattr)s(%(l)s, %(a)s, %(r)s);" %
+                                dict(
+                                    setattr=self.pyjslib_name('setattr'),
+                                    l=lhs,
+                                    a=uescapejs(attr_name),
+                                    r=expr)
+                                )
+                assigns.append(desc_setattr)
+                return assigns
             if self.descriptors:
                 desc_setattr = ("""%(l)s.__is_instance__ && """
                                 """typeof %(l)s.__setattr__ == 'function' ? """
@@ -3096,14 +3107,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                                 dict(
                                     setattr=self.pyjslib_name('setattr'),
                                     l=lhs,
-                                    a=attr_name,
+                                    a=uescapejs(attr_name),
                                     r=expr)
                                 )
                 assigns.append(desc_setattr)
                 return assigns
             lhs += '.' + attr_name
         elif isinstance(v, self.ast.AssName):
-            lhs = self._lhsFromName(v.name, current_klass)
+            lhs = self._lhsFromName(v.name, current_klass, kind=kind)
             if v.flags == "OP_ASSIGN":
                 op = "="
             else:
@@ -3184,8 +3195,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return
 
         v = node.nodes[0]
-        rhs = self.expr(node.expr, current_klass)
-        assigns = self._assigns_list(v, current_klass, rhs)
+        rhs, rhs_kind = self._typed_expr(node.expr, current_klass)
+        assigns = self._assigns_list(v, current_klass, rhs, rhs_kind)
         for line in assigns:
             self.w( self.spacing() + line)
 
@@ -3673,6 +3684,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             rhs = nextval
         else:
             rhs = "%s.$nextval" % nextval
+
+        # We don't pass list_kind here because we only know the type of the iterable,
+        # but not the type of its elements. However, only the element type is what
+        # matters for the assigned variable.
         assigns = self._assigns_list(node.assign, current_klass, rhs)
 
         if self.source_tracking:
