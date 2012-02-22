@@ -974,7 +974,7 @@ class Translator(object):
         # print out the deps and check for wrong imports
         if self.imported_modules:
             self.w( '/*')
-            self.w( 'PYJS_DEPS: %s' % self.imported_modules)
+            self.w( 'PYJS_DEPS: %s' % map(uescapejs, self.imported_modules))
             self.w( '*/')
 
         # print out the imported js
@@ -1071,8 +1071,6 @@ class Translator(object):
 
         for d in node.decorators:
             code = add_callfunc(code, d)
-            elif isinstance(d, self.ast.CallFunc):
-                code = add_callfunc(code, d)
 
         self.pop_lookup()
 
@@ -2369,7 +2367,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 method_name = call_name
                 call_name = 'null'
             else:
-                method_name = repr(method_name)
+                method_name = uescapejs(method_name)
             call_code = "$pyjs_kwargs_call(%s, %s, %s, %s, [%s], %s)" % (
                 call_name, method_name, star_arg_name, dstar_arg_name, fn_args, fn_kwargs)
         else:
@@ -2497,8 +2495,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
     %(s)s$pyjs.track.module=%(mp)s__name__;""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'mp': self.module_prefix})
 
             pyjs_try_err = self.add_lookup('variable', pyjs_try_err, pyjs_try_err)
-        # XXX: This causes bug in class definitions?
-        pyjs_try_err_name = pyjs_try_err + "_name"
             if hasattr(node, 'handlers'):
                 else_str = self.spacing()
                 if len(node.handlers) == 1 and node.handlers[0][0] is None:
@@ -3360,14 +3356,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
     def _discard(self, node, current_klass): # Kluev version
 
         if isinstance(node.expr, self.ast.CallFunc):
-            expr = self._callfunc(
+            expr = self._typed_callfunc(
                 node.expr,
                 current_klass,
                 is_statement=True,
                 optlocal_var=isinstance(node.expr.node, self.ast.Name),
-            )
+            )[0]
             if isinstance(node.expr.node, self.ast.Name):
-                name_type, pyname, jsname, depth, is_local = self.lookup(node.expr.node.name)
+                name_type, pyname, jsname, depth, is_local, kind = self.lookup(node.expr.node.name)
                 if name_type == '__pyjamas__' and \
                    jsname in __pyjamas__.native_js_funcs:
                     self.w( expr)
@@ -3625,14 +3621,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return self._dict(node, current_klass), 'dict'
         elif isinstance(node, self.ast.Tuple):
             return self._tuple(node, current_klass), 'tuple'
+        elif isinstance(node, self.ast.Set):
+            return self._set(node, current_klass), 'set'
+        elif isinstance(node, self.ast.Sliceobj):
+            return self._sliceobj(node, current_klass), 'slice'
         elif isinstance(node, self.ast.Lambda):
             return self._lambda(node, current_klass), 'func'
-        elif isinstance(node, self.ast.SetComp):
-            return self._collcomp(node, current_klass), 'set'
-        elif isinstance(node, self.ast.DictComp):
-            return self._collcomp(node, current_klass), 'dict'
-        elif isinstance(node, self.ast.ListComp):
-            return self._collcomp(node, current_klass), 'list'
+        elif isinstance(node, self.ast.CollComp):
+            return self._typed_collcomp(node, current_klass)
         elif isinstance(node, self.ast.IfExp):
             return self._typed_if_expr(node, current_klass)
         return self.expr(node, current_klass), None
@@ -4298,13 +4294,15 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         return function_name
 
 
-    def _collcomp(self, node, current_klass):
+    def _typed_collcomp(self, node, current_klass):
+        kind = None
         self.push_lookup()
         resultvar = self.uniqid("$collcomp")
         self.add_lookup('variable', resultvar, resultvar)
         save_output = self.output
         self.output = StringIO()
         if isinstance(node, self.ast.ListComp):
+            kind = 'list'
             tnode = self.ast.Discard(
                 self.ast.CallFunc(
                     self.ast.Getattr(self.ast.Name(resultvar), 'append'),
@@ -4312,6 +4310,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             )
             varinit = self.pyjslib_name("list", args='')
         elif isinstance(node, self.ast.SetComp):
+            kind = 'set'
             tnode = self.ast.Discard(
                 self.ast.CallFunc(
                     self.ast.Getattr(self.ast.Name(resultvar), 'add'),
@@ -4319,6 +4318,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             )
             varinit = self.pyjslib_name("set", args='')
         elif isinstance(node, self.ast.DictComp):
+            kind = 'dict'
             tnode = self.ast.Assign([
                 self.ast.Subscript(self.ast.Name(resultvar),
                                    'OP_ASSIGN', [node.key])
@@ -4356,7 +4356,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             )
         )
         self.pop_lookup()
-        return collcomp_code
+        return collcomp_code, kind
 
 
     def _genexpr(self, node, current_klass):
@@ -4593,7 +4593,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.Lambda):
             return self._lambda(node, current_klass)
         elif isinstance(node, self.ast.CollComp):
-            return self._collcomp(node, current_klass)
+            return self._typed_collcomp(node, current_klass)[0]
 
         elif isinstance(node, self.ast.IfExp):
             return self._typed_if_expr(node, current_klass)[0]

@@ -196,7 +196,7 @@ JS("@{{type}}.__module__ = @{{object}}.__module__;")
 
 class tuple:
     def __new__(cls, data=JS("[]")):
-        self = object.__new__(cls)       
+        self = object.__new__(cls)
         JS("""
         if (@{{data}} === null) {
             throw @{{TypeError}}("'NoneType' is not iterable");
@@ -267,6 +267,7 @@ class tuple:
     def __getitem__(self, _index):
         JS("""
         var index = @{{_index}}.valueOf();
+        if (typeof index == 'boolean') index = @{{int}}(index);
         if (index < 0) index += @{{self}}.__array.length;
         if (index < 0 || index >= @{{self}}.__array.length) {
             throw @{{IndexError}}("tuple index out of range");
@@ -277,8 +278,38 @@ class tuple:
     def __len__(self):
         return INT(JS("""@{{self}}.__array.length"""))
 
+    
+    def index(self, value, _start=0):
+        JS("""
+        var start = @{{_start}}.valueOf();
+        /* if (typeof valueXXX == 'number' || typeof valueXXX == 'string') {
+            start = selfXXX.__array.indexOf(valueXXX, start);
+            if (start >= 0)
+                return start;
+        } else */ {
+            var len = @{{self}}.__array.length >>> 0;
+
+            start = (start < 0)
+                    ? Math.ceil(start)
+                    : Math.floor(start);
+            if (start < 0)
+                start += len;
+
+            for (; start < len; start++) {
+                if ( /*start in selfXXX.__array && */
+                    @{{cmp}}(@{{self}}.__array[start], @{{value}}) == 0)
+                    return start;
+            }
+        }
+        """)
+        raise ValueError("list.index(x): x not in list")
+
     def __contains__(self, value):
-        return JS('@{{self}}.__array.indexOf(@{{value}})>=0')
+        try:
+            self.index(value)
+        except ValueError:
+            return False
+        return True
 
     def __iter__(self):
         return JS("new $iter_array(@{{self}}.__array)")
@@ -326,9 +357,9 @@ class tuple:
         s += ")";
         return s;
         """)
-    
+
     __str__ = __repr__
-    
+
     def __add__(self, y):
         if not isinstance(y, self):
             raise TypeError("can only concatenate tuple to tuple")
@@ -377,187 +408,6 @@ object.__str__ = JS("""function (self) {
     }
     return s + "<unknown>";
 }""")
-
-class tuple:
-    def __init__(self, data=JS("[]")):
-        JS("""
-        if (@{{data}} === null) {
-            throw @{{TypeError}}("'NoneType' is not iterable");
-        }
-        if (@{{data}}.constructor === Array) {
-            @{{self}}.__array = @{{data}}.slice();
-            return null;
-        }
-        if (typeof @{{data}}.__iter__ == 'function') {
-            if (typeof @{{data}}.__array == 'object') {
-                @{{self}}.__array = @{{data}}.__array.slice();
-                return null;
-            }
-            var iter = @{{data}}.__iter__();
-            if (typeof iter.__array == 'object') {
-                @{{self}}.__array = iter.__array.slice();
-                return null;
-            }
-            @{{data}} = [];
-            var item, i = 0;
-            if (typeof iter.$genfunc == 'function') {
-                while (typeof (item=iter.next(true)) != 'undefined') {
-                    @{{data}}[i++] = item;
-                }
-            } else {
-                try {
-                    while (true) {
-                        @{{data}}[i++] = iter.next();
-                    }
-                }
-                catch (e) {
-                    if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
-                }
-            }
-            @{{self}}.__array = @{{data}};
-            return null;
-        }
-        throw @{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable");
-        """)
-
-    def __hash__(self):
-        return '$tuple$' + str(self.__array)
-
-    def __cmp__(self, l):
-        if not isinstance(l, tuple):
-            return 1
-        JS("""
-        var n1 = @{{self}}.__array.length,
-            n2 = @{{l}}.__array.length,
-            a1 = @{{self}}.__array,
-            a2 = @{{l}}.__array,
-            n, c;
-        n = (n1 < n2 ? n1 : n2);
-        for (var i = 0; i < n; i++) {
-            c = @{{cmp}}(a1[i], a2[i]);
-            if (c) return c;
-        }
-        if (n1 < n2) return -1;
-        if (n1 > n2) return 1;
-        return 0;""")
-
-    def __getslice__(self, lower, upper):
-        JS("""
-        if (@{{upper}}==null) return @{{tuple}}(@{{self}}.__array.slice(@{{lower}}));
-        return @{{tuple}}(@{{self}}.__array.slice(@{{lower}}, @{{upper}}));
-        """)
-
-    def __getitem__(self, _index):
-        JS("""
-        var index = @{{_index}}.valueOf();
-        if (typeof index == 'boolean') index = @{{int}}(index);
-        if (index < 0) index += @{{self}}.__array.length;
-        if (index < 0 || index >= @{{self}}.__array.length) {
-            throw @{{IndexError}}("tuple index out of range");
-        }
-        return @{{self}}.__array[index];
-        """)
-
-    def __len__(self):
-        return INT(JS("""@{{self}}.__array.length"""))
-    
-    def index(self, value, _start=0):
-        JS("""
-        var start = @{{_start}}.valueOf();
-        /* if (typeof valueXXX == 'number' || typeof valueXXX == 'string') {
-            start = selfXXX.__array.indexOf(valueXXX, start);
-            if (start >= 0)
-                return start;
-        } else */ {
-            var len = @{{self}}.__array.length >>> 0;
-
-            start = (start < 0)
-                    ? Math.ceil(start)
-                    : Math.floor(start);
-            if (start < 0)
-                start += len;
-
-            for (; start < len; start++) {
-                if ( /*start in selfXXX.__array && */
-                    @{{cmp}}(@{{self}}.__array[start], @{{value}}) == 0)
-                    return start;
-            }
-        }
-        """)
-        raise ValueError("list.index(x): x not in list")    
-
-    def __contains__(self, value):
-        try:
-            self.index(value)
-        except ValueError:
-            return False
-        return True
-        #return JS('@{{self}}.__array.indexOf(@{{value}})>=0')
-
-    def __iter__(self):
-        return JS("new $iter_array(@{{self}}.__array)")
-        JS("""
-        var i = 0;
-        var l = @{{self}}.__array;
-        return {
-            'next': function() {
-                if (i >= l.length) {
-                    throw @{{StopIteration}}();
-                }
-                return l[i++];
-            },
-            '__iter__': function() {
-                return this;
-            }
-        };
-        """)
-
-    def __enumerate__(self):
-        return JS("new $enumerate_array(@{{self}}.__array)")
-
-    def getArray(self):
-        """
-        Access the javascript Array that is used internally by this list
-        """
-        return self.__array
-
-    #def __str__(self):
-    #    return self.__repr__()
-    #See monkey patch at the end of the tuple class definition
-
-    def __repr__(self):
-        if callable(self):
-            return "<type '%s'>" % self.__name__
-        JS("""
-        var s = "(";
-        for (var i=0; i < @{{self}}.__array.length; i++) {
-            s += @{{repr}}(@{{self}}.__array[i]);
-            if (i < @{{self}}.__array.length - 1)
-                s += ", ";
-        }
-        if (@{{self}}.__array.length == 1)
-            s += ",";
-        s += ")";
-        return s;
-        """)
-
-    def __add__(self, y):
-        if not isinstance(y, self):
-            raise TypeError("can only concatenate tuple to tuple")
-        return tuple(self.__array.concat(y.__array))
-
-    def __mul__(self, n):
-        if not JS("@{{n}} !== null && @{{n}}.__number__ && (@{{n}}.__number__ != 0x01 || isFinite(@{{n}}))"):
-            raise TypeError("can't multiply sequence by non-int")
-        a = []
-        while n:
-            n -= 1
-            a.extend(self.__array)
-        return a
-
-    def __rmul__(self, n):
-        return self.__mul__(n)
-
 
 class basestring(object):
     pass
@@ -4880,6 +4730,10 @@ class dict:
     def __new__(cls, *args, **kwargs):
         # initialize memory
         self = super(dict, cls).__new__(cls, *args, **kwargs)
+        JS("""
+        @{{self}}.__object = {};
+        return @{{self}};
+        """)
 
     def __init__(self, seq=JS("[]"), **kwargs):
         # Transform data into an array with [key,value]
@@ -6588,9 +6442,12 @@ def dir(obj):
     }
     var properties=@{{list}}();
     for (var property in @{{obj}}) {
-        if (property in attrib_remap) {
+        if (property.substring(0, 2) === '$$' && property in attrib_remap) {
             // handle back mapping of name
-            properties.append(property.substring(2));
+            properties.append(attrib_remap[property]);
+        } else if ('$$' + property in attrib_remap) {
+            // ignore JS-internal properties
+            continue;
         } else {
             properties.append(property);
         }
@@ -6778,7 +6635,9 @@ class complex:
             return "(%s+%sj)" % (self.real, self.imag)
         else:
             return "%sj" % self.imag
-    
+
+    __str__ = __repr__
+
     def __add__(self, b):
         if isinstance(b, complex):
             return complex(self.real + b.real, self.imag + b.imag)
@@ -6786,10 +6645,10 @@ class complex:
             return complex(self.real + b, self.imag)
         else:
             raise TypeError("unsupported operand type(s) for +: '%r', '%r'" % (self, b))
-        
-JS("@{{complex}}['__radd__'] = @{{complex}}['__add__'];")
-JS("@{{complex}}['__str__'] = @{{complex}}['__repr__'];")
-JS("@{{complex}}['toString'] = @{{complex}}['__repr__'];")
+
+    __radd__ = __add__
+
+JS("@{{complex}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type complex>'; };")
 
 JS("@{{next_hash_id}} = 0;")
 
