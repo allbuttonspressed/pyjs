@@ -2267,6 +2267,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
     def _typed_callfunc_code(self, v, current_klass, is_statement=False, optlocal_var=False):
         self.ignore_debug = False
+        is_builtin = False
         method_name = None
         call_args = []
         kind = None
@@ -2310,6 +2311,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     call_name = '@{{_check_name}}("%s", %s)' % (pyname, call_name)
             else:
                 if name_type == 'builtin':
+                    is_builtin = True
                     if v.node.name == 'len' and len(v.args) == 1:
                         return self.inline_len_code(v, current_klass)
                     elif v.node.name in ('int', 'long', 'float') and len(v.args) == 1:
@@ -2358,7 +2360,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         else:
             fn_kwargs = 'null'
 
-        if kwargs or star_arg_name or dstar_arg_name or self.call_support:
+        if kwargs or star_arg_name or dstar_arg_name or (self.call_support and
+                                                         not is_builtin):
             if not star_arg_name:
                 star_arg_name = 'null'
             if not dstar_arg_name:
