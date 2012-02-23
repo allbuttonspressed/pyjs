@@ -30,5 +30,5 @@ if True:
 # Import all
 all_masked = False
 all_override = False
-from allwith__all__ import *
-from allsimple import *
+from .allwith__all__ import *
+from .allsimple import *

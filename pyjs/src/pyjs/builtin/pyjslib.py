@@ -7135,7 +7135,7 @@ def sprintf(strng, args):
     return result.join("");
 """)
 
-__module_internals = set(['__track_lines__'])
+__module_internals = set(['__track_lines__', 'toString'])
 def _globals(module):
     """
     XXX: It should return dictproxy instead!

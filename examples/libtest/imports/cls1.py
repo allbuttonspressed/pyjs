@@ -1,3 +1,3 @@
 
-from cls import CLS
+from .cls import CLS
 

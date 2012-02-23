@@ -11,9 +11,9 @@ locale = 'en'
 domains = []
 
 import sys
-import domain
+import I18N.domain
 domains.append('domain')
-import domain.subdomain
+import I18N.domain.subdomain
 domains.append('domain.subdomain')
 
 def set_locale(loc):

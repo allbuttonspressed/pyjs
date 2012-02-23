@@ -1,4 +1,4 @@
-import path
+from . import path
 
 name = 'pyjs'
 

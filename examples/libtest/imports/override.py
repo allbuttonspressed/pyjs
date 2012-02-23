@@ -1,2 +1,2 @@
 
-import overrideme
+from . import overrideme

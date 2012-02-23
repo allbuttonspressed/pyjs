@@ -974,7 +974,7 @@ class Translator(object):
         # print out the deps and check for wrong imports
         if self.imported_modules:
             self.w( '/*')
-            self.w( 'PYJS_DEPS: %s' % map(uescapejs, self.imported_modules))
+            self.w( 'PYJS_DEPS: %s' % map(str, self.imported_modules))
             self.w( '*/')
 
         # print out the imported js
@@ -1891,8 +1891,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         # object to check our scope
         self._doImport(node.names, current_klass, root_level, True)
 
-    def _doImport(self, names, current_klass, root_level, assignBase,
-                  absPath=False, all=False):
+    def _doImport(self, names, current_klass, root_level, assignBase, all=False):
         if root_level:
             modtype = 'root-module'
         else:
@@ -1931,10 +1930,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 or (assignBase and not package_mod[0] in ['root-module', 'module'])
                ):
                 # the import statement
-                if absPath:
-                    context = 'null'
-                else:
-                    context = self.import_context
+                context = 'null'
                 if not all:
                     import_stmt = "@{{___import___}}('%s', %s" % (
                         importName,
@@ -2011,9 +2007,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     # Ignoring from __future__ import name[0]
                     pass
             return
-        # TODO: check again if this really works correctly. We've switched to absolute
-        # imports like in Python 3.
-        absPath = True
         modname = node.modname
         if hasattr(node, 'level') and node.level > 0:
             if self.relative_import_context is not None:
@@ -2032,11 +2025,11 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         for name in node.names:
             if name[0] == "*":
                 self._doImport(((modname, name[0]),), current_klass,
-                               root_level, False, absPath, True)
+                               root_level, False, True)
                 continue
             sub = modname + '.' + name[0]
             ass_name = name[1] or name[0]
-            self._doImport(((sub, ass_name),), current_klass, root_level, True, absPath)
+            self._doImport(((sub, ass_name),), current_klass, root_level, True)
 
     def _function(self, node, current_klass, force_local=False):
         save_top_level = self.top_level
@@ -3102,8 +3095,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             if self.descriptors:
                 desc_setattr = ("""%(l)s.__is_instance__ && """
                                 """typeof %(l)s.__setattr__ == 'function' ? """
-                                """%(l)s.__setattr__('%(a)s', %(r)s) : """
-                                """%(setattr)s(%(l)s, '%(a)s', %(r)s); """ % 
+                                """%(l)s.__setattr__(%(a)s, %(r)s) : """
+                                """%(setattr)s(%(l)s, %(a)s, %(r)s); """ %
                                 dict(
                                     setattr=self.pyjslib_name('setattr'),
                                     l=lhs,
@@ -4584,10 +4577,8 @@ class ImportVisitor(object):
             return
         # XXX: hack for in-function checking, we should have another
         # object to check our scope
-        absPath = False
         modname = node.modname
         if hasattr(node, 'level') and node.level > 0:
-            absPath = True
             modname = self.module_name.split('.')
             level = node.level
             if len(modname) < level:
