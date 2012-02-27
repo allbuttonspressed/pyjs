@@ -747,6 +747,8 @@ class Translator(object):
         'noNameChecking': [('name_checking', False)],
         'GetattrSupport': [('getattr_support', True)],
         'noGetattrSupport': [('getattr_support', False)],
+        'SetattrSupport': [('setattr_support', True)],
+        'noSetattrSupport': [('setattr_support', False)],
         'CallSupport': [('call_support', True)],
         'noCallSupport': [('call_support', False)],
         'BoundMethods': [('bound_methods', True)],
@@ -1036,7 +1038,7 @@ class Translator(object):
         self.option_stack.append((\
             self.debug, self.print_statements, self.function_argument_checking,
             self.attribute_checking, self.name_checking, self.getattr_support,
-            self.call_support, self.bound_methods, self.descriptors,
+            self.setattr_support, self.call_support, self.bound_methods, self.descriptors,
             self.source_tracking, self.line_tracking, self.store_source,
             self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp,
             self.inline_getitem, self.operator_funcs, self.number_classes,
@@ -1045,7 +1047,7 @@ class Translator(object):
         (\
             self.debug, self.print_statements, self.function_argument_checking,
             self.attribute_checking, self.name_checking, self.getattr_support,
-            self.call_support, self.bound_methods, self.descriptors,
+            self.setattr_support, self.call_support, self.bound_methods, self.descriptors,
             self.source_tracking, self.line_tracking, self.store_source,
             self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp,
             self.inline_getitem, self.operator_funcs, self.number_classes,
@@ -3081,7 +3083,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             else:
                 raise TranslationError(
                     "unsupported flag (in _assign)", v, self.module_name)
-            if self.getattr_support and not self.descriptors:
+            if self.setattr_support:
                 # getattr support implies the use of setattr
                 desc_setattr = ("%(setattr)s(%(l)s, %(a)s, %(r)s);" %
                                 dict(

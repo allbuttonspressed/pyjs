@@ -9,6 +9,7 @@ all_compile_options = dict(
     attribute_checking=False,
     name_checking=True,
     getattr_support=True,
+    setattr_support=True,
     call_support=True,
     bound_methods=True,
     descriptors=False,
@@ -113,6 +114,19 @@ def add_compile_options(parser):
                      )
     speed_options['getattr_support'] = False
     pythonic_options['getattr_support'] = True
+
+    parser.add_option("--no-setattr-support",
+                      dest = "setattr_support",
+                      action="store_false",
+                      help = "Do not support __setattr__()",
+                     )
+    parser.add_option("--setattr-support",
+                      dest = "setattr_support",
+                      action="store_true",
+                      help = "Support __setattr__()",
+                     )
+    speed_options['setattr_support'] = False
+    pythonic_options['setattr_support'] = True
 
     parser.add_option("--no-call-support",
                       dest = "call_support",

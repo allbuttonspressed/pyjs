@@ -19,8 +19,9 @@
 from __pyjamas__ import INT, JS, setCompilerOptions, debugger
 
 setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noNameChecking",
-                   "noGetattrSupport", "noCallSupport", "noAttributeChecking",
-                   "noSourceTracking", "noLineTracking", "noStoreSource")
+                   "noGetattrSupport", 'noSetattrSupport', "noCallSupport",
+                   "noAttributeChecking", "noSourceTracking", "noLineTracking",
+                   "noStoreSource")
 
 platform = JS("$pyjs.platform")
 sys = None
