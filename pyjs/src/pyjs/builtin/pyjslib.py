@@ -21,7 +21,7 @@ from __pyjamas__ import INT, JS, setCompilerOptions, debugger
 setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noNameChecking",
                    "noGetattrSupport", 'noSetattrSupport', "noCallSupport",
                    "noAttributeChecking", "noSourceTracking", "noLineTracking",
-                   "noStoreSource")
+                   "noStoreSource", "noUniversalMethFuncs")
 
 platform = JS("$pyjs.platform")
 sys = None
@@ -6208,7 +6208,7 @@ _wrap_unbound_method = JS("""function(method) {
             $pyjs__exception_func_instance_expected(method.__name__, method.__class__.__name__, arguments[0]);
         }
 
-        return method.apply(null, $pyjs_array_slice.call(arguments));
+        return method.apply(arguments[0], $pyjs_array_slice.call(arguments, 1));
     };
     fnwrap.__name__ = method.__name__;
     fnwrap.__args__ = method.__args__;

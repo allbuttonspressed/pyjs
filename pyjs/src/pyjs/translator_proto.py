@@ -751,6 +751,8 @@ class Translator(object):
         'noSetattrSupport': [('setattr_support', False)],
         'CallSupport': [('call_support', True)],
         'noCallSupport': [('call_support', False)],
+        'UniversalMethFuncs': [('universal_methfuncs', True)],
+        'noUniversalMethFuncs': [('universal_methfuncs', False)],
         'BoundMethods': [('bound_methods', True)],
         'noBoundMethods': [('bound_methods', False)],
         'Descriptors': [('descriptors', True)],
@@ -1038,7 +1040,8 @@ class Translator(object):
         self.option_stack.append((\
             self.debug, self.print_statements, self.function_argument_checking,
             self.attribute_checking, self.name_checking, self.getattr_support,
-            self.setattr_support, self.call_support, self.bound_methods, self.descriptors,
+            self.setattr_support, self.call_support, self.universal_methfuncs,
+            self.bound_methods, self.descriptors,
             self.source_tracking, self.line_tracking, self.store_source,
             self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp,
             self.inline_getitem, self.operator_funcs, self.number_classes,
@@ -1047,7 +1050,8 @@ class Translator(object):
         (\
             self.debug, self.print_statements, self.function_argument_checking,
             self.attribute_checking, self.name_checking, self.getattr_support,
-            self.setattr_support, self.call_support, self.bound_methods, self.descriptors,
+            self.setattr_support, self.call_support, self.universal_methfuncs,
+            self.bound_methods, self.descriptors,
             self.source_tracking, self.line_tracking, self.store_source,
             self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp,
             self.inline_getitem, self.operator_funcs, self.number_classes,
@@ -1680,91 +1684,98 @@ $generator['$genfunc'] = function () {
 
         lpself = "var "
         lp = ""
-        self.w(self.indent() + """\
+
+        if self.universal_methfuncs:
+            self.w(self.indent() + """\
 if (this.__is_instance__ === true) {\
 """, output=output)
-        if arg_names:
-            self.w( self.spacing() + """\
+
+        if self.universal_methfuncs or is_method:
+            if arg_names:
+                self.w( self.spacing() + """\
 %s%s = this;\
 """ % (lpself, arg_names[0]), output=output)
 
-        if node.varargs:
-            self._varargs_handler(node, varargname, maxargs1, lp,
-                                  prepend_this=not arg_names)
+            if node.varargs:
+                self._varargs_handler(node, varargname, maxargs1, lp,
+                                      prepend_this=not arg_names)
 
-        if node.kwargs:
-            self.w( self.spacing() + """\
+            if node.kwargs:
+                self.w( self.spacing() + """\
 %s%s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[arguments.length];\
 """ % (lpself, kwargname, maxargs1), output=output)
-            s = self.spacing()
-            self.w( """\
+                s = self.spacing()
+                self.w( """\
 %(s)sif (typeof %(lp)s%(kwargname)s != 'object' || %(lp)s%(kwargname)s.__name__ != 'dict' || typeof %(lp)s%(kwargname)s.$pyjs_is_kwarg == 'undefined') {\
 """ % locals(), output=output)
-            if node.varargs:
-                self.w( """\
+                if node.varargs:
+                    self.w( """\
 %(s)s\tif (typeof %(lp)s%(kwargname)s != 'undefined') %(lp)s%(varargname)s.__array.push(%(lp)s%(kwargname)s);\
 """ % locals(), output=output)
-            self.w( """\
+                self.w( """\
 %(s)s\t%(lpself)s%(kwargname)s = arguments[arguments.length+1];
 %(s)s} else {
 %(s)s\tdelete %(lp)s%(kwargname)s['$pyjs_is_kwarg'];
 %(s)s}\
 """ % locals(), output=output)
 
-        if self.function_argument_checking:
-            self.w( self.spacing() + """\
+            if self.function_argument_checking:
+                self.w( self.spacing() + """\
 if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.__name__, %d, %s, arguments.length+1);\
 """ % (argcount1, minargs2, maxargs2str), output=output)
 
-        self.w( self.dedent() + """\
+        if self.universal_methfuncs:
+            self.w( self.dedent() + """\
 } else {\
 """, output=output)
-        self.indent()
+            self.indent()
 
-        if arg_names:
-            self.w( self.spacing() + """\
+            if arg_names:
+                self.w( self.spacing() + """\
 %s%s = arguments[0];\
 """ % (lpself, arg_names[0]), output=output)
-        arg_idx = 0
-        for arg_name in arg_names[1:]:
-            arg_idx += 1
-            self.w( self.spacing() + """\
+            arg_idx = 0
+            for arg_name in arg_names[1:]:
+                arg_idx += 1
+                self.w( self.spacing() + """\
 %s%s = arguments[%d];\
 """ % (lp, arg_name, arg_idx), output=output)
 
-        if not is_method and self.function_argument_checking:
-            self.w( self.spacing() + """\
+        if self.universal_methfuncs or not is_method:
+            if not is_method and self.function_argument_checking:
+                self.w( self.spacing() + """\
 if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.__name__, %d, %s, arguments.length);\
 """ % (argcount2, minargs2, maxargs2str), output=output)
 
-        if node.varargs:
-            self._varargs_handler(node, varargname, maxargs2, lp)
+            if node.varargs:
+                self._varargs_handler(node, varargname, maxargs2, lp)
 
-        if node.kwargs:
-            self.w( self.spacing() + """\
+            if node.kwargs:
+                self.w( self.spacing() + """\
 %s%s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[arguments.length];\
 """ % (lpself, kwargname, maxargs2), output=output)
-            s = self.spacing()
-            self.w( """\
+                s = self.spacing()
+                self.w( """\
 %(s)sif (typeof %(lp)s%(kwargname)s != 'object' || %(lp)s%(kwargname)s.__name__ != 'dict' || typeof %(lp)s%(kwargname)s.$pyjs_is_kwarg == 'undefined') {\
 """ % locals(), output=output)
-            if node.varargs:
-                self.w( """\
+                if node.varargs:
+                    self.w( """\
 %(s)s\tif (typeof %(lp)s%(kwargname)s != 'undefined') %(lp)s%(varargname)s.__array.push(%(lp)s%(kwargname)s);\
 """ % locals(), output=output)
-            self.w( """\
+                self.w( """\
 %(s)s\t%(lp)s%(kwargname)s = arguments[arguments.length+1];
 %(s)s} else {
 %(s)s\tdelete %(lp)s%(kwargname)s['$pyjs_is_kwarg'];
 %(s)s}\
 """ % locals(), output=output)
 
-        if is_method and self.function_argument_checking:
-            self.w( """\
+            if is_method and self.function_argument_checking:
+                self.w( """\
 %sif ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.__name__, %d, %s, arguments.length);\
 """ % (self.spacing(), argcount2, minargs2, maxargs2str), output=output)
 
-        self.w( self.dedent() + "}", output=output)
+        if self.universal_methfuncs:
+            self.w( self.dedent() + "}", output=output)
 
     def _default_args_handler(self, node, arg_names, current_klass, kwargname,
                               lp, output=None):
@@ -2095,12 +2106,20 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         declared_arg_names = list(normal_arg_names)
         #if node.kwargs: declared_arg_names.append(kwargname)
 
-        function_args = ", ".join(declared_arg_names[1:])
-
-        self.indent()
         real_name = node.name
         if force_local:
             real_name = '<lambda>'
+
+        is_method = is_class_definition
+        if is_class_definition and (real_name == '__new__' or node.decorators):
+            is_method = False
+
+        if self.universal_methfuncs or is_method:
+            function_args = ", ".join(declared_arg_names[1:])
+        else:
+            function_args = ", ".join(declared_arg_names)
+
+        self.indent()
         self.w("$pyjs__prepare_func('%s', function(%s) {" % (real_name, function_args))
         self.w(self.spacing() + "  var $pyjs_last_exception, $pyjs_last_exception_stack;")
 
@@ -2108,7 +2127,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         if self.create_locals:
             defaults_done_by_inline = True
-        self._instance_method_init(node, declared_arg_names, varargname, kwargname, current_klass, is_class_definition)
+
+        self._instance_method_init(node, declared_arg_names, varargname, kwargname, current_klass, is_method)
 
         # default arguments
         if not defaults_done_by_inline:

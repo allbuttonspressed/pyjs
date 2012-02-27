@@ -3,7 +3,7 @@ speed_options={}
 pythonic_options={}
 
 all_compile_options = dict(
-    debug = False,
+    debug=False,
     print_statements=True,
     function_argument_checking=False,
     attribute_checking=False,
@@ -11,6 +11,7 @@ all_compile_options = dict(
     getattr_support=True,
     setattr_support=True,
     call_support=True,
+    universal_methfuncs=True,
     bound_methods=True,
     descriptors=False,
     source_tracking=False,
@@ -140,6 +141,19 @@ def add_compile_options(parser):
                      )
     speed_options['call_support'] = False
     pythonic_options['call_support'] = True
+
+    parser.add_option("--no-universal-methfuncs",
+                      dest = "universal_methfuncs",
+                      action="store_false",
+                      help = "Generate functions which can be e.g. monkey-patched as methods",
+                     )
+    parser.add_option("--universal-methfuncs",
+                      dest = "universal_methfuncs",
+                      action="store_true",
+                      help = "Do not generate functions which can be e.g. monkey-patched as methods",
+                     )
+    speed_options['universal_methfuncs'] = False
+    pythonic_options['universal_methfuncs'] = True
 
     parser.add_option("--no-bound-methods",
                       dest = "bound_methods",
