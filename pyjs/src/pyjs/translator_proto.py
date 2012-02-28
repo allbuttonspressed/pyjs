@@ -437,6 +437,12 @@ for a in ECMAScipt_Reserved_Words:
 def bracket_fn(s):
     return s # "(%s)" % s
 
+def get_kind(kind, level=0):
+    if isinstance(kind, tuple):
+        return kind[level]
+    assert level == 0
+    return kind
+
 # pass in the compiler module (lib2to3 pgen or "standard" python one)
 # and patch transformer. see http://bugs.python.org/issue6978
 def monkey_patch_broken_transformer(compiler): # USELESS NOW
@@ -1332,9 +1338,9 @@ class Translator(object):
         result = None
         kind = None if self.number_classes else 'number'
 
-        if expr_kind == 'string':
+        if get_kind(expr_kind) == 'string':
             result = '(%s).length' % e
-        if expr_kind in ('list', 'tuple'):
+        if get_kind(expr_kind) in ('list', 'tuple'):
             result = '(%s).__array.length' % e
         if result is not None:
             if self.number_classes:
@@ -2331,8 +2337,14 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                         return self.inline_len_code(v, current_klass)
                     elif v.node.name in ('int', 'long', 'float') and len(v.args) == 1:
                         kind = 'number'
-                    elif v.node.name == 'bool' and len(v.args) == 1:
+                    elif v.node.name ==  and len(v.args) == 1:
                         kind = 'bool'
+                    elif v.node.name in ('sorted', 'list') and len(v.args) == 1:
+                        kind = ('list', None)
+                    elif v.node.name in ('set', 'tuple', 'dict') and len(v.args) == 1:
+                        kind = (v.node.name, None)
+                    elif v.node.name == 'enumerate' and len(v.args) == 1:
+                        kind = ('generator', ('tuple', ('number', None)))
                 call_name = jsname
         elif not self.getattr_support and isinstance(v.node, self.ast.Getattr):
             method_name = self.attrib_remap(v.node.attrname)
@@ -3189,9 +3201,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             
             assigns.append("var " + tempName + " = " + unpack_call + ";")
             
-            for index,child in enumerate(child_nodes):
+            for index, child in enumerate(child_nodes):
                 unpacked_value = tempName + "[" + str(index) + "]";
-                assigns.extend(self._assigns_list(child, current_klass, unpacked_value))
+                child_kind = None
+                if (kind and get_kind(kind) in ('tuple', 'list') and get_kind(kind, 1) and
+                        index < len(get_kind(kind, 1))):
+                    child_kind = get_kind(kind, 1)[index]
+                assigns.extend(self._assigns_list(child, current_klass, unpacked_value,
+                                                  kind=child_kind))
             return assigns
         else:
             raise TranslationError(
@@ -3280,13 +3297,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         return self._inner_bool_test_expr(test, kind)
 
     def _inner_bool_test_expr(self, test, kind):
-        if kind in ('list', 'tuple'):
+        if get_kind(kind) in ('list', 'tuple'):
             test = '(%s).__array.length' % test
-        elif kind == 'string':
+        elif get_kind(kind) == 'string':
             test = '(%s).length' % test
-        elif kind == 'dict':
+        elif get_kind(kind) == 'dict':
             test = '(%s).__nonzero__()' % test
-        elif kind not in ('bool', 'number'):
+        elif get_kind(kind) not in ('bool', 'number'):
             test = self.inline_bool_code(test)
         return test
 
@@ -3390,11 +3407,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
     def _not(self, node, current_klass):
         expr, kind = self._typed_expr(node.expr, current_klass)
-        if self.stupid_mode or kind in ('bool', 'number', 'string'):
+        if self.stupid_mode or get_kind(kind) in ('bool', 'number', 'string'):
             return "!(%s)" % expr
-        elif kind in ('list', 'tuple'):
+        elif get_kind(kind) in ('list', 'tuple'):
             return "!(%s).__array.length" % expr
-        elif kind == 'dict':
+        elif get_kind(kind) == 'dict':
             return "!((%s).__nonzero__())" % expr
         return '!(%s)' % self.inline_bool_code(expr)
 
@@ -3407,7 +3424,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             e, child_kind = self._typed_expr(child, current_klass)
             if child_kind != kind:
                 kind = None
-            if child_kind in ('bool', 'int', 'string'):
+            if get_kind(child_kind) in ('bool', 'number', 'string'):
                 expr = '(%(e)s || %(expr)s)' % locals()
             else:
                 v = self.uniqid('$or')
@@ -3427,7 +3444,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             e, child_kind = self._typed_expr(child, current_klass)
             if child_kind != kind:
                 kind = None
-            if child_kind in ('bool', 'int', 'string'):
+            if get_kind(child_kind) in ('bool', 'number', 'string'):
                 expr = '(%(e)s && %(expr)s)' % locals()
             else:
                 v = self.uniqid('$and')
@@ -3478,17 +3495,17 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.CallFunc):
             return self._typed_callfunc(node, current_klass, optlocal_var=True)
         elif isinstance(node, self.ast.List):
-            return self._list(node, current_klass), 'list'
+            return self._list(node, current_klass), ('list', None)
         elif isinstance(node, self.ast.Dict):
-            return self._dict(node, current_klass), 'dict'
+            return self._dict(node, current_klass), ('dict', None)
         elif isinstance(node, self.ast.Tuple):
-            return self._tuple(node, current_klass), 'tuple'
+            return self._tuple(node, current_klass), ('tuple', None)
         elif isinstance(node, self.ast.Set):
-            return self._set(node, current_klass), 'set'
+            return self._set(node, current_klass), ('set', None)
         elif isinstance(node, self.ast.Sliceobj):
             return self._sliceobj(node, current_klass), 'slice'
         elif isinstance(node, self.ast.Lambda):
-            return self._lambda(node, current_klass), 'func'
+            return self._lambda(node, current_klass), ('func', None)
         elif isinstance(node, self.ast.CollComp):
             return self._typed_collcomp(node, current_klass)
         elif isinstance(node, self.ast.IfExp):
@@ -3526,17 +3543,18 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
         list_expr, list_kind = self._typed_expr(node.list, current_klass)
 
-        if list_kind in ('list', 'tuple'):
+        if get_kind(list_kind) in ('list', 'tuple'):
             rhs = '%(iterator_name)s[%(nextval)s]' % locals()
         elif self.inline_code:
             rhs = nextval
         else:
             rhs = "%s.$nextval" % nextval
 
-        # We don't pass list_kind here because we only know the type of the iterable,
-        # but not the type of its elements. However, only the element type is what
-        # matters for the assigned variable.
-        assigns = self._assigns_list(node.assign, current_klass, rhs)
+        list_item_kind = None
+        if get_kind(list_kind) in ('list', 'tuple', 'generator'):
+            list_item_kind = get_kind(list_kind, 1)
+
+        assigns = self._assigns_list(node.assign, current_klass, rhs, list_item_kind)
 
         if self.source_tracking:
             self.stacksize_depth += 1
@@ -3544,7 +3562,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.add_lookup('variable', var_trackstack_size, var_trackstack_size)
             self.w( self.spacing() + "%s=$pyjs.trackstack.length;" % var_trackstack_size)
         s = self.spacing()
-        if list_kind in ('list', 'tuple'):
+        if get_kind(list_kind) in ('list', 'tuple'):
             self.w("""\
 %(s)s%(iterator_name)s = """ % locals() + self.track_call("%(list_expr)s.__array" % locals(), node.lineno) + ';')
             self.w("""%(s)s%(nextval)s = -1;""" % locals())
@@ -3699,10 +3717,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
     def _typed_unaryadd(self, node, current_klass):
         e, kind = self._typed_expr(node.expr, current_klass)
-        if kind != 'number':
+        if get_kind(kind) != 'number':
             kind = None
 
-        if not self.operator_funcs or kind == 'number':
+        if not self.operator_funcs or get_kind(kind) == 'number':
             return "(%s)" % e, kind
 
         v = self.uniqid('$uadd')
@@ -3713,10 +3731,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
     def _typed_unarysub(self, node, current_klass):
         e, kind = self._typed_expr(node.expr, current_klass)
-        if kind != 'number':
+        if get_kind(kind) != 'number':
             kind = None
 
-        if not self.operator_funcs or kind == 'number':
+        if not self.operator_funcs or get_kind(kind) == 'number':
             return "-(%s)" % e, kind
 
         v = self.uniqid('$usub')
@@ -3729,10 +3747,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         e1, kind1 = self._typed_expr(node.left, current_klass)
         e2, kind2 = self._typed_expr(node.right, current_klass)
         kind = None
-        if kind1 == kind2 and kind1 in ('number', 'string', 'tuple', 'list'):
+        if kind1 == kind2 and get_kind(kind1) in ('number', 'string', 'tuple', 'list'):
             kind = kind1
+        elif (get_kind(kind1) == get_kind(kind2) and
+                get_kind(kind1) in ('number', 'string', 'tuple', 'list')):
+            kind = get_kind(kind1)
 
-        if not self.operator_funcs or kind in ('number', 'string'):
+        if not self.operator_funcs or get_kind(kind) in ('number', 'string'):
             return "(%s)+(%s)" % (e1, e2), kind
 
         s = self.spacing()
@@ -3750,10 +3771,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         e1, kind1 = self._typed_expr(node.left, current_klass)
         e2, kind2 = self._typed_expr(node.right, current_klass)
         kind = None
-        if kind1 == kind2 and kind1 == 'number':
+        if kind1 == kind2 and get_kind(kind1) == 'number':
             kind = kind1
 
-        if not self.operator_funcs or kind == 'number':
+        if not self.operator_funcs or get_kind(kind) == 'number':
             return "(%s)-(%s)" % (e1, e2), kind
 
         s = self.spacing()
@@ -3771,10 +3792,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         e1, kind1 = self._typed_expr(node.left, current_klass)
         e2, kind2 = self._typed_expr(node.right, current_klass)
         kind = None
-        if kind1 == kind2 and kind1 == 'number':
+        if kind1 == kind2 and get_kind(kind1) == 'number':
             kind = kind1
 
-        if not self.operator_funcs or kind == 'number':
+        if not self.operator_funcs or get_kind(kind) == 'number':
             return "Math.floor((%s)/(%s))" % (e1, e2), kind
 
         s = self.spacing()
@@ -3792,10 +3813,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         e1, kind1 = self._typed_expr(node.left, current_klass)
         e2, kind2 = self._typed_expr(node.right, current_klass)
         kind = None
-        if kind1 == kind2 and kind1 == 'number':
+        if kind1 == kind2 and get_kind(kind1) == 'number':
             kind = kind1
 
-        if not self.operator_funcs or kind == 'number':
+        if not self.operator_funcs or get_kind(kind) == 'number':
             return "(%s)/(%s)" % (e1, e2), kind
 
         op_div = 'op_truediv' if self.future_division else 'op_div'
@@ -3815,16 +3836,18 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         e1, kind1 = self._typed_expr(node.left, current_klass)
         e2, kind2 = self._typed_expr(node.right, current_klass)
         kind = None
-        if kind1 == kind2 and kind1 == 'number':
+        if kind1 == kind2 and get_kind(kind1) == 'number':
             kind = kind1
         else:
             for multype in ('string', 'tuple', 'list'):
-                if (kind1 == multype and kind2 == 'number') or \
-                        (kind1 == 'number' and kind2 == multype):
-                    kind = multype
+                if get_kind(kind1) == multype and get_kind(kind2) == 'number':
+                    kind = kind1
+                    break
+                elif kind1 == 'number' and get_kind(kind2) == multype:
+                    kind = kind2
                     break
 
-        if not self.operator_funcs or kind == 'number':
+        if not self.operator_funcs or get_kind(kind) == 'number':
             return "(%s)*(%s)" % (e1, e2), kind
 
         s = self.spacing()
@@ -3842,9 +3865,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         e1, kind1 = self._typed_expr(node.left, current_klass)
         e2, kind2 = self._typed_expr(node.right, current_klass)
         kind = None
-        if kind1 == kind2 and kind1 == 'number':
+        if kind1 == kind2 and get_kind(kind1) == 'number':
             kind = kind1
-        elif kind1 == 'string':
+        elif get_kind(kind1) == 'string':
             kind = kind1
             return self.track_call("@{{sprintf}}(%s, %s)" % (e1, e2), node.lineno), kind
 
@@ -3858,7 +3881,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.add_lookup('variable', v1, v1)
         self.add_lookup('variable', v2, v2)
 
-        if kind == 'number':
+        if get_kind(kind) == 'number':
             return ('((%(v1)s=%(e1)s %% (%(v2)s=%(e2)s)) < 0 && %(v2)s > 0 ? '
                     '%(v1)s + %(v2)s : %(v1)s)' % locals(), kind)
 
@@ -3875,10 +3898,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         e1, kind1 = self._typed_expr(node.left, current_klass)
         e2, kind2 = self._typed_expr(node.right, current_klass)
         kind = None
-        if kind1 == kind2 and kind1 == 'number':
+        if kind1 == kind2 and get_kind(kind1) == 'number':
             kind = kind1
 
-        if not self.operator_funcs or kind == 'number':
+        if not self.operator_funcs or get_kind(kind) == 'number':
             return "Math.pow(%s, %s)" % (e1, e2), kind
 
         s = self.spacing()
@@ -4016,7 +4039,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         save_output = self.output
         self.output = StringIO()
         if isinstance(node, self.ast.ListComp):
-            kind = 'list'
+            kind = ('list', None)
             tnode = self.ast.Discard(
                 self.ast.CallFunc(
                     self.ast.Getattr(self.ast.Name(resultvar), 'append'),
@@ -4024,7 +4047,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             )
             varinit = self.pyjslib_name("list", args='')
         elif isinstance(node, self.ast.SetComp):
-            kind = 'set'
+            kind = ('set', None)
             tnode = self.ast.Discard(
                 self.ast.CallFunc(
                     self.ast.Getattr(self.ast.Name(resultvar), 'add'),
@@ -4032,7 +4055,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             )
             varinit = self.pyjslib_name("set", args='')
         elif isinstance(node, self.ast.DictComp):
-            kind = 'dict'
+            kind = ('dict', None)
             tnode = self.ast.Assign([
                 self.ast.Subscript(self.ast.Name(resultvar),
                                    'OP_ASSIGN', [node.key])
