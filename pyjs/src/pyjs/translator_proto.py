@@ -2337,7 +2337,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                         return self.inline_len_code(v, current_klass)
                     elif v.node.name in ('int', 'long', 'float') and len(v.args) == 1:
                         kind = 'number'
-                    elif v.node.name ==  and len(v.args) == 1:
+                    elif v.node.name == 'bool' and len(v.args) == 1:
                         kind = 'bool'
                     elif v.node.name in ('sorted', 'list') and len(v.args) == 1:
                         kind = ('list', None)
