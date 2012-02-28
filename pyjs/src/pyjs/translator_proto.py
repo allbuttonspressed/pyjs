@@ -3116,7 +3116,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 raise TranslationError(
                     "unsupported flag (in _assign)", v, self.module_name)
             if self.setattr_support:
-                # getattr support implies the use of setattr
                 desc_setattr = ("%(setattr)s(%(l)s, %(a)s, %(r)s);" %
                                 dict(
                                     setattr=self.pyjslib_name('setattr'),
