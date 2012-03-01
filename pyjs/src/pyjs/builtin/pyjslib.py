@@ -6391,7 +6391,7 @@ def setattr(obj, name, value):
     if (typeof @{{name}}!= 'string') {
         throw @{{TypeError}}("attribute name must be string");
     }
-    if (@{{obj}}.__is_instance__ && typeof @{{obj}}.__setattr__ == 'function') {
+    if (@{{obj}}.__is_instance__ && typeof @{{obj}}.__setattr__ == 'function' && @{{obj}}.__setattr__ !== @{{object}}.__setattr__) {
         @{{obj}}.__setattr__(@{{name}}, @{{value}})
         return;
     }
