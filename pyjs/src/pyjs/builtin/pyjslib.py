@@ -264,7 +264,7 @@ class tuple:
         """)
 
     def __hash__(self):
-        return '$tuple$' + str(self.__array)
+        return '$tuple$' + '|'.join(map(hash, self))
 
     def __cmp__(self, l):
         if not isinstance(l, tuple):
