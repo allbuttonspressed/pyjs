@@ -4255,11 +4255,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             attr_left = self.attrib_join(attr_[:-1])
             attr_right = attr_[-1]
             attrstr = attr
-            v = self.uniqid('$attr')
-            vl = self.uniqid('$attr')
-            self.add_lookup('variable', v, v)
-            self.add_lookup('variable', vl, vl)
             if self.bound_methods or self.descriptors:
+                v = self.uniqid('$attr')
+                vl = self.uniqid('$attr')
+                self.add_lookup('variable', v, v)
+                self.add_lookup('variable', vl, vl)
                 getattr_condition = """(%(v)s=(%(vl)s=%(attr_left)s)['%(attr_right)s']) == null || ((%(vl)s.__is_instance__) && typeof %(v)s == 'function')"""
                 if self.descriptors:
                     getattr_condition += """ || (typeof %(v)s['__get__'] == 'function')"""
