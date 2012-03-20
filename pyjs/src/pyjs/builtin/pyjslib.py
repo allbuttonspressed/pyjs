@@ -411,6 +411,9 @@ JS("$pyjs_module_type.__mro__ = @{{tuple}}([$pyjs_module_type, @{{object}}]);")
 
 JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type tuple>'; };")
 
+# This is used for efficiency e.g. when handling empty *args
+_empty_tuple = ()
+
 class basestring(object):
     pass
 

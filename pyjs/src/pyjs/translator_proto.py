@@ -1716,7 +1716,7 @@ if (this.__is_instance__ === true) {\
 """ % locals(), output=output)
                 if node.varargs:
                     self.w( """\
-%(s)s\tif (typeof %(lp)s%(kwargname)s != 'undefined') %(lp)s%(varargname)s.__array.push(%(lp)s%(kwargname)s);\
+%(s)s\tif (typeof %(lp)s%(kwargname)s != 'undefined') %(lp)s%(varargname)s.push(%(lp)s%(kwargname)s);\
 """ % locals(), output=output)
                 self.w( """\
 %(s)s\t%(lpself)s%(kwargname)s = arguments[arguments.length+1];
@@ -1766,7 +1766,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 """ % locals(), output=output)
                 if node.varargs:
                     self.w( """\
-%(s)s\tif (typeof %(lp)s%(kwargname)s != 'undefined') %(lp)s%(varargname)s.__array.push(%(lp)s%(kwargname)s);\
+%(s)s\tif (typeof %(lp)s%(kwargname)s != 'undefined') %(lp)s%(varargname)s.push(%(lp)s%(kwargname)s);\
 """ % locals(), output=output)
                 self.w( """\
 %(s)s\t%(lp)s%(kwargname)s = arguments[arguments.length+1];
@@ -1782,6 +1782,12 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         if self.universal_methfuncs:
             self.w( self.dedent() + "}", output=output)
+
+        if node.varargs:
+            self.w( """\
+%s%s = %s.length ? $p['tuple'](%s) : $p['_empty_tuple'];
+""" % (self.spacing(), varargname, varargname, varargname))
+
 
     def _default_args_handler(self, node, arg_names, current_klass, kwargname,
                               lp, output=None):
@@ -1839,8 +1845,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         code = '$pyjs_array_slice.call(arguments,%d,%s)' % (start, end)
         if prepend_this:
             code = '([this]).concat(%s)' % code
+
         self.w( """\
-%s%s%s = $p['tuple'](%s);
+%s%s%s = %s;
 """ % (self.spacing(), lp, varargname, code))
 
     def _kwargs_parser(self, node, function_name, arg_names, current_klass, method_ = False):
