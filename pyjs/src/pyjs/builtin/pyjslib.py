@@ -518,6 +518,9 @@ def op_eq(a,b):
             }
             return false;
         }
+        if (typeof @{{a}}.__class__ != 'undefined') {
+            return @{{a}} === @{{b}};
+        }
         return @{{a}} == @{{b}};
     } else if (typeof @{{b}} == 'object' || typeof @{{b}} == 'function') {
         if (typeof @{{b}}.__eq__ == 'function') {
@@ -533,6 +536,9 @@ def op_eq(a,b):
                 return @{{b}}.__cmp__(@{{a}}) == 0;
             }
             return false;
+        }
+        if (typeof @{{b}}.__class__ != 'undefined') {
+            return @{{a}} === @{{b}};
         }
         return @{{a}} == @{{b}};
     }
