@@ -738,6 +738,16 @@ class TranslationError(Exception):
 def strip_py(name):
     return name
 
+def kind_context(func):
+    """Automatically set the kind context"""
+    def wrapper(self, node, *args, **kwargs):
+        self.kind_context.append(node.name or '?')
+        try:
+            return func(self, node, *args, **kwargs)
+        finally:
+            self.kind_context.pop()
+    return wrapper
+
 class Translator(object):
 
     decorator_compiler_options = {\
@@ -791,7 +801,7 @@ class Translator(object):
 
     def __init__(self, compiler,
                  module_name, module_file_name, src, mod, output,
-                 dynamic=0, findFile=None, **kw):
+                 dynamic=0, findFile=None, static_kinds=None, **kw):
 
         #monkey_patch_broken_transformer(compiler) #TODO - still necessary ??
 
@@ -827,6 +837,10 @@ class Translator(object):
         self.option_stack = []
         self.lookup_stack = [{}]
         self.kind_lookup_stack = [{}]
+        # The current "path" within the source code (func name, class name, etc.)
+        self.kind_context = [self.module_name]
+        # Static type information of the form {'module.myfunc.somevar': 'number', ...}
+        self.static_kinds = static_kinds or {}
         self.indent_level = 0
         self.__unique_ids__ = {}
         self.try_depth = -1
@@ -1145,6 +1159,10 @@ class Translator(object):
             return "$p['%(name)s'](%(args)s)" % dict(name=name, args=args)
 
     def add_lookup(self, name_type, pyname, jsname, depth=-1, kind=None):
+        kind_path = '.'.join(self.kind_context + [pyname])
+        if kind is None and kind_path in self.static_kinds:
+            kind = self.static_kinds[kind_path]
+
         jsname = self.jsname(name_type, jsname)
         if self.local_prefix is not None:
             if jsname.find(self.local_prefix) != 0:
@@ -2057,6 +2075,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             ass_name = name[1] or name[0]
             self._doImport(((sub, ass_name),), current_klass, root_level, True)
 
+    @kind_context
     def _function(self, node, current_klass, force_local=False):
         save_top_level = self.top_level
         self.push_options()
@@ -2347,11 +2366,11 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     elif v.node.name == 'bool' and len(v.args) == 1:
                         kind = 'bool'
                     elif v.node.name in ('sorted', 'list') and len(v.args) == 1:
-                        kind = ('list', None)
+                        kind = ('list', None, None)
                     elif v.node.name in ('set', 'tuple', 'dict') and len(v.args) == 1:
-                        kind = (v.node.name, None)
+                        kind = (v.node.name, None, None)
                     elif v.node.name == 'enumerate' and len(v.args) == 1:
-                        kind = ('generator', ('tuple', ('number', None)))
+                        kind = ('generator', None, ('tuple', 2, 'number', None))
                 call_name = jsname
         elif not self.getattr_support and isinstance(v.node, self.ast.Getattr):
             method_name = self.attrib_remap(v.node.attrname)
@@ -2727,6 +2746,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return [jsname, v.attrname, attr_name]
         return [self.expr(v.expr, current_klass), v.attrname, attr_name]
 
+    @kind_context
     def _class(self, node, parent_class = None):
         save_top_level = self.top_level
         if parent_class is None:
@@ -3198,21 +3218,28 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             #   should check each child and assign index if found extended flag
             for child in child_nodes:
                 pass
-            
+
             tempName = self.uniqid("$tupleassign")
-            unpack_call = self.track_call(
-                self.pyjslib_name('__ass_unpack', 
-                                  args=[expr, len(child_nodes), extended_unpack]
-                                  ), v.lineno)
-            
+            # Check if this is a fixed-length tuple
+            if (kind and get_kind(kind) in ('tuple', 'list') and
+                    get_kind(kind, 1) is not None and len(kind) - 2 == len(child_nodes)):
+                unpack_call = '%s.__array' % expr
+            else:
+                unpack_call = self.track_call(
+                    self.pyjslib_name('__ass_unpack', 
+                                      args=[expr, len(child_nodes), extended_unpack]
+                                      ), v.lineno)
+
             assigns.append("var " + tempName + " = " + unpack_call + ";")
-            
+
             for index, child in enumerate(child_nodes):
                 unpacked_value = tempName + "[" + str(index) + "]";
                 child_kind = None
-                if (kind and get_kind(kind) in ('tuple', 'list') and get_kind(kind, 1) and
-                        index < len(get_kind(kind, 1))):
-                    child_kind = get_kind(kind, 1)[index]
+                if kind and get_kind(kind) in ('tuple', 'list'):
+                    if get_kind(kind, 1) is None:
+                        child_kind = get_kind(kind, 2)
+                    else:
+                        child_kind = get_kind(kind, index + 2)
                 assigns.extend(self._assigns_list(child, current_klass, unpacked_value,
                                                   kind=child_kind))
             return assigns
@@ -3501,11 +3528,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.CallFunc):
             return self._typed_callfunc(node, current_klass, optlocal_var=True)
         elif isinstance(node, self.ast.List):
-            return self._list(node, current_klass), ('list', None)
+            return self._list(node, current_klass), ('list', None, None)
         elif isinstance(node, self.ast.Dict):
-            return self._dict(node, current_klass), ('dict', None)
+            return self._dict(node, current_klass), ('dict', None, None)
         elif isinstance(node, self.ast.Tuple):
-            return self._tuple(node, current_klass), ('tuple', None)
+            return self._tuple(node, current_klass), ('tuple', None, None)
         elif isinstance(node, self.ast.Set):
             return self._set(node, current_klass), ('set', None)
         elif isinstance(node, self.ast.Sliceobj):
@@ -3547,20 +3574,49 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             assTestvar = ""
         reuse_tuple = "false"
 
-        list_expr, list_kind = self._typed_expr(node.list, current_klass)
+        # We have special optimizations when iterating over enumerate(), for example.
+        special_optimization = None
+        if (isinstance(node.list, self.ast.CallFunc) and
+                len(node.list.args) == 1 and
+                isinstance(node.list.node, self.ast.Name) and
+                node.list.node.name == 'enumerate' and
+                self.lookup(node.list.node.name)[0] == 'builtin'):
+            list_expr, list_kind = self._typed_expr(node.list.args[0], current_klass)
+            if get_kind(list_kind) in ('list', 'tuple'):
+                special_optimization = 'enumerate'
+                inner_list_kind = None
+                if get_kind(list_kind, 1) is None:
+                    inner_list_kind = get_kind(list_kind, 2)
+                list_kind = ('list', None, ('tuple', 2, 'number', inner_list_kind))
+        if special_optimization is None:
+            list_expr, list_kind = self._typed_expr(node.list, current_klass)
 
         if get_kind(list_kind) in ('list', 'tuple'):
             rhs = '%(iterator_name)s[%(nextval)s]' % locals()
+            # Even if we can't optimize the unpacking process we can at least optimize
+            # the iteration, so go back to emulating a tuple
+            if special_optimization == 'enumerate' and (
+                    not isinstance(node.assign, self.ast.AssTuple) or
+                    len(node.assign.nodes) != 2):
+                rhs = '%s([%s, %s])' % (self.pyjslib_name('tuple'), nextval, rhs)
+                special_optimization = None
         elif self.inline_code:
             rhs = nextval
         else:
             rhs = "%s.$nextval" % nextval
 
         list_item_kind = None
-        if get_kind(list_kind) in ('list', 'tuple', 'generator'):
-            list_item_kind = get_kind(list_kind, 1)
+        if get_kind(list_kind) in ('list', 'tuple', 'generator') and \
+                get_kind(list_kind, 1) in (1, None):
+            list_item_kind = get_kind(list_kind, 2)
 
-        assigns = self._assigns_list(node.assign, current_klass, rhs, list_item_kind)
+        if special_optimization == 'enumerate':
+            assigns = self._assigns_list(node.assign.nodes[0], current_klass, nextval,
+                                         'number')
+            assigns.extend(self._assigns_list(node.assign.nodes[1], current_klass, rhs,
+                                              inner_list_kind))
+        else:
+            assigns = self._assigns_list(node.assign, current_klass, rhs, list_item_kind)
 
         if self.source_tracking:
             self.stacksize_depth += 1
@@ -4045,7 +4101,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         save_output = self.output
         self.output = StringIO()
         if isinstance(node, self.ast.ListComp):
-            kind = ('list', None)
+            kind = ('list', None, None)
             tnode = self.ast.Discard(
                 self.ast.CallFunc(
                     self.ast.Getattr(self.ast.Name(resultvar), 'append'),
@@ -4061,7 +4117,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             )
             varinit = self.pyjslib_name("set", args='')
         elif isinstance(node, self.ast.DictComp):
-            kind = ('dict', None)
+            kind = ('dict', None, None)
             tnode = self.ast.Assign([
                 self.ast.Subscript(self.ast.Name(resultvar),
                                    'OP_ASSIGN', [node.key])
