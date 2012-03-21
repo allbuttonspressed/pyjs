@@ -966,7 +966,7 @@ class Translator(object):
                 for node in child.nodes:
                     self._stmt(node, None)
             elif isinstance(child, self.ast.Slice):
-                self.w( self.spacing() + self._slice(child, None))
+                self.w( self.spacing() + self._typed_slice(child, None)[0])
             else:
                 raise TranslationError(
                     "unsupported type (in __init__)",
@@ -2951,7 +2951,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         #elif isinstance(node, self.ast.CallFunc):
         #    self._typed_callfunc(node, current_klass)[0]
         elif isinstance(node, self.ast.Slice):
-            self.w( self.spacing() + self._slice(node, current_klass))
+            self.w( self.spacing() + self._typed_slice(node, current_klass)[0])
         elif isinstance(node, self.ast.AssName):
             # TODO: support other OP_xxx types and move this to
             # a separate function
@@ -3488,7 +3488,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         expr = ",".join([self.expr(child, current_klass) for child in node.nodes])
         return "@{{op_and}}([%s])" % expr, kind
 
-    def _typed_expr(self, node, current_klass):
+    def _typed_expr(self, node, current_klass, accept_js_object=False):
         if isinstance(node, self.ast.Const):
             return self._typed_const(node)
         elif isinstance(node, self.ast.Name):
@@ -3543,6 +3543,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return self._typed_collcomp(node, current_klass)
         elif isinstance(node, self.ast.IfExp):
             return self._typed_if_expr(node, current_klass)
+        elif isinstance(node, self.ast.Slice):
+            return self._typed_slice(node, current_klass,
+                                     accept_js_object=accept_js_object)
         return self.expr(node, current_klass), None
 
 
@@ -3574,47 +3577,78 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             assTestvar = ""
         reuse_tuple = "false"
 
-        # We have special optimizations when iterating over enumerate(), for example.
+        # We have special optimizations when iterating over enumerate(), reversed(), and
+        # reversed(list(enumerate())).
         special_optimization = None
         if (isinstance(node.list, self.ast.CallFunc) and
                 len(node.list.args) == 1 and
                 isinstance(node.list.node, self.ast.Name) and
-                node.list.node.name == 'enumerate' and
+                node.list.node.name in ('enumerate', 'reversed') and
                 self.lookup(node.list.node.name)[0] == 'builtin'):
-            list_expr, list_kind = self._typed_expr(node.list.args[0], current_klass)
-            if get_kind(list_kind) in ('list', 'tuple'):
-                special_optimization = 'enumerate'
-                inner_list_kind = None
+            # First handle reversed(list(enumerate()))
+            argnode = node.list.args[0]
+            if (node.list.node.name == 'reversed' and
+                    isinstance(argnode, self.ast.CallFunc) and
+                    len(argnode.args) == 1 and
+                    isinstance(argnode.node, self.ast.Name) and
+                    argnode.node.name in ('list', 'tuple') and
+                    self.lookup(argnode.node.name)[0] == 'builtin' and
+                    isinstance(argnode.args[0], self.ast.CallFunc) and
+                    len(argnode.args[0].args) == 1 and
+                    isinstance(argnode.args[0].node, self.ast.Name) and
+                    argnode.args[0].node.name == 'enumerate' and
+                    self.lookup(argnode.args[0].node.name)[0] == 'builtin'):
+                list_expr, list_kind = self._typed_expr(argnode.args[0].args[0],
+                                                        current_klass,
+                                                        accept_js_object=True)
+                if get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
+                    special_optimization = 'reversed-enumerate'
+            else:
+                list_expr, list_kind = self._typed_expr(node.list.args[0], current_klass,
+                                                        accept_js_object=True)
+                if get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
+                    if node.list.node.name == 'enumerate':
+                        special_optimization = 'enumerate'
+                    elif node.list.node.name == 'reversed':
+                        special_optimization = 'reversed'
+            if special_optimization in ('enumerate', 'reversed-enumerate'):
+                inner_kind = None
                 if get_kind(list_kind, 1) is None:
-                    inner_list_kind = get_kind(list_kind, 2)
-                list_kind = ('list', None, ('tuple', 2, 'number', inner_list_kind))
-        if special_optimization is None:
-            list_expr, list_kind = self._typed_expr(node.list, current_klass)
+                    inner_kind = get_kind(list_kind, 2)
+                list_kind = (get_kind(list_kind), None,
+                             ('tuple', 2, 'number', inner_kind))
 
-        if get_kind(list_kind) in ('list', 'tuple'):
+        if special_optimization is None:
+            list_expr, list_kind = self._typed_expr(node.list, current_klass,
+                                                    accept_js_object=True)
+
+        if get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
             rhs = '%(iterator_name)s[%(nextval)s]' % locals()
             # Even if we can't optimize the unpacking process we can at least optimize
-            # the iteration, so go back to emulating a tuple
-            if special_optimization == 'enumerate' and (
+            # the iteration, so fall back to generating a tuple, but at least efficiently
+            if special_optimization in ('enumerate', 'reversed-enumerate') and (
                     not isinstance(node.assign, self.ast.AssTuple) or
                     len(node.assign.nodes) != 2):
                 rhs = '%s([%s, %s])' % (self.pyjslib_name('tuple'), nextval, rhs)
-                special_optimization = None
+                if special_optimization == 'reversed-enumerate':
+                    special_optimization = 'reversed'
+                else:
+                    special_optimization = None
         elif self.inline_code:
             rhs = nextval
         else:
             rhs = "%s.$nextval" % nextval
 
         list_item_kind = None
-        if get_kind(list_kind) in ('list', 'tuple', 'generator') and \
+        if get_kind(list_kind) in ('list', 'tuple', 'generator', 'jsarray') and \
                 get_kind(list_kind, 1) in (1, None):
             list_item_kind = get_kind(list_kind, 2)
 
-        if special_optimization == 'enumerate':
+        if special_optimization in ('enumerate', 'reversed-enumerate'):
             assigns = self._assigns_list(node.assign.nodes[0], current_klass, nextval,
                                          'number')
             assigns.extend(self._assigns_list(node.assign.nodes[1], current_klass, rhs,
-                                              inner_list_kind))
+                                              inner_kind))
         else:
             assigns = self._assigns_list(node.assign, current_klass, rhs, list_item_kind)
 
@@ -3624,11 +3658,21 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.add_lookup('variable', var_trackstack_size, var_trackstack_size)
             self.w( self.spacing() + "%s=$pyjs.trackstack.length;" % var_trackstack_size)
         s = self.spacing()
-        if get_kind(list_kind) in ('list', 'tuple'):
+        if get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
+            if get_kind(list_kind) == 'jsarray':
+                iterator_value = list_expr
+            else:
+                iterator_value = "%(list_expr)s.__array" % locals()
+            if special_optimization == 'reversed-enumerate':
+                iterator_value = '%s.slice(0)' % iterator_value
             self.w("""\
-%(s)s%(iterator_name)s = """ % locals() + self.track_call("%(list_expr)s.__array" % locals(), node.lineno) + ';')
-            self.w("""%(s)s%(nextval)s = -1;""" % locals())
-            condition = "++%(nextval)s < %(iterator_name)s.length" % locals()
+%(s)s%(iterator_name)s = """ % locals() + self.track_call(iterator_value, node.lineno) + ';')
+            if special_optimization in ('reversed', 'reversed-enumerate'):
+                self.w("""%(s)s%(nextval)s = %(iterator_name)s.length;""" % locals())
+                condition = "--%(nextval)s >= 0" % locals()
+            else:
+                self.w("""%(s)s%(nextval)s = -1;""" % locals())
+                condition = "++%(nextval)s < %(iterator_name)s.length" % locals()
         elif self.inline_code:
             self.w( """\
 %(s)s%(iterator_name)s = """ % locals() + self.track_call("%(list_expr)s" % locals(), node.lineno) + ';')
@@ -4221,7 +4265,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.pop_options()
         return captured_output
 
-    def _slice(self, node, current_klass):
+    def _typed_slice(self, node, current_klass, accept_js_object=False):
         lower = "0"
         upper = "null"
         if node.lower != None:
@@ -4229,13 +4273,25 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         if node.upper != None:
             upper = self.expr(node.upper, current_klass)
         if node.flags == "OP_APPLY":
+            expr, kind = self._typed_expr(node.expr, current_klass)
+            if get_kind(kind) not in ('tuple', 'list'):
+                kind = None
+            elif lower == '0' and upper == 'null':
+                # Optimization: Make a fast copy
+                if accept_js_object:
+                    return '(%s).__array.slice(0)' % expr, ('jsarray',) + kind[1:]
+                return self.pyjslib_name(get_kind(kind), args=[expr]), kind
+            elif get_kind(kind, 1) is not None:
+                # We have a list of a specific length, but we don't know the resulting
+                # length. So, let's return that we don't know what's inside.
+                kind = (get_kind(kind), None, None)
             return self.pyjslib_name("__getslice", args=[
-                self.expr(node.expr, current_klass), lower, upper
-            ])
+                expr, lower, upper
+            ]), kind
         elif node.flags == "OP_DELETE":
             return self.pyjslib_name("__delslice", args=[
                 self.expr(node.expr, current_klass), lower, upper
-            ])
+            ]), None
         else:
             raise TranslationError(
                 "unsupported flag (in _slice)", node, self.module_name)
@@ -4388,7 +4444,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.Sliceobj):
             return self._sliceobj(node, current_klass)
         elif isinstance(node, self.ast.Slice):
-            return self._slice(node, current_klass)
+            return self._typed_slice(node, current_klass)[0]
         elif isinstance(node, self.ast.Lambda):
             return self._lambda(node, current_klass)
         elif isinstance(node, self.ast.CollComp):
