@@ -237,7 +237,7 @@ function $pyjs__exception_func_class_expected(func_name, class_name, instance) {
 
 function $pyjs_check_instance_type(instance, func, first_arg) {
     var klass = func.__class__;
-    if (!$pyjs.options.arg_instance_type || typeof instance.prototype == 'undefined'
+    if (!$pyjs.options.arg_instance_type || typeof instance.__class__ == 'undefined'
             || typeof klass == 'undefined' || func.__is_staticmethod__) {
         return;
     }
@@ -256,7 +256,7 @@ function $pyjs_check_instance_type(instance, func, first_arg) {
     if (typeof instance.__is_instance__ != 'undefined'
             && func.__is_instance__ !== false
             && typeof klass != 'undefined'
-            && instance.prototype.__md5__ !== klass.__md5__
+            && instance.__class__.__md5__ !== klass.__md5__
             && !is_subtype(instance, klass)) {
         $pyjs__exception_func_instance_expected(func.__name__, klass.__name__, instance);
     }
@@ -416,11 +416,9 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     var base_mro_list = new Array();
     for (var i = 0; i < bases.length; i++) {
         if (bases[i].__mro__ != null) {
-            base_mro_list.push(new Array().concat(bases[i].__mro__.__array));
+            base_mro_list.push([].concat(bases[i].__mro__.__array));
         } else if (typeof bases[i].__class__ == 'function') {
-            base_mro_list.push(new Array().concat([bases[i].__class__]));
-        } else if (typeof bases[i].prototype == 'function') {
-            base_mro_list.push(new Array().concat([bases[i].prototype]));
+            base_mro_list.push([bases[i].__class__]);
         }
     }
     var __mro__ = $pyjs__mro_merge(base_mro_list);
@@ -481,7 +479,6 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     if (typeof pyjslib.tuple != 'undefined') {
         cls_fn.__mro__ = pyjslib.tuple(__mro__);
     }
-    cls_fn.prototype = cls_fn;
     cls_fn.__dict__ = cls_fn;
     cls_fn.__is_instance__ = false;
     cls_fn.__super_classes__ = bases;
@@ -690,7 +687,7 @@ function $pyjs_instance_method_get(inst, args,
         if arg_names and self.function_argument_checking:
             self.w( """\
 if ($pyjs.options.arg_instance_type) {
-\tif (%(self)s.prototype.__md5__ !== '%(__md5__)s') {
+\tif (%(self)s.__class__.__md5__ !== '%(__md5__)s') {
 \t\tif (!@{{_isinstance}}(%(self)s, arguments['callee']['__class__'])) {
 \t\t\t$pyjs__exception_func_instance_expected(arguments['callee']['__name__'], arguments['callee']['__class__']['__name__'], %(self)s);
 \t\t}

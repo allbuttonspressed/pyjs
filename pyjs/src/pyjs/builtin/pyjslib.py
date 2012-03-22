@@ -5763,15 +5763,16 @@ def super(typ, object_or_type = None):
         return fn;
     }
     var obj = {};
-    var cls = function() {};
-    cls.prototype = obj;
     function wrapper(obj, name) {
         var fnwrap = function() {
             return obj[name].apply(@{{object_or_type}},
                                    $pyjs_array_slice.call(arguments));
         };
         fnwrap.__name__ = name;
-        fnwrap.__args__ = obj[name].__args__;
+        if (obj[name].__args__ != null) {
+            // Remove the bound instance from the args list
+            fnwrap.__args__ = obj[name].__args__.slice(0, 2).concat(obj[name].__args__.slice(3));
+        }
         return fnwrap;
     }
     for (var m in fn) {
@@ -5781,7 +5782,6 @@ def super(typ, object_or_type = None):
             obj[m] = fn[m];
         }
     }
-    obj = new cls();
     obj.__is_instance__ = @{{object_or_type}}.__is_instance__;
     return obj;
     """)
@@ -6130,7 +6130,7 @@ def _isinstance(object_, classinfo):
     var n = __mro__.length;
     if (@{{classinfo}}.__is_instance__ === false) {
         while (--n >= 0) {
-            if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}.prototype) {
+            if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}) {
                 return true;
             }
         }
@@ -6166,7 +6166,7 @@ def _issubtype(object_, classinfo):
     var n = __mro__.length;
     if (@{{classinfo}}.__is_instance__ === false) {
         while (--n >= 0) {
-            if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}.prototype) {
+            if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}) {
                 return true;
             }
         }
