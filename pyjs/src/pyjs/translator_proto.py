@@ -443,6 +443,11 @@ def get_kind(kind, level=0):
     assert level == 0
     return kind
 
+class RawNode(object):
+    def __init__(self, value, lineno):
+        self.value = value
+        self.lineno = lineno
+
 # pass in the compiler module (lib2to3 pgen or "standard" python one)
 # and patch transformer. see http://bugs.python.org/issue6978
 def monkey_patch_broken_transformer(compiler): # USELESS NOW
@@ -2322,10 +2327,20 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         self.w( self.spacing() + "continue;")
 
 
+    def _is_builtin_call(self, node, names, argcount=1):
+        if isinstance(names, basestring):
+            names = (names,)
+        return node.node.name if (isinstance(node, self.ast.CallFunc) and
+                len(node.args) == argcount and
+                isinstance(node.node, self.ast.Name) and
+                node.node.name in names and
+                self.lookup(node.node.name)[0] == 'builtin') else None
+
     def _typed_callfunc_code(self, v, current_klass, is_statement=False, optlocal_var=False):
         self.ignore_debug = False
         is_builtin = False
         method_name = None
+        fast_super_call = False
         call_args = []
         kind = None
         if isinstance(v.node, self.ast.Name):
@@ -2382,6 +2397,21 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     elif v.node.name == 'enumerate' and len(v.args) == 1:
                         kind = ('generator', None, ('tuple', 2, 'number', None))
                 call_name = jsname
+        elif isinstance(v.node, self.ast.Getattr) and \
+                self._is_builtin_call(v.node.expr, 'super', 2):
+            fast_super_call = True
+            params = [self.expr(arg, current_klass) for arg in v.node.expr.args]
+            if not isinstance(v.node.expr.args[1], self.ast.Name):
+                call_name = self.uniqid('$superself')
+                self.add_lookup('variable', call_name, call_name)
+                self.w(self.spacing() + 'var %s = %s;' % (params[1]))
+                params[1] = call_name
+            else:
+                call_name = params[1]
+            super_expr = self.pyjslib_name('_fast_super', params)
+            super_node = self.ast.Getattr(RawNode(super_expr, v.node.expr.lineno),
+                                          v.node.attrname, v.node.lineno)
+            method_name = self.expr(super_node, current_klass)
         elif not self.getattr_support and isinstance(v.node, self.ast.Getattr):
             method_name = self.attrib_remap(v.node.attrname)
             if isinstance(v.node.expr, self.ast.Name):
@@ -2432,10 +2462,12 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             if method_name is None:
                 method_name = call_name
                 call_name = 'null'
-            else:
+            elif not fast_super_call:
                 method_name = uescapejs(method_name)
             call_code = "$pyjs_kwargs_call(%s, %s, %s, %s, [%s], %s)" % (
                 call_name, method_name, star_arg_name, dstar_arg_name, fn_args, fn_kwargs)
+        elif fast_super_call:
+            call_code = '%s.apply(%s, [%s])' % (method_name, call_name, ", ".join(call_args))
         else:
             if method_name is not None:
                 call_name = "%s['%s']" % (call_name, method_name)
@@ -2692,15 +2724,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         attr_name = self.attrib_remap(v.attrname)
         if use_getattr:
             expr = self.expr(v.expr, current_klass)
-            return ["@{{getattr}}(%s, '%s')" % (expr, attr_name)]
-
+            return [self.pyjslib_name('getattr', (expr, uescapejs(attr_name)))]
 
         if isinstance(v.expr, self.ast.Name):
             obj = self._typed_name(v.expr, current_klass, return_none_for_module=True)[0]
             if not use_getattr or attr_name == '__class__' or \
                     attr_name == '__name__':
                 return [obj, attr_name]
-            return ["@{{getattr}}(%s, '%s')" % (obj, attr_name)]
+            return [self.pyjslib_name('getattr', (obj, uescapejs(attr_name)))]
 
         elif isinstance(v.expr, self.ast.Getattr):
             return self._getattr(v.expr, current_klass) + [attr_name]
@@ -2747,7 +2778,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
     def _getattr2(self, v, current_klass, attr_name):
         if isinstance(v.expr, self.ast.Getattr):
             return self._getattr2(v.expr, current_klass, v.attrname) + [attr_name]
-        if isinstance(v.expr, self.ast.Name):
+        elif isinstance(v.expr, self.ast.Name):
             name_type, pyname, jsname, depth, is_local, varkind = self.lookup(v.expr.name)
             if name_type is None:
                 jsname = self.scopeName(jsname, depth, is_local)
@@ -3595,24 +3626,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         # We have special optimizations when iterating over enumerate(), reversed(), and
         # reversed(list(enumerate())).
         special_optimization = None
-        if (isinstance(node.list, self.ast.CallFunc) and
-                len(node.list.args) == 1 and
-                isinstance(node.list.node, self.ast.Name) and
-                node.list.node.name in ('enumerate', 'reversed') and
-                self.lookup(node.list.node.name)[0] == 'builtin'):
+        if self._is_builtin_call(node.list, ('enumerate', 'reversed')):
             # First handle reversed(list(enumerate()))
             argnode = node.list.args[0]
             if (node.list.node.name == 'reversed' and
-                    isinstance(argnode, self.ast.CallFunc) and
-                    len(argnode.args) == 1 and
-                    isinstance(argnode.node, self.ast.Name) and
-                    argnode.node.name in ('list', 'tuple') and
-                    self.lookup(argnode.node.name)[0] == 'builtin' and
-                    isinstance(argnode.args[0], self.ast.CallFunc) and
-                    len(argnode.args[0].args) == 1 and
-                    isinstance(argnode.args[0].node, self.ast.Name) and
-                    argnode.args[0].node.name == 'enumerate' and
-                    self.lookup(argnode.args[0].node.name)[0] == 'builtin'):
+                    self._is_builtin_call(argnode, ('list', 'tuple')) and
+                    self._is_builtin_call(argnode.args[0], 'enumerate')):
                 list_expr, list_kind = self._typed_expr(argnode.args[0].args[0],
                                                         current_klass,
                                                         accept_js_object=True)
@@ -4464,7 +4483,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return self._lambda(node, current_klass)
         elif isinstance(node, self.ast.CollComp):
             return self._typed_collcomp(node, current_klass)[0]
-
         elif isinstance(node, self.ast.IfExp):
             return self._typed_if_expr(node, current_klass)[0]
         elif isinstance(node, self.ast.Yield):
@@ -4473,6 +4491,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return self._backquote(node, current_klass)
         elif isinstance(node, self.ast.GenExpr):
             return self._genexpr(node, current_klass)
+        elif isinstance(node, RawNode):
+            return node.value
         else:
             raise TranslationError(
                 "unsupported type (in expr)", node, self.module_name)

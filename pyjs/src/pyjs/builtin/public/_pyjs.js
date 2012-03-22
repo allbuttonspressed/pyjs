@@ -10,12 +10,10 @@ var $pyjs_module_type = {
 
 function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
 {
-    if (obj !== null) {
+    if (obj !== null && typeof func != 'function') {
+        func = obj[func];
         if (obj.__is_instance__ === true && obj.hasOwnProperty(func)) {
-            func = obj[func];
             obj = null;
-        } else {
-            func = obj[func];
         }
     }
 
@@ -510,7 +508,8 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     if (class_name !== 'super') {
         var super_cache = [];
         for (var index = 0; index < __mro__.length - 1; index++) {
-            super_cache.push($pyjs_type('super', __mro__.slice(index + 1), {}));
+            super_cache.push($pyjs_type('super', __mro__.slice(index + 1),
+                                        {$_fast_super: true}));
         }
         cls_fn.__$super_cache__ = super_cache;
     }

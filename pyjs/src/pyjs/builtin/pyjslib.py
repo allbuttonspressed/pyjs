@@ -5734,7 +5734,7 @@ class property(object):
         self.fdel = fdel
         return self
 
-def super(typ, object_or_type = None):
+def _fast_super(typ, object_or_type):
     # This is a partial implementation: only super(type, object)
     if not _issubtype(object_or_type, typ):
         raise TypeError("super(type, obj): obj must be an instance or subtype of type")
@@ -5759,6 +5759,13 @@ def super(typ, object_or_type = None):
     }
     fn.__new__ = fn.__mro__.__array[1].__new__;
     fn.__init__ = fn.__mro__.__array[1].__init__;
+    return fn;
+    """)
+
+def super(typ, object_or_type = None):
+    # This is a partial implementation: only super(type, object)
+    JS("""
+    var fn = @{{_fast_super}}(typ, object_or_type);
     if (@{{object_or_type}}.__is_instance__ === false) {
         return fn;
     }
@@ -5776,6 +5783,9 @@ def super(typ, object_or_type = None):
         return fnwrap;
     }
     for (var m in fn) {
+        if (m === '$_fast_super') {
+            continue;
+        }
         if (typeof fn[m] == 'function') {
             obj[m] = wrapper(fn, m);
         } else {
@@ -6280,7 +6290,7 @@ def getattr(obj, name, default_value=_undefined):
 
     var method = @{{obj}}[re_mapped];
 
-    if (method === null)
+    if (method === null || @{{obj}}.$_fast_super)
         return method;
 
     if (typeof method.__get__ == 'function') {
