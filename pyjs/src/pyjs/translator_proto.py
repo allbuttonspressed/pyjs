@@ -2799,7 +2799,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             debug_class_name = ''
         class_name = self.add_lookup('class', node.name, class_name)
         self.w( self.indent() + class_name + """ = (function %(debug_class_name)s(){
-%(s)svar %(p)s = new Object();
+%(s)svar %(p)s = {};
 %(s)svar $method;
 %(s)s%(p)s.__module__ = %(mp)s__name__;""" % {'s': self.spacing(), 'p': local_prefix, 'mp': self.module_prefix,
                                               'debug_class_name': debug_class_name})
