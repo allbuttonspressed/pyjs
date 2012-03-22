@@ -339,10 +339,7 @@ function $pyjs__class_instance(class_name, module_name) {
             instance = cls_fn.__new__.apply(null, [cls_fn, arguments[0]]);
             args = arguments;
         } else {
-            args = [cls_fn];
-            for (i=0; i<arguments.length; i++) {
-                args.push(arguments[i]);
-            }
+            args = [cls_fn].concat($pyjs_array_slice.call(arguments));
             init_args = args;
             var kwargs = null;
             if (arguments.length >= 1) {
