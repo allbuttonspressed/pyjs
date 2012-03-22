@@ -873,7 +873,11 @@ class Translator(object):
             self.import_context = "null"
             self.relative_import_context = None
 
-        self.w( self.indent() + "$pyjs.loaded_modules['%s'] = function (__mod_name__) {" % module_name)
+        if self.debuggable_function_names:
+            module_debug_name = '$mod$' + '$'.join(self.kind_context).replace('.', '$')
+        else:
+            module_debug_name = ''
+        self.w( self.indent() + "$pyjs.loaded_modules['%s'] = function %s(__mod_name__) {" % (module_name, module_debug_name))
         self.w( self.spacing() + "if($pyjs.loaded_modules['%s'].__was_initialized__) return $pyjs.loaded_modules['%s'];"% (module_name, module_name))
         if self.parent_module_name:
             self.w( self.spacing() + "if(typeof $pyjs.loaded_modules['%s'] == 'undefined' || !$pyjs.loaded_modules['%s'].__was_initialized__) @{{___import___}}('%s', null);"% (self.parent_module_name, self.parent_module_name, self.parent_module_name))
@@ -2141,12 +2145,12 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         #if node.kwargs: declared_arg_names.append(kwargname)
 
         real_name = node.name
-        if self.debuggable_function_names:
-            debug_name = ' $fn$' + '$'.join(self.kind_context).replace('.', '$')
-        else:
-            debug_name = ''
         if force_local:
             real_name = '<lambda>'
+        if self.debuggable_function_names:
+            debug_name = '$fn$' + '$'.join(self.kind_context).replace('.', '$')
+        else:
+            debug_name = ''
 
         is_method = is_class_definition
         if is_class_definition and (real_name == '__new__' or node.decorators):
@@ -2158,7 +2162,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             function_args = ", ".join(declared_arg_names)
 
         self.indent()
-        self.w("$pyjs__prepare_func('%s', function%s(%s) {" % (real_name, debug_name, function_args))
+        self.w("$pyjs__prepare_func('%s', function %s(%s) {" % (real_name, debug_name, function_args))
         self.w(self.spacing() + "  var $pyjs_last_exception, $pyjs_last_exception_stack;")
 
         defaults_done_by_inline = False
@@ -2789,11 +2793,16 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
         if node.name in ['object', 'pyjslib.Object', 'pyjslib.object']:
             base_classes = []
+        if self.debuggable_function_names:
+            debug_class_name = '$cls$' + '$'.join(self.kind_context).replace('.', '$')
+        else:
+            debug_class_name = ''
         class_name = self.add_lookup('class', node.name, class_name)
-        self.w( self.indent() + class_name + """ = (function(){
+        self.w( self.indent() + class_name + """ = (function %(debug_class_name)s(){
 %(s)svar %(p)s = new Object();
 %(s)svar $method;
-%(s)s%(p)s.__module__ = %(mp)s__name__;""" % {'s': self.spacing(), 'p': local_prefix, 'mp': self.module_prefix})
+%(s)s%(p)s.__module__ = %(mp)s__name__;""" % {'s': self.spacing(), 'p': local_prefix, 'mp': self.module_prefix,
+                                              'debug_class_name': debug_class_name})
 
         if self.function_argument_checking or self.module_name == 'pyjslib':
             self.w( self.spacing() + "%(p)s.__md5__ = '%(m)s';" % {'p': local_prefix, 'm': current_klass.__md5__})
