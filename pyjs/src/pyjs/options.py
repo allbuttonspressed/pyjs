@@ -4,6 +4,7 @@ pythonic_options={}
 
 all_compile_options = dict(
     debug=False,
+    debuggable_function_names=True,
     print_statements=True,
     function_argument_checking=False,
     attribute_checking=False,

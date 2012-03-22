@@ -1058,7 +1058,8 @@ class Translator(object):
 
     def push_options(self):
         self.option_stack.append((\
-            self.debug, self.print_statements, self.function_argument_checking,
+            self.debug, self.debuggable_function_names, self.print_statements,
+            self.function_argument_checking,
             self.attribute_checking, self.name_checking, self.getattr_support,
             self.setattr_support, self.call_support, self.universal_methfuncs,
             self.bound_methods, self.descriptors,
@@ -1068,7 +1069,8 @@ class Translator(object):
         ))
     def pop_options(self):
         (\
-            self.debug, self.print_statements, self.function_argument_checking,
+            self.debug, self.debuggable_function_names, self.print_statements,
+            self.function_argument_checking,
             self.attribute_checking, self.name_checking, self.getattr_support,
             self.setattr_support, self.call_support, self.universal_methfuncs,
             self.bound_methods, self.descriptors,
@@ -2139,6 +2141,10 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         #if node.kwargs: declared_arg_names.append(kwargname)
 
         real_name = node.name
+        if self.debuggable_function_names:
+            debug_name = ' $fn$' + '$'.join(self.kind_context).replace('.', '$')
+        else:
+            debug_name = ''
         if force_local:
             real_name = '<lambda>'
 
@@ -2152,7 +2158,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             function_args = ", ".join(declared_arg_names)
 
         self.indent()
-        self.w("$pyjs__prepare_func('%s', function(%s) {" % (real_name, function_args))
+        self.w("$pyjs__prepare_func('%s', function%s(%s) {" % (real_name, debug_name, function_args))
         self.w(self.spacing() + "  var $pyjs_last_exception, $pyjs_last_exception_stack;")
 
         defaults_done_by_inline = False
