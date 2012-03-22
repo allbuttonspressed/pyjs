@@ -2030,6 +2030,11 @@ cmp = JS("""function(a, b) {
     } else if ((typeof b == 'object' || typeof b == 'function') && typeof b.__cmp__ == 'function') {
         return -b.__cmp__(a);
     }
+    if (a && b && (typeof a.__class__ != 'undefined' || typeof b.__class__ != 'undefined')) {
+        if (a === b)
+            return 0;
+        return @{{cmp}}(@{{__hash}}(a), @{{__hash}}(b));
+    }
     if (a == b) return 0;
     if (a > b) return 1;
     return -1;
@@ -6259,11 +6264,13 @@ def getattr(obj, name, default_value=_undefined):
         re_mapped = '$$' + @{{name}};
     }
 
-    if (typeof @{{obj}}[re_mapped] == 'undefined') {
+    var method = @{{obj}}[re_mapped];
+
+    if (typeof method == 'undefined') {
         if (typeof @{{obj}} == 'function' && re_mapped == '__call__') {
             return @{{obj}};
         }
-        
+
         if (@{{obj}}.__is_instance__ === true &&
                     typeof @{{obj}}.__getattr__ == 'function') {
             // pass the pure name to __getattr__ not the remapped one! (the user
@@ -6287,8 +6294,6 @@ def getattr(obj, name, default_value=_undefined):
         }
         return @{{default_value}};
     }
-
-    var method = @{{obj}}[re_mapped];
 
     if (method === null || @{{obj}}.$_fast_super)
         return method;
@@ -6334,18 +6339,18 @@ def getattr(obj, name, default_value=_undefined):
 
         return method.apply(@{{obj}}, $pyjs_array_slice.call(arguments));
     };
-    
+
     // copy all attribues
     for (var attr in method) {
         if (attr !== '__is_staticmethod__' && attr !== '__is_classmethod__') {
             fnwrap[attr] = method[attr];
         }
     }
-     
+
     fnwrap.__name__ = re_mapped;
     if (fnwrap.__args__ != null) {
         // Remove the bound instance from the args list
-        fnwrap.__args__ = $pyjs_array_slice.call(fnwrap.__args__, 0, 2).concat($pyjs_array_slice.call(fnwrap.__args__, 3));
+        fnwrap.__args__ = fnwrap.__args__.slice(0, 2).concat(fnwrap.__args__.slice(3));
     }
     fnwrap.__is_staticmethod__ = true;
     fnwrap.__class__ = @{{obj}}.__class__;
