@@ -325,7 +325,7 @@ class tuple:
 
             for (; start < len; start++) {
                 if ( /*start in selfXXX.__array && */
-                    @{{cmp}}(@{{self}}.__array[start], @{{value}}) == 0)
+                    @{{op_eq}}(@{{self}}.__array[start], @{{value}}))
                     return start;
             }
         }
