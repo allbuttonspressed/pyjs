@@ -473,11 +473,13 @@ def op_eq(a,b):
         return @{{a}} === @{{b}};
     }
 
-    if (@{{a}} === @{{b}}) {
-        if (@{{a}}.__is_instance__ === false &&
-            @{{b}}.__is_instance__ === false) {
-            return true;
-        }
+    if (@{{a}} === @{{b}} && @{{a}}.__is_instance__ !== true &&
+            @{{b}}.__is_instance__ !== true) {
+        return true;
+    }
+
+    if (typeof @{{a}} == 'string' && typeof @{{b}} == 'string') {
+        return @{{a}} == @{{b}};
     }
 
     switch ((@{{a}}.__number__ << 8) | @{{b}}.__number__) {
