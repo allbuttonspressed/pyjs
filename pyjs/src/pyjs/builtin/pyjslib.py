@@ -4341,9 +4341,9 @@ $enumerate_array.prototype.$genfunc = $enumerate_array.prototype.next;
 # NOTE: $genfunc is defined to enable faster loop code
 
 class list:
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         # initialize memory using a JS array
-        self = super(list, cls).__new__(cls, *args, **kwargs)
+        self = object.__new__(cls)
         JS("""
         @{{self}}.__array = [];
         return @{{self}};
@@ -4743,9 +4743,9 @@ class slice:
 JS("@{{slice}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type slice>'; };")
 
 class dict:
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         # initialize memory
-        self = super(dict, cls).__new__(cls, *args, **kwargs)
+        self = object.__new__(cls)
         JS("""
         @{{self}}.__object = {};
         return @{{self}};
@@ -5102,30 +5102,13 @@ class dict:
 JS("@{{dict}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type dict>'; };")
 
 # __empty_dict is used in kwargs initialization
-# There must me a temporary __new__ and __init__ function used to prevent infinite
-# recursion
 def __empty_dict():
-    JS("""
-    var dict__new__ = @{{dict}}.__new__;
-    var dict__init__ = @{{dict}}.__init__;
-    var d;
-    @{{dict}}.__new__ = function(cls) {
-        var self = @{{super}}(@{{dict}}, cls).__new__(cls);
-        self.__object = {};
-        return self;
-    };
-    @{{dict}}.__init__ = function() {
-    };
-    d = @{{dict}}();
-    d.__new__ = @{{dict}}.__new__ = dict__new__;
-    d.__init__ = @{{dict}}.__init__ = dict__init__;
-    return d;
-""")
+    return dict.__new__(dict)
 
 class BaseSet(object):
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         # initialize memory
-        self = super(BaseSet, cls).__new__(cls, *args, **kwargs)
+        self = object.__new__(cls)
         JS("""
         @{{self}}.__object = {};
         return @{{self}};
@@ -5590,7 +5573,7 @@ class frozenset(BaseSet):
             Input data can be Array(key, val), iteratable (key,val) or
             Object/Function
         """
-        self = super(frozenset, cls).__new__(cls, _data)
+        self = BaseSet.__new__(cls)
         if _data is None:
             data = JS("[]")
         else:

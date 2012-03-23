@@ -397,6 +397,37 @@ PYJSLIB_BUILTIN_MAPPING = {\
     'None': 'null',
 }
 
+PYJSLIB_STATIC_KINDS = {
+    'True': 'bool',
+    'False': 'bool',
+    'None': 'null',
+    'bool': ('func', 'bool'),
+    'int': ('func', 'number'),
+    'long': ('func', 'number'),
+    'float': ('func', 'number'),
+    'set': ('func', ('set', None)),
+    'tuple': ('func', ('tuple', None, None)),
+    'list': ('func', ('list', None, None)),
+    'sorted': ('func', ('list', None, None)),
+    'dict': ('func', ('dict', None, None)),
+    'enumerate': ('func', ('generator', None, ('tuple', 2, 'number', None))),
+    '_isinstance': ('func', 'bool'),
+    'isinstance': ('func', 'bool'),
+    '_issubtype': ('func', 'bool'),
+    'issubclass': ('func', 'bool'),
+    'hasattr': ('func', 'bool'),
+}
+STATIC_KINDS = {'pyjslib.' + key: value for key, value in PYJSLIB_STATIC_KINDS.items()}
+
+CONTEXT_OPTIONS = {
+    'pyjslib.list.__new__': dict(function_argument_checking=False),
+    'pyjslib.tuple.__new__': dict(function_argument_checking=False),
+    'pyjslib.dict.__new__': dict(function_argument_checking=False),
+    'pyjslib.BaseSet.__new__': dict(function_argument_checking=False),
+    'pyjslib.frozenset.__new__': dict(function_argument_checking=False),
+    'pyjslib.__empty_dict': dict(function_argument_checking=False),
+}
+
 SCOPE_KEY = 0
 
 # Variable names that should be remapped in functions/methods
@@ -744,12 +775,21 @@ def strip_py(name):
     return name
 
 def kind_context(func):
-    """Automatically set the kind context"""
+    """Automatically set the kind context and context-specific compilation options"""
     def wrapper(self, node, *args, **kwargs):
         self.kind_context.append(node.name or '?')
+        self.push_options()
         try:
+            context = '.'.join(self.kind_context)
+            if context in self.context_options:
+                for key, value in self.context_options[context].items():
+                    if key not in all_compile_options:
+                        raise TranslationError('Unknown compilation option: %s' % key,
+                                               node, self.module_name)
+                    setattr(self, key, value)
             return func(self, node, *args, **kwargs)
         finally:
+            self.pop_options()
             self.kind_context.pop()
     return wrapper
 
@@ -806,7 +846,7 @@ class Translator(object):
 
     def __init__(self, compiler,
                  module_name, module_file_name, src, mod, output,
-                 dynamic=0, findFile=None, static_kinds=None, **kw):
+                 dynamic=0, findFile=None, context_options=None, static_kinds=None, **kw):
 
         #monkey_patch_broken_transformer(compiler) #TODO - still necessary ??
 
@@ -844,8 +884,12 @@ class Translator(object):
         self.kind_lookup_stack = [{}]
         # The current "path" within the source code (func name, class name, etc.)
         self.kind_context = [self.module_name]
+        # Context-specific compilation options
+        self.context_options = CONTEXT_OPTIONS.copy()
+        self.context_options.update(context_options or {})
         # Static type information of the form {'module.myfunc.somevar': 'number', ...}
-        self.static_kinds = static_kinds or {}
+        self.static_kinds = STATIC_KINDS.copy()
+        self.static_kinds.update(static_kinds or {})
         self.indent_level = 0
         self.__unique_ids__ = {}
         self.try_depth = -1
@@ -1015,7 +1059,7 @@ class Translator(object):
             self.w( '/*')
             self.w( 'PYJS_JS: %s' % repr(self.imported_js))
             self.w( '*/')
-            
+
     def set_compile_options(self, opts):
         opts = dict(all_compile_options, **opts)
         for opt, value in opts.iteritems():
@@ -1174,6 +1218,11 @@ class Translator(object):
         if kind is None and kind_path in self.static_kinds:
             kind = self.static_kinds[kind_path]
 
+        if len(self.lookup_stack) == 1 and depth in (-1, 0) and \
+                self.module_name == 'pyjslib' and \
+                name_type in ('variable', 'function', 'class'):
+            name_type = 'builtin'
+
         jsname = self.jsname(name_type, jsname)
         if self.local_prefix is not None:
             if jsname.find(self.local_prefix) != 0:
@@ -1223,6 +1272,12 @@ class Translator(object):
                 name_type = 'builtin'
                 pyname = name
                 jsname = PYJSLIB_BUILTIN_MAPPING[name]
+
+        if depth <= 0 and name_type == 'builtin':
+            kind_key = 'pyjslib.' + name
+            if kind_key in self.static_kinds and kind is None:
+                kind = self.static_kinds[kind_key]
+
         is_local = (name_type is not None) and \
                     (max_depth > 0) and (max_depth == depth)
         #if self.create_locals:
@@ -2128,14 +2183,22 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         arg_names = []
         py_arg_names = []
-        for arg in node.argnames:
+        for argindex, arg in enumerate(node.argnames):
             if isinstance(arg, tuple):
                 for a in arg:
                     py_arg_names.append(a)
                     arg_names.append(self.add_lookup('variable', a, a))
             else:
                 py_arg_names.append(arg)
-                arg_names.append(self.add_lookup('variable', arg, arg))
+                arg_kind = None
+                if node.kwargs:
+                    if argindex == len(node.argnames) - 1:
+                        arg_kind = ('dict', 'string', None)
+                    elif node.varargs and argindex == len(node.argnames) - 2:
+                        arg_kind = ('tuple', None, None)
+                elif node.varargs and argindex == len(node.argnames) - 1:
+                    arg_kind = ('tuple', None, None)
+                arg_names.append(self.add_lookup('variable', arg, arg, kind=arg_kind))
 
         normal_arg_names = list(arg_names)
         if node.kwargs:
@@ -2345,6 +2408,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         kind = None
         if isinstance(v.node, self.ast.Name):
             name_type, pyname, jsname, depth, is_local, varkind = self.lookup(v.node.name)
+            if get_kind(varkind) == 'func':
+                kind = get_kind(varkind, 1)
             if name_type == '__pyjamas__':
                 try:
                     raw_js = getattr(__pyjamas__, v.node.name)
@@ -2386,16 +2451,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     is_builtin = True
                     if v.node.name == 'len' and len(v.args) == 1:
                         return self.inline_len_code(v, current_klass)
-                    elif v.node.name in ('int', 'long', 'float') and len(v.args) == 1:
-                        kind = 'number'
-                    elif v.node.name == 'bool' and len(v.args) == 1:
-                        kind = 'bool'
-                    elif v.node.name in ('sorted', 'list') and len(v.args) == 1:
-                        kind = ('list', None, None)
-                    elif v.node.name in ('set', 'tuple', 'dict') and len(v.args) == 1:
-                        kind = (v.node.name, None, None)
-                    elif v.node.name == 'enumerate' and len(v.args) == 1:
-                        kind = ('generator', None, ('tuple', 2, 'number', None))
                 call_name = jsname
         elif isinstance(v.node, self.ast.Getattr) and \
                 self._is_builtin_call(v.node.expr, 'super', 2):
@@ -2404,7 +2459,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             if not isinstance(v.node.expr.args[1], self.ast.Name):
                 call_name = self.uniqid('$superself')
                 self.add_lookup('variable', call_name, call_name)
-                self.w(self.spacing() + 'var %s = %s;' % (params[1]))
+                self.w(self.spacing() + '%s = %s;' % (params[1]))
                 params[1] = call_name
             else:
                 call_name = params[1]
@@ -2432,8 +2487,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         kwargs = []
         star_arg_name = None
+        star_arg_kind = None
         if v.star_args:
-            star_arg_name = self.expr(v.star_args, current_klass)
+            star_arg_name, star_arg_kind = self._typed_expr(v.star_args, current_klass)
         dstar_arg_name = None
         if v.dstar_args:
             dstar_arg_name = self.expr(v.dstar_args, current_klass)
@@ -2453,8 +2509,22 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         else:
             fn_kwargs = 'null'
 
-        if kwargs or star_arg_name or dstar_arg_name or (self.call_support and
-                                                         not is_builtin):
+        if star_arg_name and get_kind(star_arg_kind) in ('tuple', 'list') and \
+                not kwargs and not dstar_arg_name and not self.call_support:
+            if fast_super_call:
+                call_code = '%s.apply(%s, [%s].concat(%s.__array))' % (
+                    method_name, call_name, ", ".join(call_args), star_arg_name)
+            else:
+                varname = self.uniqid('$callself')
+                self.add_lookup('variable', varname, varname)
+                self.w(self.spacing() + '%s = %s;' % (varname, call_name))
+                call_name = varname
+                if method_name is not None:
+                    call_name = "%s['%s']" % (call_name, method_name)
+                call_code = "%s.apply(%s, [%s].concat(%s))" % (
+                    call_name, varname, ", ".join(call_args), star_arg_name)
+        elif kwargs or star_arg_name or dstar_arg_name or (self.call_support and
+                                                           not is_builtin):
             if not star_arg_name:
                 star_arg_name = 'null'
             if not dstar_arg_name:
@@ -3539,12 +3609,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return self._typed_const(node)
         elif isinstance(node, self.ast.Name):
             return self._typed_name(node, current_klass, optlocal_var=True)
-        elif isinstance(node, self.ast.Name):
-            expr = self.expr(node, current_klass)
-            kind = None
-            if expr in ('true', 'false'):
-                kind = 'bool'
-            return expr, kind
         elif isinstance(node, self.ast.Mul):
             return self._typed_mul(node, current_klass)
         elif isinstance(node, self.ast.Add):
