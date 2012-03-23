@@ -411,11 +411,13 @@ PYJSLIB_STATIC_KINDS = {
     'sorted': ('func', ('list', None, None)),
     'dict': ('func', ('dict', None, None)),
     'enumerate': ('func', ('generator', None, ('tuple', 2, 'number', None))),
+    'hasattr': ('func', 'bool'),
+
     '_isinstance': ('func', 'bool'),
     'isinstance': ('func', 'bool'),
     '_issubtype': ('func', 'bool'),
     'issubclass': ('func', 'bool'),
-    'hasattr': ('func', 'bool'),
+    'isSet': ('func', 'number'),
 }
 STATIC_KINDS = {'pyjslib.' + key: value for key, value in PYJSLIB_STATIC_KINDS.items()}
 
@@ -426,6 +428,8 @@ CONTEXT_OPTIONS = {
     'pyjslib.BaseSet.__new__': dict(function_argument_checking=False),
     'pyjslib.frozenset.__new__': dict(function_argument_checking=False),
     'pyjslib.__empty_dict': dict(function_argument_checking=False),
+    'pyjslib.isSet': dict(function_argument_checking=False),
+    'pyjslib.BaseSet.__nonzero__': dict(function_argument_checking=False),
 }
 
 SCOPE_KEY = 0
@@ -777,7 +781,10 @@ def strip_py(name):
 def kind_context(func):
     """Automatically set the kind context and context-specific compilation options"""
     def wrapper(self, node, *args, **kwargs):
-        self.kind_context.append(node.name or '?')
+        name = node.name or ''
+        if isinstance(node, self.ast.Function) and name.startswith('$lambda'):
+            name = '$lambda'
+        self.kind_context.append(name)
         self.push_options()
         try:
             context = '.'.join(self.kind_context)
@@ -946,7 +953,7 @@ class Translator(object):
         lhs = self.scopeName('__name__', 0, False)
         self.w( self.spacing() + "%s = __mod_name__;" % (lhs))
         if self.source_tracking:
-            self.w( self.spacing() + "%s__track_lines__ = new Array();" % self.module_prefix)
+            self.w( self.spacing() + "%s__track_lines__ = [];" % self.module_prefix)
         name = module_name.split(".")
         if len(name) > 1:
             jsname = self.jsname('variable', name[-1])
@@ -1273,9 +1280,13 @@ class Translator(object):
                 pyname = name
                 jsname = PYJSLIB_BUILTIN_MAPPING[name]
 
-        if depth <= 0 and name_type == 'builtin':
+        if depth <= 0 and (name_type == 'builtin' or self.module_name == 'pyjslib'):
             kind_key = 'pyjslib.' + name
             if kind_key in self.static_kinds and kind is None:
+                if name_type != 'builtin':
+                    name_type = 'builtin'
+                    pyname = name
+                    jsname = self.jsname("variable", "$p['%s']" % self.attrib_remap(name))
                 kind = self.static_kinds[kind_key]
 
         is_local = (name_type is not None) and \
@@ -1483,16 +1494,26 @@ class Translator(object):
     __inline_getitem_code_str = __inline_getitem_code_str.replace("    ", "\t").replace("\n", "\n%(s)s")
 
     def inline_getitem_code(self, node, current_klass):
-        e = self.expr(node.expr, current_klass)
+        e, expr_kind = self._typed_expr(node.expr, current_klass)
         i = self.expr(node.subs[0], current_klass)
+        try:
+            index = int(i)
+        except ValueError:
+            index = None
+        if index is not None and get_kind(expr_kind) in ('tuple', 'list') and \
+                get_kind(expr_kind, 1) is not None and (get_kind(expr_kind, 1) > index >= 0 or
+                                                        get_kind(expr_kind, 1) >= -index > 0):
+            if index < 0:
+                index = get_kind(expr_kind, 1) + index
+            return "%(e)s.__array[%(i)s]" % locals(), get_kind(expr_kind, 2 + index)
         if self.inline_getitem:
             v1 = self.uniqid('$')
             self.add_lookup('variable', v1, v1)
             v2 = self.uniqid('$')
             self.add_lookup('variable', v2, v2)
             s = self.spacing()
-            return self.__inline_getitem_code_str % locals()
-        return "%(e)s.__getitem__(%(i)s)" % locals()
+            return self.__inline_getitem_code_str % locals(), None
+        return "%(e)s.__getitem__(%(i)s)" % locals(), None
 
     def md5(self, node):
         return md5(self.module_name + str(node.lineno) + repr(node)).hexdigest()
@@ -2515,12 +2536,17 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 call_code = '%s.apply(%s, [%s].concat(%s.__array))' % (
                     method_name, call_name, ", ".join(call_args), star_arg_name)
             else:
-                varname = self.uniqid('$callself')
-                self.add_lookup('variable', varname, varname)
-                self.w(self.spacing() + '%s = %s;' % (varname, call_name))
-                call_name = varname
+                if isinstance(v.node, self.ast.Name):
+                    varname = call_name
+                else:
+                    varname = self.uniqid('$callself')
+                    self.add_lookup('variable', varname, varname)
+                    self.w(self.spacing() + '%s = %s;' % (varname, call_name))
+                    call_name = varname
                 if method_name is not None:
                     call_name = "%s['%s']" % (call_name, method_name)
+                else:
+                    varname = 'null'
                 call_code = "%s.apply(%s, [%s].concat(%s))" % (
                     call_name, varname, ", ".join(call_args), star_arg_name)
         elif kwargs or star_arg_name or dstar_arg_name or (self.call_support and
@@ -2917,13 +2943,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.track_lineno(node, False)
 
         create_class = """\
-%(s)svar $bases = new Array(%(bases)s);"""
+%(s)svar $bases = [%(bases)s];"""
         if self.module_name == 'pyjslib':
             create_class += """
 %(s)sreturn $pyjs_type('%(n)s', $bases, %(local_prefix)s);"""
         else:
             create_class += """
-%(s)svar $data = $p['dict']();
+%(s)svar $data = $p['__empty_dict']();
 %(s)sfor (var $item in %(local_prefix)s) { $data.__setitem__($item.startswith('$$') ? $item.slice(2) : $item, %(local_prefix)s[$item]); }
 %(s)sreturn @{{_create_class}}('%(n)s', $p['tuple']($bases), $data);"""
         create_class %= {'n': node.name, 's': self.spacing(), 'local_prefix': local_prefix, 'bases': ",".join(map(lambda x: x[1], base_classes))}
@@ -3230,7 +3256,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(v.expr, self.ast.Getattr):
             lhs = self.attrib_join(self._getattr(v, current_klass, False)[:-1])
         elif isinstance(v.expr, self.ast.Subscript):
-            lhs = self._subscript(v.expr, current_klass)
+            lhs = self._typed_subscript(v.expr, current_klass)[0]
         elif isinstance(v.expr, self.ast.CallFunc):
             lhs = self._typed_callfunc(v.expr, current_klass)[0]
         else:
@@ -3450,7 +3476,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             test = '(%s).__array.length' % test
         elif get_kind(kind) == 'string':
             test = '(%s).length' % test
-        elif get_kind(kind) == 'dict':
+        elif get_kind(kind) in ('dict', 'set'):
             test = '(%s).__nonzero__()' % test
         elif get_kind(kind) not in ('bool', 'number'):
             test = self.inline_bool_code(test)
@@ -3642,7 +3668,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.Dict):
             return self._dict(node, current_klass), ('dict', None, None)
         elif isinstance(node, self.ast.Tuple):
-            return self._tuple(node, current_klass), ('tuple', None, None)
+            return self._typed_tuple(node, current_klass)
         elif isinstance(node, self.ast.Set):
             return self._set(node, current_klass), ('set', None)
         elif isinstance(node, self.ast.Sliceobj):
@@ -3656,10 +3682,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.Slice):
             return self._typed_slice(node, current_klass,
                                      accept_js_object=accept_js_object)
+        elif isinstance(node, self.ast.Subscript):
+            return self._typed_subscript(node, current_klass)
         return self.expr(node, current_klass), None
-
-
-
 
 
     def _for(self, node, current_klass): # DANIEL KLUEV VERSION
@@ -3953,9 +3978,17 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         kind = None
         if kind1 == kind2 and get_kind(kind1) in ('number', 'string', 'tuple', 'list'):
             kind = kind1
-        elif (get_kind(kind1) == get_kind(kind2) and
-                get_kind(kind1) in ('number', 'string', 'tuple', 'list')):
-            kind = get_kind(kind1)
+        elif get_kind(kind1) == get_kind(kind2):
+            if get_kind(kind1) in ('tuple', 'list'):
+                if get_kind(kind1, 1) is not None and get_kind(kind2, 1) is not None:
+                    kind = (kind1[0], kind1[1] + kind2[1]) + kind1[2:] + kind2[2:]
+                elif get_kind(kind1, 1) is None and get_kind(kind2, 1) is None and \
+                        get_kind(kind1, 2) == get_kind(kind2, 2):
+                    kind = kind1
+                else:
+                    kind = (kind1[0], None, None)
+            elif get_kind(kind1) in ('number', 'string'):
+                kind = get_kind(kind1)
 
         if not self.operator_funcs or get_kind(kind) in ('number', 'string'):
             return "(%s)+(%s)" % (e1, e2), kind
@@ -4159,7 +4192,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         return "@{{op_bitor}}([%s])" % ", ".join([self.expr(child, current_klass) for child in node.nodes])
 
 
-    def _subscript(self, node, current_klass):
+    def _typed_subscript(self, node, current_klass):
         if node.flags == "OP_APPLY":
             if len(node.subs) == 1:
                 return self.inline_getitem_code(node, current_klass)
@@ -4198,6 +4231,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         return self.track_call("$p['list']([" + ", ".join([self.expr(x, current_klass) for x in node.nodes]) + "])", node.lineno)
 
     def _dict(self, node, current_klass):
+        if len(node.items) == 0:
+            return "$p['__empty_dict']()"
         items = []
         for x in node.items:
             key = self.expr(x[0], current_klass)
@@ -4205,12 +4240,20 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             items.append("[" + key + ", " + value + "]")
         return self.track_call("$p['dict']([" + ", ".join(items) + "])")
 
-    def _tuple(self, node, current_klass):
-        return self.track_call("$p['tuple']([" + ", ".join([self.expr(x, current_klass) for x in node.nodes]) + "])", node.lineno)
-    
+    def _typed_tuple(self, node, current_klass):
+        if len(node.nodes) == 0:
+            return "$p['_empty_tuple']", ('tuple', 0)
+        kind = ('tuple', len(node.nodes))
+        exprs = []
+        for x in node.nodes:
+            expr, expr_kind = self._typed_expr(x, current_klass)
+            exprs.append(expr)
+            kind += (expr_kind,)
+        return self.track_call("$p['tuple']([" + ", ".join(exprs) + "])", node.lineno), kind
+
     def _set(self, node, current_klass):
-        return self.track_call("$p['set']([" + ", ".join([self.expr(x, current_klass) for x in node.nodes]) + "])", node.lineno)        
-    
+        return self.track_call("$p['set']([" + ", ".join([self.expr(x, current_klass) for x in node.nodes]) + "])", node.lineno)
+
     def _sliceobj(self, node, current_klass):
         args = ", ".join([self.expr(x, current_klass) for x in node.nodes])
         return self.track_call(self.pyjslib_name("slice", args=args),
@@ -4463,7 +4506,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.Name):
             return self._typed_name(node, current_klass, optlocal_var=True)[0]
         elif isinstance(node, self.ast.Subscript):
-            return self._subscript(node, current_klass)
+            return self._typed_subscript(node, current_klass)[0]
         elif isinstance(node, self.ast.Getattr):
             attr_ = self._getattr(node, current_klass)
             if len(attr_) == 1:
@@ -4536,7 +4579,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.Dict):
             return self._dict(node, current_klass)
         elif isinstance(node, self.ast.Tuple):
-            return self._tuple(node, current_klass)
+            return self._typed_tuple(node, current_klass)[0]
         elif isinstance(node, self.ast.Set):
             return self._set(node, current_klass)
         elif isinstance(node, self.ast.Sliceobj):

@@ -414,7 +414,7 @@ JS("$pyjs_module_type.__mro__ = @{{tuple}}([$pyjs_module_type, @{{object}}]);")
 JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type tuple>'; };")
 
 # This is used for efficiency e.g. when handling empty *args
-_empty_tuple = ()
+_empty_tuple = tuple()
 
 class basestring(object):
     pass
@@ -2035,7 +2035,7 @@ cmp = JS("""function(a, b) {
     if (a && b && (typeof a.__class__ != 'undefined' || typeof b.__class__ != 'undefined')) {
         if (a === b)
             return 0;
-        return @{{cmp}}(@{{__hash}}(a), @{{__hash}}(b));
+        return -1;
     }
     if (a == b) return 0;
     if (a > b) return 1;
@@ -4471,7 +4471,7 @@ class list:
 
             for (; start < len; start++) {
                 if ( /*start in selfXXX.__array && */
-                    @{{cmp}}(@{{self}}.__array[start], @{{value}}) == 0)
+                    @{{op_eq}}(@{{self}}.__array[start], @{{value}}))
                     return start;
             }
         }
@@ -5150,6 +5150,14 @@ class BaseSet(object):
         if (otherMismatch) return -1;
         return 0;
 """)
+
+    def __nonzero__(self):
+        JS("""
+        for (var key in @{{self}}.__object) {
+            return true;
+        }
+        return false;
+        """)
 
     def __contains__(self, value):
         if isSet(value) == 1: # An instance of set
@@ -6058,7 +6066,7 @@ def len(object):
     v = 0
     JS("""
     if (typeof @{{object}}== 'undefined') {
-        throw @{{UndefinedValueError}}("obj");
+        throw @{{UndefinedValueError}}("len() on undefined");
     }
     if (@{{object}}=== null)
         return @{{v}};
@@ -6359,7 +6367,7 @@ def _del(obj):
 def delattr(obj, name):
     JS("""
     if (typeof @{{obj}}== 'undefined') {
-        throw @{{UndefinedValueError}}("obj");
+        throw @{{UndefinedValueError}}("delattr() on undefined");
     }
     if (typeof @{{name}}!= 'string') {
         throw @{{TypeError}}("attribute name must be string");
@@ -6399,7 +6407,7 @@ def delattr(obj, name):
 def setattr(obj, name, value):
     JS("""
     if (typeof @{{obj}}== 'undefined') {
-        throw @{{UndefinedValueError}}("obj");
+        throw @{{UndefinedValueError}}("setattr() on undefined");
     }
     if (typeof @{{name}}!= 'string') {
         throw @{{TypeError}}("attribute name must be string");
@@ -6424,7 +6432,7 @@ def setattr(obj, name, value):
 def hasattr(obj, name):
     JS("""
     if (typeof @{{obj}} == 'undefined') {
-        throw @{{UndefinedValueError}}("obj");
+        throw @{{UndefinedValueError}}("hasattr() on undefined");
     }
     if (typeof @{{name}} != 'string') {
         throw @{{TypeError}}("attribute name must be string");
@@ -6453,7 +6461,7 @@ def hasattr(obj, name):
 def dir(obj):
     JS("""
     if (typeof @{{obj}}== 'undefined') {
-        throw @{{UndefinedValueError}}("obj");
+        throw @{{UndefinedValueError}}("dir() on undefined");
     }
     var properties=@{{list}}();
     for (var property in @{{obj}}) {
@@ -6842,8 +6850,8 @@ def isInteger(a):
 
 def isSet(a):
     JS("""
-    if (@{{a}}=== null) return false;
-    if (typeof @{{a}}.__object == 'undefined') return false;
+    if (@{{a}}=== null) return 0;
+    if (typeof @{{a}}.__object == 'undefined') return 0;
     var a_mro = @{{a}}.__mro__.__array;
     if (a_mro.length > 2) {
         switch (a_mro[a_mro.length-3].__md5__) {
@@ -6853,7 +6861,7 @@ def isSet(a):
                 return 2;
         }
     }
-    return false;
+    return 0;
 """)
 def toJSObjects(x):
     """
@@ -8521,9 +8529,10 @@ __ass_unpack = JS("""function (data, count, extended) {
 def __with(mgr, func):
     """
     Copied verbatim from http://www.python.org/dev/peps/pep-0343/
+    except for JS() code which is needed to pass the correct ``this``
     """
     exit = type(mgr).__exit__  # Not calling it yet
-    value = type(mgr).__enter__(mgr)
+    value = JS("@{{type}}(@{{mgr}}).__enter__.call(@{{mgr}})")
     exc = True
     try:
         try:
@@ -8531,14 +8540,14 @@ def __with(mgr, func):
         except:
             # The exceptional case is handled here
             exc = False
-            if not exit(mgr, *sys.exc_info()):
+            if not JS("@{{exit}}.apply(@{{mgr}}, @{{sys}}.exc_info().__array)"):
                 raise
             # The exception is swallowed if exit() returns true
     finally:
         # The normal and non-local-goto cases are handled here
         if exc:
-            exit(mgr, None, None, None)
-            
+            JS("@{{exit}}.call(@{{mgr}}, null, null, null)")
+
 init()
 
 Ellipsis = EllipsisType()
