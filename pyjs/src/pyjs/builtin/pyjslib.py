@@ -39,6 +39,8 @@ var $max_int = 0x7fffffff;
 var $min_int = -0x80000000;
 """)
 
+JS("@{{next_hash_id}} = 0;")
+
 _handle_exception = JS("""function(err) {
     $pyjs.loaded_modules['sys'].save_exception_stack();
 
@@ -5724,6 +5726,21 @@ class property(object):
 
 def _fast_super(typ, object_or_type):
     # This is a partial implementation: only super(type, object)
+
+    # Check the cache
+    JS("""
+    var fn;
+    var hash = typ.$H;
+    if (typeof hash != 'undefined') {
+        hash = '$super' + hash.toString();
+        if (hash in @{{object_or_type}}.__$super_cache__) {
+            fn = @{{object_or_type}}.__$super_cache__[hash];
+            fn.__new__ = fn.__mro__.__array[1].__new__;
+            fn.__init__ = fn.__mro__.__array[1].__init__;
+            return fn;
+        }
+    }
+    """)
     if not _issubtype(object_or_type, typ):
         raise TypeError("super(type, obj): obj must be an instance or subtype of type")
     JS("""
@@ -5733,18 +5750,7 @@ def _fast_super(typ, object_or_type):
     }
     var mro = @{{object_or_type}}.__mro__.__array;
     var index = 0;
-    var fn = null;
-    for (; index < mro.length; index++) {
-        if (mro[index] === @{{typ}}) {
-            if (@{{object_or_type}}.__$super_cache__.length > 0) {
-                fn = @{{object_or_type}}.__$super_cache__[index];
-            }
-            break;
-        }
-    }
-    if (fn === null) {
-        fn = $pyjs_type('super', mro.slice(index + 1), {});
-    }
+    fn = $pyjs_type('super', mro.slice(index + 1), {});
     fn.__new__ = fn.__mro__.__array[1].__new__;
     fn.__init__ = fn.__mro__.__array[1].__init__;
     return fn;
@@ -6658,8 +6664,6 @@ class complex:
     __radd__ = __add__
 
 JS("@{{complex}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type complex>'; };")
-
-JS("@{{next_hash_id}} = 0;")
 
 # hash(obj) == (obj === null? null : (obj.hasOwnProperty("$H") ? obj.$H : ((typeof obj == 'string' || obj.__number__) ? '$'+obj : @{{__hash}}(obj))))
 if JS("typeof 'a'[0] == 'undefined'"):

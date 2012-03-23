@@ -503,10 +503,16 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     }
 
     if (class_name !== 'super') {
-        var super_cache = [];
+        var super_cache = {};
+        var hash;
         for (var index = 0; index < __mro__.length - 1; index++) {
-            super_cache.push($pyjs_type('super', __mro__.slice(index + 1),
-                                        {$_fast_super: true}));
+            hash = __mro__[index].$H;
+            if (typeof hash == 'undefined') {
+                hash = __mro__[index].$H = ++$p.next_hash_id;
+            }
+            hash = '$super' + hash.toString();
+            super_cache[hash] = $pyjs_type('super', __mro__.slice(index + 1),
+                                           {$_fast_super: true});
         }
         cls_fn.__$super_cache__ = super_cache;
     }
