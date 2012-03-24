@@ -2218,7 +2218,17 @@ Number.prototype.__pow__ = function (y, z) {
 };
 """)
 
-def float_int(value, radix=None):
+float_int = JS("""function $fn$pyjslib$float_int(value, radix) {
+    if (typeof radix == 'undefined') {
+        if (typeof value == 'number') {
+            return value >= 0 ? Math.floor(value) : Math.ceil(value);
+        }
+        radix = null;
+    }
+    return @{{_float_int}}(value, radix);
+}""")
+
+def _float_int(value, radix):
     JS("""
     var v;
     if (typeof @{{value}}['__int__'] != 'undefined') {
