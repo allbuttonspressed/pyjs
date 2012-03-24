@@ -2477,6 +2477,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 call_name = jsname
         elif isinstance(v.node, self.ast.Getattr) and \
                 self._is_builtin_call(v.node.expr, 'super', 2):
+            # Optimize super(Class, self).some_method(...) calls
             fast_super_call = True
             params = [self.expr(arg, current_klass) for arg in v.node.expr.args]
             if not isinstance(v.node.expr.args[1], self.ast.Name):
@@ -2490,6 +2491,16 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             super_node = self.ast.Getattr(RawNode(super_expr, v.node.expr.lineno),
                                           v.node.attrname, v.node.lineno)
             method_name = self.expr(super_node, current_klass)
+        elif (isinstance(v.node, self.ast.Getattr) and
+                v.node.attrname == '__new__' and len(v.args) == 2 and
+                isinstance(v.args[1], (self.ast.Tuple, self.ast.List)) and
+                isinstance(v.node.expr, self.ast.Name) and
+                v.node.expr.name == 'tuple' and self.lookup('tuple')[0] == 'builtin'):
+            # Optimize tuple.__new__(cls, (a, b, ...)) calls
+            # (which is a common CPython-specific optimization)
+            cls_name = self.expr(v.args[0], current_klass)
+            elems = ','.join(self.expr(elem, current_klass) for elem in v.args[1].nodes)
+            return '%s.__new__(%s, [%s])' % (self.pyjslib_name('tuple'), cls_name, elems), None
         elif not self.getattr_support and isinstance(v.node, self.ast.Getattr):
             method_name = self.attrib_remap(v.node.attrname)
             if isinstance(v.node.expr, self.ast.Name):
