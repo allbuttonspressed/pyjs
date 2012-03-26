@@ -1224,7 +1224,10 @@ class Translator(object):
             return "$p['%(name)s'](%(args)s)" % dict(name=name, args=args)
 
     def add_lookup(self, name_type, pyname, jsname, depth=-1, kind=None):
-        kind_path = '.'.join(self.kind_context + [pyname])
+        if name_type in ('class', 'function', 'method'):
+            kind_path = '.'.join(self.kind_context)
+        else:
+            kind_path = '.'.join(self.kind_context + [pyname])
         if kind is None and kind_path in self.static_kinds:
             kind = self.static_kinds[kind_path]
 
@@ -2215,6 +2218,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             else:
                 py_arg_names.append(arg)
                 arg_kind = None
+                if lookup_type == 'method' and argindex == 1 and \
+                        node.name in ('__setattr__', '__getattr__', '__delattr__'):
+                    arg_kind = 'string'
                 if node.kwargs:
                     if argindex == len(node.argnames) - 1:
                         arg_kind = ('dict', 'string', None)
@@ -2502,6 +2508,21 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             cls_name = self.expr(v.args[0], current_klass)
             elems = ','.join(self.expr(elem, current_klass) for elem in v.args[1].nodes)
             return '%s.__new__(%s, [%s])' % (self.pyjslib_name('tuple'), cls_name, elems), None
+        elif (isinstance(v.node, self.ast.Getattr) and
+                v.node.attrname == 'get' and 2 >= len(v.args) >= 1 and
+                isinstance(v.args[0], self.ast.Name) and
+                get_kind(self.lookup(v.args[0].name)[-1]) == 'class' and
+                isinstance(v.node.expr, self.ast.Name) and
+                get_kind(self.lookup(v.node.expr.name)[-1]) == 'dict'):
+            # Optimize <dict>.get(<class> [, default_value]) calls
+            dict_name = '%s.__object' % self.expr(v.node.expr, current_klass)
+            key = '%s.$H' % self.expr(v.args[0], current_klass)
+            if len(v.args) == 2:
+                default = self.expr(v.args[1], current_klass)
+            else:
+                default = 'null'
+            return "(typeof %s[%s] == 'undefined' ? %s : %s[%s][1])" % (
+                dict_name, key, default, dict_name, key), None
         elif not self.getattr_support and isinstance(v.node, self.ast.Getattr):
             method_name = self.attrib_remap(v.node.attrname)
             if isinstance(v.node.expr, self.ast.Name):
@@ -3580,9 +3601,15 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             if not self.stupid_mode and not primitive:
                 return "(((%s)|1) == 1)" % self.inline_cmp_code(lhs, rhs)
         if op == "in":
+            if get_kind(rhs_type) in ('dict', 'set'):
+                if get_kind(lhs_type) == 'class':
+                    return '%s.$H in %s.__object' % (lhs, rhs)
+            elif get_kind(rhs_type) in ('tuple', 'list'):
+                if get_kind(lhs_type) in ('string', 'number', 'class'):
+                    return '%s.__array.indexOf(%s) >= 0' % (rhs, lhs)
             return rhs + ".__contains__(" + lhs + ")"
         elif op == "not in":
-            return "!" + rhs + ".__contains__(" + lhs + ")"
+            return "!" + self.compare_code('in', lhs, rhs, lhs_type, rhs_type)
         if op == "is":
             if self.number_classes:
                 return "@{{op_is}}(%s, %s)" % (lhs, rhs)
@@ -3678,11 +3705,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.CallFunc):
             return self._typed_callfunc(node, current_klass, optlocal_var=True)
         elif isinstance(node, self.ast.List):
-            return self._list(node, current_klass), ('list', None, None)
+            return self._typed_list(node, current_klass,
+                                    accept_js_object=accept_js_object)
         elif isinstance(node, self.ast.Dict):
             return self._dict(node, current_klass), ('dict', None, None)
         elif isinstance(node, self.ast.Tuple):
-            return self._typed_tuple(node, current_klass)
+            return self._typed_tuple(node, current_klass,
+                                     accept_js_object=accept_js_object)
         elif isinstance(node, self.ast.Set):
             return self._set(node, current_klass), ('set', None)
         elif isinstance(node, self.ast.Sliceobj):
@@ -4219,7 +4248,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
     def _subscript_stmt(self, node, current_klass):
         if node.flags == "OP_DELETE":
-            self.w( self.spacing() + self.track_call(self.expr(node.expr, current_klass) + ".__delitem__(" + self.expr(node.subs[0], current_klass) + ")", node.lineno) + ';')
+            container, container_kind = self._typed_expr(node.expr, current_klass)
+            index, index_kind = self._typed_expr(node.subs[0], current_klass)
+            if get_kind(container_kind) == 'dict' and get_kind(index_kind) == 'class':
+                self.w(self.spacing() + "delete %s.__object[%s.$H];" % (container, index))
+            else:
+                self.w(self.spacing() + self.track_call("%s.__delitem__(%s)" % (container, index), node.lineno) + ';')
         else:
             raise TranslationError(
                 "unsupported flag (in _subscript)", node, self.module_name)
@@ -4241,8 +4275,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             raise TranslationError(
                 "unsupported flag (in _assign)", v, self.module_name)
 
-    def _list(self, node, current_klass):
-        return self.track_call("$p['list']([" + ", ".join([self.expr(x, current_klass) for x in node.nodes]) + "])", node.lineno)
+    def _typed_list(self, node, current_klass, accept_js_object=False):
+        if accept_js_object:
+            return self._typed_tuple(node, current_klass, accept_js_object=True)
+        kind = ('list', None, None)
+        exprs = [self.expr(x, current_klass) for x in node.nodes]
+        return self.track_call("$p['list']([" + ", ".join(exprs) + "])", node.lineno), kind
 
     def _dict(self, node, current_klass):
         if len(node.items) == 0:
@@ -4254,15 +4292,21 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             items.append("[" + key + ", " + value + "]")
         return self.track_call("$p['dict']([" + ", ".join(items) + "])")
 
-    def _typed_tuple(self, node, current_klass):
-        if len(node.nodes) == 0:
-            return "$p['_empty_tuple']", ('tuple', 0)
-        kind = ('tuple', len(node.nodes))
+    def _typed_tuple(self, node, current_klass, accept_js_object=False):
+        if accept_js_object:
+            kind = ('jsarray',)
+        else:
+            if len(node.nodes) == 0:
+                return "$p['_empty_tuple']", ('tuple', 0)
+            kind = ('tuple',)
+        kind += (len(node.nodes),)
         exprs = []
         for x in node.nodes:
             expr, expr_kind = self._typed_expr(x, current_klass)
             exprs.append(expr)
             kind += (expr_kind,)
+        if accept_js_object:
+            return '[%s]' % ', '.join(exprs), kind
         return self.track_call("$p['tuple']([" + ", ".join(exprs) + "])", node.lineno), kind
 
     def _set(self, node, current_klass):
@@ -4589,7 +4633,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 """ % locals()
             return attr
         elif isinstance(node, self.ast.List):
-            return self._list(node, current_klass)
+            return self._typed_list(node, current_klass)[0]
         elif isinstance(node, self.ast.Dict):
             return self._dict(node, current_klass)
         elif isinstance(node, self.ast.Tuple):
