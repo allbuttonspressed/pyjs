@@ -4935,7 +4935,7 @@ class dict:
         JS("""
         for (var i in @{{self}}.__object) @{{size}}++;
         """)
-        return INT(size);
+        return INT(size)
 
     #def has_key(self, key):
     #    return self.__contains__(key)
@@ -4968,7 +4968,7 @@ class dict:
         """)
 
     @staticmethod
-    def fromkeys(iterable, v = None):
+    def fromkeys(iterable, v=None):
         d = {}
         for i in iterable:
             d[i] = v
@@ -5028,7 +5028,7 @@ class dict:
 
     def setdefault(self, key, default_value):
         JS("""
-        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         return typeof @{{self}}.__object[sKey] == 'undefined' ? (@{{self}}.__object[sKey]=[@{{key}}, @{{default_value}}])[1] : @{{self}}.__object[sKey][1];
 """)
 
@@ -5040,9 +5040,9 @@ class dict:
             break;
         }
         if (empty) return @{{default_value}};
-        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         return typeof @{{self}}.__object[sKey] == 'undefined' ? @{{default_value}} : @{{self}}.__object[sKey][1];
-""")
+        """)
 
     def update(self, *args, **kwargs):
         if args:
@@ -5062,21 +5062,33 @@ class dict:
             for k,v in kwargs.iteritems():
                 self[k] = v
 
-    def pop(self, k, *d):
-        if len(d) > 1:
-            raise TypeError("pop expected at most 2 arguments, got %s" %
-                            (1 + len(d)))
-
-        if k in self or not d:
-            res = self[k]
-            del self[k]
-            return res
-
-        return d[0]
+    def pop(self, key):
+        JS("""
+        if (arguments.length > 2) {
+            throw @{{TypeError}}("pop expected at most 3 arguments, got "
+                                 + (1 + arguments.length).toString());
+        }
+        var default_value = arguments.length == 2 ? arguments[1] : undefined;
+        var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var value = @{{self}}.__object[sKey];
+        if (typeof value == 'undefined') {
+            if (default_value === undefined) {
+                throw @{{KeyError}}(@{{key}});
+            }
+            return default_value;
+        }
+        delete @{{self}}.__object[sKey];
+        return value[1];
+        """)
 
     def popitem(self):
-        for k, v in self.iteritems():
-            return (k, v)
+        JS("""
+        for (var sKey in @{{self}}.__object) {
+            var result = @{{self}}.__object[sKey];
+            delete @{{self}}.__object[sKey];
+            return result[1];
+        }
+        """)
         raise KeyError('popitem(): dictionary is empty')
 
     def getObject(self):

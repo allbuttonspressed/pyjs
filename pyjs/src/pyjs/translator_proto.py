@@ -425,6 +425,7 @@ CONTEXT_OPTIONS = {
     'pyjslib.list.__new__': dict(function_argument_checking=False),
     'pyjslib.tuple.__new__': dict(function_argument_checking=False),
     'pyjslib.dict.__new__': dict(function_argument_checking=False),
+    'pyjslib.dict.pop': dict(function_argument_checking=False),
     'pyjslib.BaseSet.__new__': dict(function_argument_checking=False),
     'pyjslib.frozenset.__new__': dict(function_argument_checking=False),
     'pyjslib.__empty_dict': dict(function_argument_checking=False),
