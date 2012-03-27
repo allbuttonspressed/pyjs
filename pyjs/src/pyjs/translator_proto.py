@@ -4345,12 +4345,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.output = StringIO()
         if isinstance(node, self.ast.ListComp):
             kind = ('list', None, None)
+            expr = self.expr(node.expr, current_klass)
             tnode = self.ast.Discard(
-                self.ast.CallFunc(
-                    self.ast.Getattr(self.ast.Name(resultvar), 'append'),
-                    [node.expr], None, None)
+                RawNode('%s.__array.push(%s)' % (resultvar, expr), node.lineno)
             )
-            varinit = self.pyjslib_name("list", args='')
+            varinit = '%(l)s.__new__(%(l)s)' % {'l': self.pyjslib_name("list")}
         elif isinstance(node, self.ast.SetComp):
             kind = ('set', None)
             tnode = self.ast.Discard(
