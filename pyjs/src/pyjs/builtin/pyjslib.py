@@ -5764,7 +5764,6 @@ def _fast_super(typ, object_or_type):
     var fn;
     var hash = typ.$H;
     if (typeof hash != 'undefined') {
-        hash = '$super' + hash.toString();
         if (hash in @{{object_or_type}}.__$super_cache__) {
             fn = @{{object_or_type}}.__$super_cache__[hash];
             fn.__new__ = fn.__mro__.__array[1].__new__;
@@ -6280,10 +6279,7 @@ def getattr(obj, name, default_value=_undefined):
     // however, note that accessing some attributes on native JS objects won't
     // work i.e. `native_js_object.length` for example. This has to be accessed via
     // JS()!
-    var re_mapped = @{{name}};
-    if ('$$' + @{{name}} in attrib_remap) {
-        re_mapped = '$$' + @{{name}};
-    }
+    var re_mapped = '$$' + @{{name}} in attrib_remap ? '$$' + @{{name}} : @{{name}};
 
     var method = @{{obj}}[re_mapped];
 
@@ -6402,8 +6398,7 @@ def delattr(obj, name):
         @{{obj}}.__delattr__(@{{name}});
         return;
     }
-    var mapped_name = '$$' + @{{name}} in attrib_remap ? '$$' + @{{name}}: 
-                        @{{name}};
+    var mapped_name = '$$' + @{{name}} in attrib_remap ? '$$' + @{{name}} : @{{name}};
     if (   @{{obj}}!== null
         && (typeof @{{obj}}== 'object' || typeof @{{obj}}== 'function')
         && (typeof(@{{obj}}[mapped_name]) != "undefined")

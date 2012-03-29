@@ -1228,7 +1228,7 @@ class Translator(object):
             kind_path = '.'.join(self.kind_context)
         else:
             kind_path = '.'.join(self.kind_context + [pyname])
-        if kind is None and kind_path in self.static_kinds:
+        if kind_path in self.static_kinds:
             kind = self.static_kinds[kind_path]
 
         if len(self.lookup_stack) == 1 and depth in (-1, 0) and \
@@ -2569,7 +2569,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         else:
             fn_kwargs = 'null'
 
-        if fast_instantiation and not kwargs and not dstar_arg_name and not method_name:
+        if fast_instantiation and not star_arg_name and not kwargs and not dstar_arg_name and not method_name:
             new_args = [call_name]
             init_args = []
             for orig_node, expr in zip(v.args, call_args):
@@ -2603,7 +2603,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     call_name = "%s['%s']" % (call_name, method_name)
                 else:
                     varname = 'null'
-                call_code = "%s.apply(%s, [%s].concat(%s))" % (
+                call_code = "%s.apply(%s, [%s].concat(%s.__array))" % (
                     call_name, varname, ", ".join(call_args), star_arg_name)
         elif kwargs or star_arg_name or dstar_arg_name or (self.call_support and
                                                            not is_builtin):
