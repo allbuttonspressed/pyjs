@@ -6102,7 +6102,7 @@ def len(object):
 
 def isinstance(object_, classinfo):
     JS("""
-    if (typeof @{{object_}}== 'undefined') {
+    if (typeof @{{object_}} == 'undefined') {
         return false;
     }
     if (@{{object_}} == null) {
@@ -6138,16 +6138,18 @@ def isinstance(object_, classinfo):
     if (typeof @{{object_}} != 'object' && typeof @{{object_}} != 'function') {
         return false;
     }
+    if (@{{classinfo}}.__class__ === @{{tuple}}) {
+        for (var index=0; index < @{{classinfo}}.__array.length; index++) {
+            var ci = @{{classinfo}}.__array[index];
+            if (@{{isinstance}}(@{{object_}}, ci)) {
+                return true;
+            }
+        }
+        return false;
+    } else {
+        return @{{_isinstance}}(@{{object_}}, @{{classinfo}});
+    }
 """)
-    if _isinstance(classinfo, tuple):
-        if _isinstance(object_, tuple):
-            return True
-        for ci in classinfo:
-            if isinstance(object_, ci):
-                return True
-        return False
-    else:
-        return _isinstance(object_, classinfo)
 
 def _isinstance(object_, classinfo):
     JS("""
@@ -6157,18 +6159,22 @@ def _isinstance(object_, classinfo):
         || @{{classinfo}}.__is_instance__ === null) {
         return false;
     }
-    var __mro__ = @{{object_}}.__mro__.__array;
-    var n = __mro__.length;
-    if (@{{classinfo}}.__is_instance__ === false) {
-        while (--n >= 0) {
-            if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}) {
-                return true;
-            }
+    if (@{{object_}}.__is_instance__ === false && @{{classinfo}} === @{{type}}) {
+        return true;
+    } else if (@{{classinfo}}.__is_instance__ === false) {
+        var hash = @{{classinfo}}.$H;
+        if (hash in @{{object_}}.__$super_cache__) {
+            return true;
         }
-        return false;
-    }
-    while (--n >= 0) {
-        if (@{{object_}}.__mro__.__array[n] === @{{classinfo}}.__class__) return true;
+        if (@{{classinfo}} === @{{object}}) {
+            return true;
+        }
+    } else {
+        var __mro__ = @{{object_}}.__mro__.__array;
+        var n = __mro__.length;
+        while (--n >= 0) {
+            if (__mro__.__array[n] === @{{classinfo}}.__class__) return true;
+        }
     }
     return false;
     """)
