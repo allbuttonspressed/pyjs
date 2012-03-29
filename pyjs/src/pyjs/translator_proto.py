@@ -2434,12 +2434,11 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         is_builtin = False
         method_name = None
         fast_super_call = False
+        fast_instantiation = False
         call_args = []
         kind = None
         if isinstance(v.node, self.ast.Name):
             name_type, pyname, jsname, depth, is_local, varkind = self.lookup(v.node.name)
-            if get_kind(varkind) == 'func':
-                kind = get_kind(varkind, 1)
             if name_type == '__pyjamas__':
                 try:
                     raw_js = getattr(__pyjamas__, v.node.name)
@@ -2462,6 +2461,11 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             elif v.node.name == 'globals':
                 # XXX: Should be dictproxy, to handle changes
                 return "@{{_globals}}(%s)" % self.modpfx()[:-1], None
+
+            if get_kind(varkind) == 'func':
+                kind = get_kind(varkind, 1)
+            elif get_kind(varkind) == 'class':
+                fast_instantiation = True
 
             if name_type is None:
                 # What to do with a (yet) unknown name?
@@ -2565,7 +2569,24 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         else:
             fn_kwargs = 'null'
 
-        if star_arg_name and get_kind(star_arg_kind) in ('tuple', 'list') and \
+        if fast_instantiation and not kwargs and not dstar_arg_name and not method_name:
+            new_args = [call_name]
+            init_args = []
+            for orig_node, expr in zip(v.args, call_args):
+                if isinstance(orig_node, self.ast.Name):
+                    new_args.append(expr)
+                    init_args.append(expr)
+                else:
+                    varname = self.uniqid('$arg')
+                    self.add_lookup('variable', varname, varname)
+                    new_args.append('(%s=%s)' % (varname, expr))
+                    init_args.append(varname)
+
+            varname = self.uniqid('$inst')
+            self.add_lookup('variable', varname, varname)
+            call_code = '((%s=%s.__new__(%s)), %s.__init__(%s), %s)' % (
+                varname, call_name, ', '.join(new_args), varname, ', '.join(init_args), varname)
+        elif star_arg_name and get_kind(star_arg_kind) in ('tuple', 'list') and \
                 not kwargs and not dstar_arg_name and not self.call_support:
             if fast_super_call:
                 call_code = '%s.apply(%s, [%s].concat(%s.__array))' % (
