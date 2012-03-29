@@ -4301,7 +4301,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             return self._typed_tuple(node, current_klass, accept_js_object=True)
         kind = ('list', None, None)
         exprs = [self.expr(x, current_klass) for x in node.nodes]
-        return self.track_call("$p['list']([" + ", ".join(exprs) + "])", node.lineno), kind
+        varname = self.uniqid('$list')
+        self.add_lookup('variable', varname, varname)
+        return self.track_call("(%s=$p['list'].__new__($p['list']), %s.__init__([%s]), %s)" % (
+                            varname, varname, ", ".join(exprs), varname), node.lineno), kind
 
     def _dict(self, node, current_klass):
         if len(node.items) == 0:
@@ -4311,7 +4314,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             key = self.expr(x[0], current_klass)
             value = self.expr(x[1], current_klass)
             items.append("[" + key + ", " + value + "]")
-        return self.track_call("$p['dict']([" + ", ".join(items) + "])")
+        return self.track_call("$p['dict']([%s])" % ", ".join(items))
 
     def _typed_tuple(self, node, current_klass, accept_js_object=False):
         if accept_js_object:
@@ -4328,10 +4331,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             kind += (expr_kind,)
         if accept_js_object:
             return '[%s]' % ', '.join(exprs), kind
-        return self.track_call("$p['tuple']([" + ", ".join(exprs) + "])", node.lineno), kind
+        return self.track_call("$p['tuple'].__new__($p['tuple'], [%s])" % ", ".join(exprs), node.lineno), kind
 
     def _set(self, node, current_klass):
-        return self.track_call("$p['set']([" + ", ".join([self.expr(x, current_klass) for x in node.nodes]) + "])", node.lineno)
+        return self.track_call("$p['set']([%s])" % ", ".join([self.expr(x, current_klass) for x in node.nodes]), node.lineno)
 
     def _sliceobj(self, node, current_klass):
         args = ", ".join([self.expr(x, current_klass) for x in node.nodes])
