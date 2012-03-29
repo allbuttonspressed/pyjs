@@ -1823,7 +1823,7 @@ if (this.__is_instance__ === true) {\
 """ % (lpself, kwargname, maxargs1), output=output)
                 s = self.spacing()
                 self.w( """\
-%(s)sif (typeof %(lp)s%(kwargname)s != 'object' || %(lp)s%(kwargname)s === null || %(lp)s%(kwargname)s.__name__ != 'dict' || typeof %(lp)s%(kwargname)s.$pyjs_is_kwarg == 'undefined') {\
+%(s)sif (typeof %(lp)s%(kwargname)s != 'object' || %(lp)s%(kwargname)s === null || %(lp)s%(kwargname)s.__name__ !== 'dict' || typeof %(lp)s%(kwargname)s.$pyjs_is_kwarg == 'undefined') {\
 """ % locals(), output=output)
                 if node.varargs:
                     self.w( """\

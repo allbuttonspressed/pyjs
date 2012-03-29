@@ -1459,7 +1459,7 @@ String.prototype.format = function() {
     var args = $p['tuple']($pyjs_array_slice.call(arguments,0,arguments.length-1));
 
     var kw = arguments.length >= 1 ? arguments[arguments.length-1] : arguments[arguments.length];
-    if (typeof kw != 'object' || kw.__name__ != 'dict' || typeof kw.$pyjs_is_kwarg == 'undefined') {
+    if (typeof kw != 'object' || kw.__name__ !== 'dict' || typeof kw.$pyjs_is_kwarg == 'undefined') {
         if (typeof kw != 'undefined') args.__array.push(kw);
         kw = arguments[arguments.length+1];
     } else {
