@@ -288,8 +288,8 @@ class tuple:
 
     def __getslice__(self, lower, upper):
         JS("""
-        if (@{{upper}}==null) return @{{tuple}}(@{{self}}.__array.slice(@{{lower}}));
-        return @{{tuple}}(@{{self}}.__array.slice(@{{lower}}, @{{upper}}));
+        if (@{{upper}}==null) return @{{tuple}}.__new__(@{{tuple}}, @{{self}}.__array.slice(@{{lower}}));
+        return @{{tuple}}.__new__(@{{tuple}}, @{{self}}.__array.slice(@{{lower}}, @{{upper}}));
         """)
 
     def __getitem__(self, _index):
@@ -1466,7 +1466,7 @@ String.prototype.format = function() {
         delete kw['$pyjs_is_kwarg'];
     }
     if (typeof kw == 'undefined') {
-        kw = $p['__empty_dict']();
+        kw = $p['dict'].__new__($p['dict']);
     }
     return $p['_string_format'](this, args, kw);
 }
@@ -4084,7 +4084,7 @@ JS("""
         var div = new $long(0);
         var mod = new $long(0);
         l_divmod(this, b, div, mod);
-        return @{{tuple}}([div, mod]);
+        return @{{tuple}}.__new__(@{{tuple}}, [div, mod]);
     };
 
     $long.__divmod__ = function (y) {
@@ -4345,7 +4345,7 @@ $enumerate_array.prototype.next = function (noStop, reuseTuple) {
     } else {
         this.tl[0] = new @{{int}}(this.i);
     }
-    return reuseTuple === true ? this.tuple : @{{tuple}}(this.tl);
+    return reuseTuple === true ? this.tuple : @{{tuple}}.__new__(@{{tuple}}, this.tl);
 };
 $enumerate_array.prototype.__iter__ = function ( ) {
     return this;
@@ -5126,10 +5126,6 @@ class dict:
     __str__ = __repr__
 
 JS("@{{dict}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type dict>'; };")
-
-# __empty_dict is used in kwargs initialization
-def __empty_dict():
-    return dict.__new__(dict)
 
 class BaseSet(object):
     def __new__(cls):
@@ -7164,7 +7160,7 @@ def sprintf(strng, args):
         }
     }
     if (constructor != "tuple") {
-        args = @{{tuple}}([args]);
+        args = @{{tuple}}.__new__(@{{tuple}}, [args]);
     }
     nargs = args.__array.length;
     sprintf_list(strng, args);
@@ -7285,19 +7281,19 @@ def divmod(x, y):
             case 0x0401:
                 if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
                 var f = Math.floor(@{{x}} / @{{y}});
-                return @{{tuple}}([f, @{{x}} - f * @{{y}}]);
+                return @{{tuple}}.__new__(@{{tuple}}, [f, @{{x}} - f * @{{y}}]);
             case 0x0102:
                 if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
                 var f = Math.floor(@{{x}} / @{{y}}.__v);
-                return @{{tuple}}([f, @{{x}} - f * @{{y}}.__v]);
+                return @{{tuple}}.__new__(@{{tuple}}, [f, @{{x}} - f * @{{y}}.__v]);
             case 0x0201:
                 if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
                 var f = Math.floor(@{{x}}.__v / @{{y}});
-                return @{{tuple}}([f, @{{x}}.__v - f * @{{y}}]);
+                return @{{tuple}}.__new__(@{{tuple}}, [f, @{{x}}.__v - f * @{{y}}]);
             case 0x0202:
                 if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
                 var f = Math.floor(@{{x}}.__v / @{{y}}.__v);
-                return @{{tuple}}([new @{{int}}(f), new @{{int}}(@{{x}}.__v - f * @{{y}}.__v)]);
+                return @{{tuple}}.__new__(@{{tuple}}, [new @{{int}}(f), new @{{int}}(@{{x}}.__v - f * @{{y}}.__v)]);
             case 0x0204:
                 return @{{y}}.__rdivmod__(new @{{long}}(@{{x}}.__v));
             case 0x0402:

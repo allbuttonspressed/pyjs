@@ -295,7 +295,6 @@ PYJSLIB_BUILTIN_FUNCTIONS=frozenset((
     "zip",
 
     # internal mappings needed
-    "__empty_dict",
     "next_hash_id",
     "__hash",
     "wrapped_next",
@@ -428,7 +427,6 @@ CONTEXT_OPTIONS = {
     'pyjslib.dict.pop': dict(function_argument_checking=False),
     'pyjslib.BaseSet.__new__': dict(function_argument_checking=False),
     'pyjslib.frozenset.__new__': dict(function_argument_checking=False),
-    'pyjslib.__empty_dict': dict(function_argument_checking=False),
     'pyjslib.isSet': dict(function_argument_checking=False),
     'pyjslib.BaseSet.__nonzero__': dict(function_argument_checking=False),
     'random.Random.randrange': dict(operator_funcs=False, stupid_mode=True),
@@ -1918,8 +1916,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             revargs.reverse()
             self.w( """\
 %(s)sif (typeof %(lp)s%(k)s == 'undefined') {
-%(s)s\t%(lp)s%(k)s = @{{__empty_dict}}();\
-""" % {'lp': lp, 's': self.spacing(), 'k': kwargname}, output=output)
+%(s)s\t%(lp)s%(k)s = %(d)s.__new__(%(d)s);\
+""" % {'lp': lp, 's': self.spacing(), 'k': kwargname, 'd': self.pyjslib_name('dict')}, output=output)
 
             for v in revargs:
                 self.w( """\
@@ -3005,10 +3003,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 %(s)sreturn $pyjs_type('%(n)s', $bases, %(local_prefix)s);"""
         else:
             create_class += """
-%(s)svar $data = $p['__empty_dict']();
+%(s)svar $data = %(d)s.__new__(%(d)s);
 %(s)sfor (var $item in %(local_prefix)s) { $data.__setitem__($item.startswith('$$') ? $item.slice(2) : $item, %(local_prefix)s[$item]); }
 %(s)sreturn @{{_create_class}}('%(n)s', $p['tuple']($bases), $data);"""
-        create_class %= {'n': node.name, 's': self.spacing(), 'local_prefix': local_prefix, 'bases': ",".join(map(lambda x: x[1], base_classes))}
+        create_class %= {'n': node.name, 's': self.spacing(), 'local_prefix': local_prefix, 'bases': ",".join(map(lambda x: x[1], base_classes)),
+                         'd': self.pyjslib_name('dict')}
         create_class += """
 %s})();""" % self.dedent()
         self.w( create_class)
@@ -4300,6 +4299,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         if accept_js_object:
             return self._typed_tuple(node, current_klass, accept_js_object=True)
         kind = ('list', None, None)
+        if len(node.nodes) == 0:
+            return "$p['list'].__new__($p['list'])", kind
         exprs = [self.expr(x, current_klass) for x in node.nodes]
         varname = self.uniqid('$list')
         self.add_lookup('variable', varname, varname)
@@ -4308,13 +4309,16 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
     def _dict(self, node, current_klass):
         if len(node.items) == 0:
-            return "$p['__empty_dict']()"
+            return "$p['dict'].__new__($p['dict'])"
         items = []
         for x in node.items:
             key = self.expr(x[0], current_klass)
             value = self.expr(x[1], current_klass)
             items.append("[" + key + ", " + value + "]")
-        return self.track_call("$p['dict']([%s])" % ", ".join(items))
+        varname = self.uniqid('$dict')
+        self.add_lookup('variable', varname, varname)
+        return self.track_call("(%s=$p['dict'].__new__($p['dict']), %s.__init__([%s]), %s)" %
+                            (varname, varname, ", ".join(items), varname))
 
     def _typed_tuple(self, node, current_klass, accept_js_object=False):
         if accept_js_object:
@@ -4334,6 +4338,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         return self.track_call("$p['tuple'].__new__($p['tuple'], [%s])" % ", ".join(exprs), node.lineno), kind
 
     def _set(self, node, current_klass):
+        if len(node.nodes) == 0:
+            return "$p['set'].__new__($p['set'])"
         return self.track_call("$p['set']([%s])" % ", ".join([self.expr(x, current_klass) for x in node.nodes]), node.lineno)
 
     def _sliceobj(self, node, current_klass):
