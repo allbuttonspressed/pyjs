@@ -159,6 +159,7 @@ JS("@{{type__new__}}.__name__ = '__new__';")
 JS("@{{type__new__}}.__is_staticmethod__ = true;")
 JS("@{{type__new__}}.toString = function() { return '<method type.__new__>'; };")
 JS("@{{type}}.__new__ = @{{type__new__}};")
+JS("@{{type}}.__$super_cache__ = {};")
 
 def type__init__(cls, name, bases, data):
     pass
@@ -6181,7 +6182,7 @@ def _isinstance(object_, classinfo):
         var __mro__ = @{{object_}}.__mro__.__array;
         var n = __mro__.length;
         while (--n >= 0) {
-            if (__mro__.__array[n] === @{{classinfo}}.__class__) return true;
+            if (__mro__[n] === @{{classinfo}}.__class__) return true;
         }
     }
     return false;
