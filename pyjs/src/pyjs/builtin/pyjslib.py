@@ -177,10 +177,11 @@ JS("""@{{type}}.toString = function() { return "<type 'type'>"; };""")
 
 class object:
     def __setattr__(self, name, value):
+#        // This is unnecessarily inefficient
+#        if (typeof @{{name}} != 'string') {
+#            throw @{{TypeError}}("attribute name must be string");
+#        }
         JS("""
-        if (typeof @{{name}} != 'string') {
-            throw @{{TypeError}}("attribute name must be string");
-        }
         if ('$$' + @{{name}} in attrib_remap) {
             @{{name}} = '$$' + @{{name}};
         }
@@ -223,8 +224,15 @@ JS("@{{object}}.__mro__ = {__array: [@{{object}}]};")
 JS("@{{type}}.__module__ = @{{object}}.__module__;")
 
 class tuple:
-    def __new__(cls, data=JS("[]")):
+    def __new__(cls):
         self = object.__new__(cls)
+        JS("""
+        if (arguments.length == 1) {
+            @{{self}}.__array = [];
+            return @{{self}};
+        }
+        """)
+        data = JS("arguments[1]")
         JS("""
         if (@{{data}} === null) {
             throw @{{TypeError}}("'NoneType' is not iterable");

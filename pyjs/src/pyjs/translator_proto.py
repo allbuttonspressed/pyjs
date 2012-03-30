@@ -421,6 +421,7 @@ PYJSLIB_STATIC_KINDS = {
 STATIC_KINDS = {'pyjslib.' + key: value for key, value in PYJSLIB_STATIC_KINDS.items()}
 
 CONTEXT_OPTIONS = {
+    'pyjslib.object.__setattr__': dict(function_argument_checking=False),
     'pyjslib.list.__new__': dict(function_argument_checking=False),
     'pyjslib.tuple.__new__': dict(function_argument_checking=False),
     'pyjslib.dict.__new__': dict(function_argument_checking=False),
@@ -893,6 +894,8 @@ class Translator(object):
         self.kind_lookup_stack = [{}]
         # The current "path" within the source code (func name, class name, etc.)
         self.kind_context = [self.module_name]
+        # Used to detect if a function has a try-except statement
+        self.needs_last_exception = {}
         # Context-specific compilation options
         self.context_options = CONTEXT_OPTIONS.copy()
         self.context_options.update(context_options or {})
@@ -2260,7 +2263,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         self.indent()
         self.w("$pyjs__prepare_func('%s', function %s(%s) {" % (real_name, debug_name, function_args))
-        self.w(self.spacing() + "  var $pyjs_last_exception, $pyjs_last_exception_stack;")
 
         defaults_done_by_inline = False
 
@@ -2277,6 +2279,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         save_output = self.output
 
         # We convert the code twice. The first time we only collect type information.
+        self.needs_last_exception[tuple(self.kind_context)] = False
         self.output = StringIO()
         save_lookup_stack = self.lookup_stack[-1].copy()
         for child in node.code:
@@ -2284,6 +2287,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         self.output = StringIO()
         self.lookup_stack[-1] = save_lookup_stack.copy()
+        if self.needs_last_exception[tuple(self.kind_context)]:
+            self.w(self.spacing() + "  var $pyjs_last_exception, $pyjs_last_exception_stack;")
         if self.source_tracking:
             self.w( self.spacing() + "$pyjs.track={module:%s__name__,lineno:%d};$pyjs.trackstack.push($pyjs.track);" % (self.module_prefix, node.lineno))
         self.track_lineno(node, True)
@@ -2656,6 +2661,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         self._tryExcept(body, current_klass)
 
     def _tryExcept(self, node, current_klass):
+        self.needs_last_exception[tuple(self.kind_context)] = True
         save_is_generator = self.is_generator
         if self.is_generator:
             self.is_generator = self.compiler.walk(node, GeneratorExitVisitor(), walker=GeneratorExitVisitor()).has_yield
@@ -3066,6 +3072,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 self.w( self.spacing() + "throw (%s);" % self.expr(
                     node.expr1, current_klass))
         else:
+            self.needs_last_exception[tuple(self.kind_context)] = True
             if self.source_tracking:
                 self.w( self.spacing() + "if (typeof $pyjs_last_exception_stack != 'undefined') { $pyjs.__last_exception_stack__ = $pyjs_last_exception_stack; }")
                 self.w( self.spacing() + "$pyjs.__active_exception_stack__ = $pyjs.__last_exception_stack__;")
@@ -3373,12 +3380,21 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     "unsupported flag (in _assign)", v, self.module_name)
         elif isinstance(v, self.ast.Subscript):
             if v.flags == "OP_ASSIGN":
-                obj = self.expr(v.expr, current_klass)
+                obj, kind = self._typed_expr(v.expr, current_klass)
                 if len(v.subs) != 1:
                     raise TranslationError(
                         "must have one sub (in _assign)", v, self.module_name)
                 idx = self.expr(v.subs[0], current_klass)
-                assigns.append(self.track_call(obj + ".__setitem__(" + idx + ", " + expr + ")", v.lineno) + ';')
+                if get_kind(kind) == 'list' and get_kind(kind, 1) is not None:
+                    try:
+                        int_index = int(idx)
+                    except ValueError:
+                        pass
+                    else:
+                        if 0 <= int_index < get_kind(kind, 1):
+                            assigns.append('%s.__array[%s] = %s' % (obj, idx, expr))
+                            return assigns
+                assigns.append(self.track_call("%s.__setitem__(%s, %s)" % (obj, idx, expr), v.lineno) + ';')
                 return assigns
             else:
                 raise TranslationError(
@@ -4044,9 +4060,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             kind = kind1
         elif get_kind(kind1) == get_kind(kind2):
             if get_kind(kind1) in ('tuple', 'list'):
-                if get_kind(kind1, 1) is not None and get_kind(kind2, 1) is not None:
-                    kind = (kind1[0], kind1[1] + kind2[1]) + kind1[2:] + kind2[2:]
-                elif get_kind(kind1, 1) is None and get_kind(kind2, 1) is None and \
+                if get_kind(kind1, 1) is None and get_kind(kind2, 1) is None and \
                         get_kind(kind1, 2) == get_kind(kind2, 2):
                     kind = kind1
                 else:
