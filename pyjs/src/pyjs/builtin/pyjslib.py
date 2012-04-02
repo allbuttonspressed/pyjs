@@ -4659,7 +4659,7 @@ class list:
     __str__ = __repr__
 
     def __add__(self, y):
-        if not isinstance(y, self):
+        if not isinstance(y, self.__class__):
             raise TypeError("can only concatenate list to list")
         return list(self.__array.concat(y.__array))
 
