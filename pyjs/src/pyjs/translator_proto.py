@@ -339,10 +339,7 @@ PYJSLIB_BUILTIN_FUNCTIONS=frozenset((
     "op_mod",
     "__op_add",
     "__op_sub",
-    "__getslice",
-    "__setslice",
     "slice",
-    "__delslice",
     "___import___",
     "__import_all__",
     "_globals",
@@ -3411,8 +3408,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     upper = self.expr(v.upper, current_klass)
                 obj = self.expr(v.expr, current_klass)
                 assigns.append(self.track_call(
-                    self.pyjslib_name("__setslice", 
-                                      args=[obj, lower, upper, expr]),
+                    '%s.__setitem__($p["slice"](%s, %s), %s)' % (obj, lower, upper, expr),
                     v.lineno) + ';')
                 return assigns
             else:
@@ -4528,13 +4524,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 # We have a list of a specific length, but we don't know the resulting
                 # length. So, let's return that we don't know what's inside.
                 kind = (get_kind(kind), None, None)
-            return self.pyjslib_name("__getslice", args=[
-                expr, lower, upper
-            ]), kind
+            return '%s.__getitem__($p["slice"](%s, %s))' % (
+                expr, lower, upper), kind
         elif node.flags == "OP_DELETE":
-            return self.pyjslib_name("__delslice", args=[
-                self.expr(node.expr, current_klass), lower, upper
-            ]), None
+            return '%s.__delitem__($p["slice"](%s, %s))' % (
+                self.expr(node.expr, current_klass), lower, upper), None
         else:
             raise TranslationError(
                 "unsupported flag (in _slice)", node, self.module_name)

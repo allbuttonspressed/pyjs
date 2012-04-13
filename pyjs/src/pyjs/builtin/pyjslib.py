@@ -295,21 +295,27 @@ class tuple:
         if (n1 > n2) return 1;
         return 0;""")
 
-    def __getslice__(self, lower, upper):
-        JS("""
-        if (@{{upper}}==null) return @{{tuple}}.__new__(@{{tuple}}, @{{self}}.__array.slice(@{{lower}}));
-        return @{{tuple}}.__new__(@{{tuple}}, @{{self}}.__array.slice(@{{lower}}, @{{upper}}));
-        """)
-
     def __getitem__(self, _index):
         JS("""
-        var index = @{{_index}}.valueOf();
-        if (typeof index == 'boolean') index = @{{int}}(index);
-        if (index < 0) index += @{{self}}.__array.length;
-        if (index < 0 || index >= @{{self}}.__array.length) {
-            throw @{{IndexError}}("tuple index out of range");
+        if (@{{isinstance}}(@{{_index}}, @{{slice}})) {
+            if (@{{_index}}.step !== null) {
+                // TODO/IMPLEMENTME:
+                throw @{{ValueError}}("step is not yet supported");
+            }
+            if (@{{_index}}.stop === null) {
+                return @{{tuple}}.__new__(@{{tuple}}, @{{self}}.__array.slice(@{{_index}}.start));
+            } else {
+                return @{{tuple}}.__new__(@{{tuple}}, @{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
+            }
+        } else {
+            var index = @{{_index}}.valueOf();
+            if (typeof index == 'boolean') index = @{{int}}(index);
+            if (index < 0) index += @{{self}}.__array.length;
+            if (index < 0 || index >= @{{self}}.__array.length) {
+                throw @{{IndexError}}("tuple index out of range");
+            }
+            return @{{self}}.__array[index];
         }
-        return @{{self}}.__array[index];
         """)
 
     def __len__(self):
@@ -4535,62 +4541,84 @@ class list:
         if (n1 > n2) return 1;
         return 0;""")
 
-    def __getslice__(self, lower, upper):
-        JS("""
-        if (@{{upper}}==null)
-            return @{{list}}(@{{self}}.__array.slice(@{{lower}}));
-        return @{{list}}(@{{self}}.__array.slice(@{{lower}}, @{{upper}}));
-        """)
-
-    def __delslice__(self, _lower, upper):
-        JS("""
-        var lower = @{{_lower}};
-        var n = @{{upper}} - lower;
-        if (@{{upper}}==null) {
-            n =  @{{self}}.__array.length;
-        }
-        if (!lower) lower = 0;
-        if (n > 0) @{{self}}.__array.splice(lower, n);
-        """)
-        return None
-
-    def __setslice__(self, lower, upper, data):
-        self.__delslice__(lower, upper)
-        tail = self.__getslice__(lower, None)
-        self.__delslice__(lower, None)
-        self.extend(data)
-        self.extend(tail)
-        return None
-
     def __getitem__(self, _index):
         JS("""
-        var index = @{{_index}}.valueOf();
-        if (typeof index == 'boolean') index = @{{int}}(index);
-        if (index < 0) index += @{{self}}.__array.length;
-        if (index < 0 || index >= @{{self}}.__array.length) {
-            throw @{{IndexError}}("list index out of range");
+        if (@{{isinstance}}(@{{_index}}, @{{slice}})) {
+            if (@{{_index}}.step !== null) {
+                // TODO/IMPLEMENTME:
+                throw @{{ValueError}}("step is not yet supported");
+            }
+            if (@{{_index}}.stop === null) {
+                return @{{list}}(@{{self}}.__array.slice(@{{_index}}.start));
+            } else {
+                return @{{list}}(@{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
+            }
+        } else {
+            var index = @{{_index}}.valueOf();
+            if (typeof index == 'boolean') index = @{{int}}(index);
+            if (index < 0) index += @{{self}}.__array.length;
+            if (index < 0 || index >= @{{self}}.__array.length) {
+                throw @{{IndexError}}("list index out of range");
+            }
+            return @{{self}}.__array[index];
         }
-        return @{{self}}.__array[index];
         """)
 
     def __setitem__(self, _index, value):
         JS("""
-        var index = @{{_index}}.valueOf();
-        if (index < 0) index += @{{self}}.__array.length;
-        if (index < 0 || index >= @{{self}}.__array.length) {
-            throw @{{IndexError}}("list assignment index out of range");
+        if (@{{isinstance}}(@{{_index}}, @{{slice}})) {
+            if (@{{_index}}.step !== null) {
+                // TODO/IMPLEMENTME:
+                throw @{{ValueError}}("step is not yet supported");
+            }
+            if (@{{_index}}.start < 0 || @{{_index}}.stop < 0) {
+                // TODO/IMPLEMENTME:
+                throw @{{ValueError}}("negative slices not yet supported");
+            }
+            var lower = @{{_index}}.start;
+            var n = @{{_index}}.stop - lower;
+            if (@{{_index}}.stop === null) {
+                n = @{{self}}.__array.length - lower;
+            }
+            if (!lower) lower = 0;
+            var data = @{{tuple}}.__new__(@{{tuple}}, @{{value}});
+            Array.prototype.splice.apply(@{{self}}.__array, [lower, n].concat(data.__array));
+        } else {
+            var index = @{{_index}}.valueOf();
+            if (index < 0) index += @{{self}}.__array.length;
+            if (index < 0 || index >= @{{self}}.__array.length) {
+                throw @{{IndexError}}("list assignment index out of range");
+            }
+            @{{self}}.__array[index]=@{{value}};
         }
-        @{{self}}.__array[index]=@{{value}};
         """)
 
     def __delitem__(self, _index):
         JS("""
-        var index = @{{_index}}.valueOf();
-        if (index < 0) index += @{{self}}.__array.length;
-        if (index < 0 || index >= @{{self}}.__array.length) {
-            throw @{{IndexError}}("list assignment index out of range");
+        if (@{{isinstance}}(@{{_index}}, @{{slice}})) {
+            if (@{{_index}}.step !== null) {
+                // TODO/IMPLEMENTME:
+                throw @{{ValueError}}("step is not yet supported");
+            }
+            if (@{{_index}}.start < 0 || @{{_index}}.stop < 0) {
+                // TODO/IMPLEMENTME:
+                throw @{{ValueError}}("negative slices not yet supported");
+            }
+            var lower = @{{_index}}.start;
+            var n = @{{_index}}.stop - lower;
+            if (@{{_index}}.stop === null) {
+                n = @{{self}}.__array.length - lower;
+            }
+            if (!lower) lower = 0;
+            if (n > 0) @{{self}}.__array.splice(lower, n);
+        } else {
+            var index = @{{_index}}.valueOf();
+            if (index < 0) index += @{{self}}.__array.length;
+            if (index < 0 || index >= @{{self}}.__array.length) {
+                throw @{{IndexError}}("list assignment index out of range");
+            }
+            @{{self}}.__array.splice(index, 1);
         }
-        @{{self}}.__array.splice(index, 1);
         """)
 
     def __len__(self):
@@ -5927,48 +5955,6 @@ def range(start, stop = None, step = 1):
     @{{r}} = @{{list}}(items);
     """)
     return r
-
-def __getslice(object, lower, upper):
-    JS("""
-    if (@{{object}}=== null) {
-        return null;
-    }
-    if (typeof @{{object}}.__getslice__ == 'function') {
-        return @{{object}}.__getslice__(@{{lower}}, @{{upper}});
-    }
-    if (@{{object}}.slice == 'function')
-        return @{{object}}.slice(@{{lower}}, @{{upper}});
-
-    return null;
-    """)
-
-def __delslice(object, lower, upper):
-    JS("""
-    if (typeof @{{object}}.__delslice__ == 'function') {
-        return @{{object}}.__delslice__(@{{lower}}, @{{upper}});
-    }
-    if (@{{object}}.__getslice__ == 'function'
-      && @{{object}}.__delitem__ == 'function') {
-        if (@{{upper}}== null) {
-            @{{upper}}= @{{len}}(@{{object}});
-        }
-        for (var i = @{{lower}}; i < @{{upper}}; i++) {
-            @{{object}}.__delitem__(i);
-        }
-        return null;
-    }
-    throw @{{TypeError}}('object does not support item deletion');
-    return null;
-    """)
-
-def __setslice(object, lower, upper, value):
-    JS("""
-    if (typeof @{{object}}.__setslice__ == 'function') {
-        return @{{object}}.__setslice__(@{{lower}}, @{{upper}}, @{{value}});
-    }
-    throw @{{TypeError}}('object does not support __setslice__');
-    return null;
-    """)
 
 class str(basestring):
     def __new__(self, text=''):
