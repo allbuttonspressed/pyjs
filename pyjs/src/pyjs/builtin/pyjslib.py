@@ -1796,26 +1796,27 @@ String.prototype.center = function(width, fillchar) {
     return new Array(left+1).join(fillchar) + this + new Array(right+1).join(fillchar);
 };
 
-String.prototype.__getslice__ = function(lower, upper) {
-    if (lower === null) {
-        lower = 0;
-    } else if (lower < 0) {
-        lower = this.length + lower;
-    }
-    if (upper === null) {
-        upper=this.length;
-    } else if (upper < 0) {
-       upper = this.length + upper;
-    }
-    return this.substring(lower, upper);
-};
-
 String.prototype.__getitem__ = function(idx) {
-    if (idx < 0) idx += this.length;
-    if (idx < 0 || idx > this.length) {
-        throw @{{IndexError}}("string index out of range");
+    if (@{{isinstance}}(idx, @{{slice}})) {
+        var lower = idx.start, upper = idx.stop;
+        if (lower === null) {
+            lower = 0;
+        } else if (lower < 0) {
+            lower = this.length + lower;
+        }
+        if (upper === null) {
+            upper=this.length;
+        } else if (upper < 0) {
+           upper = this.length + upper;
+        }
+        return this.substring(lower, upper);
+    } else {
+        if (idx < 0) idx += this.length;
+        if (idx < 0 || idx > this.length) {
+            throw @{{IndexError}}("string index out of range");
+        }
+        return this.charAt(idx);
     }
-    return this.charAt(idx);
 };
 
 String.prototype.__setitem__ = function(idx, val) {
