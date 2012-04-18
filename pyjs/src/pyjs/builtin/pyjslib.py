@@ -4900,6 +4900,8 @@ class dict:
         if kwargs:
             init(kwargs)
 
+    __new__.__args__ = __init__.__args
+
     def __hash__(self):
         raise TypeError("dict objects are unhashable")
 
