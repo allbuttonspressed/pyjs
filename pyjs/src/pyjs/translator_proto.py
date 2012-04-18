@@ -2486,7 +2486,11 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     is_builtin = True
                     if v.node.name == 'len' and len(v.args) == 1:
                         return self.inline_len_code(v, current_klass)
-                call_name = jsname
+                if name_type == 'builtin' and v.node.name == 'tuple' and len(v.args) == 1:
+                    call_name = jsname + '.__new__'
+                    call_args.append(jsname)
+                else:
+                    call_name = jsname
         elif isinstance(v.node, self.ast.Getattr) and \
                 self._is_builtin_call(v.node.expr, 'super', 2):
             # Optimize super(Class, self).some_method(...) calls
