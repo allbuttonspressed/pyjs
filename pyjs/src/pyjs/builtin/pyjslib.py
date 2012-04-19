@@ -6364,7 +6364,9 @@ def getattr(obj, name, default_value=_undefined):
         }
     }
 
-    fnwrap.__name__ = re_mapped;
+    if (typeof fnwrap.__name__ == 'undefined') {
+        fnwrap.__name__ = re_mapped;
+    }
     if (fnwrap.__args__ != null) {
         // Remove the bound instance from the args list
         fnwrap.__args__ = fnwrap.__args__.slice(0, 2).concat(fnwrap.__args__.slice(3));
