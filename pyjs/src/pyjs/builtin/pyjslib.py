@@ -404,7 +404,7 @@ class tuple:
     __str__ = __repr__
 
     def __add__(self, y):
-        if not isinstance(y, self):
+        if not isinstance(y, self.__class__):
             raise TypeError("can only concatenate tuple to tuple")
         return tuple(self.__array.concat(y.__array))
 
