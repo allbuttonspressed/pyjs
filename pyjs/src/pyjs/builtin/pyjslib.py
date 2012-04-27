@@ -2073,6 +2073,9 @@ def bool(v):
     #    return True
     #return False
     JS("""
+    if (typeof @{{v}} == 'undefined')
+        throw @{{TypeError}}('bool() called with undefined as argument');
+
     switch (@{{v}}) {
         case null:
         case false:
