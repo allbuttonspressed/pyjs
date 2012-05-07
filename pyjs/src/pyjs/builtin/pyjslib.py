@@ -6122,9 +6122,10 @@ def len(object):
         @{{v}} = @{{object}}.__array.length;
     else if (typeof @{{object}}.__len__ == 'function')
         @{{v}} = @{{object}}.__len__();
-    else if (typeof @{{object}}.length != 'undefined')
+    else if (@{{isArray}}(@{{object}}) && typeof @{{object}}.length != 'undefined')
         @{{v}} = @{{object}}.length;
-    else throw @{{TypeError}}("object has no len()");
+    else
+        throw @{{TypeError}}("object has no len()");
     if (@{{v}}.__number__ & 0x06) return @{{v}};
     """)
     return INT(v)
