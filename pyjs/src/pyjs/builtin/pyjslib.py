@@ -638,10 +638,10 @@ def op_add(x, y):
         if (!@{{x}}.__number__) {
             if (typeof @{{x}}== 'string' && typeof @{{y}}== 'string') return @{{x}}+ @{{y}};
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__add__'] == 'function')
-                return @{{y}}.__add__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__radd__'] == 'function')
+                return @{{y}}.__radd__(@{{x}});
             if (typeof @{{x}}['__add__'] == 'function') return @{{x}}.__add__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__radd__'] == 'function') return @{{y}}.__radd__(@{{x}});
@@ -680,10 +680,10 @@ def op_sub(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__sub__'] == 'function')
-                return @{{y}}.__sub__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__rsub__'] == 'function')
+                return @{{y}}.__rsub__(@{{x}});
             if (typeof @{{x}}['__sub__'] == 'function') return @{{x}}.__sub__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__rsub__'] == 'function') return @{{y}}.__rsub__(@{{x}});
@@ -718,10 +718,10 @@ def op_floordiv(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__floordiv__'] == 'function')
-                return @{{y}}.__floordiv__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__rfloordiv__'] == 'function')
+                return @{{y}}.__rfloordiv__(@{{x}});
             if (typeof @{{x}}['__floordiv__'] == 'function') return @{{x}}.__floordiv__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__rfloordiv__'] == 'function') return @{{y}}.__rfloordiv__(@{{x}});
@@ -756,10 +756,10 @@ def op_div(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__div__'] == 'function')
-                return @{{y}}.__div__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__rdiv__'] == 'function')
+                return @{{y}}.__rdiv__(@{{x}});
             if (typeof @{{x}}['__div__'] == 'function') return @{{x}}.__div__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__rdiv__'] == 'function') return @{{y}}.__rdiv__(@{{x}});
@@ -791,10 +791,10 @@ def op_truediv(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__truediv__'] == 'function')
-                return @{{y}}.__truediv__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__rtruediv__'] == 'function')
+                return @{{y}}.__rtruediv__(@{{x}});
             if (typeof @{{x}}['__truediv__'] == 'function') return @{{x}}.__truediv__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__rtruediv__'] == 'function') return @{{y}}.__rtruediv__(@{{x}});
@@ -825,10 +825,10 @@ def op_mul(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__mul__'] == 'function')
-                return @{{y}}.__mul__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__rmul__'] == 'function')
+                return @{{y}}.__rmul__(@{{x}});
             if (typeof @{{x}}['__mul__'] == 'function') return @{{x}}.__mul__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__rmul__'] == 'function') return @{{y}}.__rmul__(@{{x}});
@@ -870,10 +870,10 @@ def op_mod(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__mod__'] == 'function')
-                return @{{y}}.__mod__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__rmod__'] == 'function')
+                return @{{y}}.__rmod__(@{{x}});
             if (typeof @{{x}}['__mod__'] == 'function') return @{{x}}.__mod__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__rmod__'] == 'function') return @{{y}}.__rmod__(@{{x}});
@@ -907,10 +907,10 @@ def op_pow(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__pow__'] == 'function')
-                return @{{y}}.__pow__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__rpow__'] == 'function')
+                return @{{y}}.__rpow__(@{{x}});
             if (typeof @{{x}}['__pow__'] == 'function') return @{{x}}.__pow__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__rpow__'] == 'function') return @{{y}}.__rpow__(@{{x}});
@@ -7341,10 +7341,10 @@ def divmod(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__divmod__'] == 'function')
-                return @{{y}}.__divmod__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__rdivmod__'] == 'function')
+                return @{{y}}.__rdivmod__(@{{x}});
             if (typeof @{{x}}['__divmod__'] == 'function') return @{{x}}.__divmod__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__rdivmod__'] == 'function') return @{{y}}.__rdivmod__(@{{x}});
