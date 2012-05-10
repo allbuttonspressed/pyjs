@@ -97,7 +97,7 @@ def _create_class(clsname, bases=None, methods=None):
 
         if hasattr(bases[0], '__class__') and hasattr(bases[0], '__new__'):
             main_base = bases[0]
-            return main_base.__class__(clsname, bases, methods)
+            return JS("""@{{main_base}}.__class__(@{{clsname}}, @{{bases}}, @{{methods}})""")
 
     return type(clsname, bases, methods)
 
@@ -303,9 +303,9 @@ class tuple:
                 throw @{{ValueError}}("step is not yet supported");
             }
             if (@{{_index}}.stop === null) {
-                return @{{tuple}}.__new__(@{{tuple}}, @{{self}}.__array.slice(@{{_index}}.start));
+                return @{{_imm_tuple}}(@{{self}}.__array.slice(@{{_index}}.start));
             } else {
-                return @{{tuple}}.__new__(@{{tuple}}, @{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
+                return @{{_imm_tuple}}(@{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
             }
         } else {
             var index = @{{_index}}.valueOf();
@@ -316,6 +316,12 @@ class tuple:
             }
             return @{{self}}.__array[index];
         }
+        """)
+
+    def __unchecked_getitem__(self, index):
+        JS("""
+        if (@{{index}} < 0) @{{index}} += @{{self}}.__array.length;
+        return @{{self}}.__array[@{{index}}];
         """)
 
     def __len__(self):
@@ -430,6 +436,11 @@ JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr
 
 # This is used for efficiency e.g. when handling empty *args
 _empty_tuple = tuple()
+
+def _imm_tuple(data):
+    self = object.__new__(tuple)
+    self.__array = data
+    return self
 
 class basestring(object):
     pass
@@ -4103,7 +4114,7 @@ JS("""
         var div = new $long(0);
         var mod = new $long(0);
         l_divmod(this, b, div, mod);
-        return @{{tuple}}.__new__(@{{tuple}}, [div, mod]);
+        return @{{_imm_tuple}}([div, mod]);
     };
 
     $long.__divmod__ = function (y) {
@@ -4568,6 +4579,12 @@ class list:
         }
         """)
 
+    def __unchecked_getitem__(self, index):
+        JS("""
+        if (@{{index}} < 0) @{{index}} += @{{self}}.__array.length;
+        return @{{self}}.__array[@{{index}}];
+        """)
+
     def __setitem__(self, _index, value):
         JS("""
         if (@{{isinstance}}(@{{_index}}, @{{slice}})) {
@@ -4595,6 +4612,12 @@ class list:
             }
             @{{self}}.__array[index]=@{{value}};
         }
+        """)
+
+    def __unchecked_setitem__(self, index, value):
+        JS("""
+        if (@{{index}} < 0) @{{index}} += @{{self}}.__array.length;
+        @{{self}}.__array[@{{index}}] = @{{value}};
         """)
 
     def __delitem__(self, _index):
@@ -4708,6 +4731,11 @@ class list:
     __rmul__ = __mul__
 
 JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type list>'; };")
+
+def _imm_list(data):
+    self = object.__new__(list)
+    self.__array = data
+    return self
 
 class slice:
     def __init__(self, a1, *args):
@@ -6094,9 +6122,10 @@ def len(object):
         @{{v}} = @{{object}}.__array.length;
     else if (typeof @{{object}}.__len__ == 'function')
         @{{v}} = @{{object}}.__len__();
-    else if (typeof @{{object}}.length != 'undefined')
+    else if (@{{isArray}}(@{{object}}) && typeof @{{object}}.length != 'undefined')
         @{{v}} = @{{object}}.length;
-    else throw @{{TypeError}}("object has no len()");
+    else
+        throw @{{TypeError}}("object has no len()");
     if (@{{v}}.__number__ & 0x06) return @{{v}};
     """)
     return INT(v)
@@ -7169,7 +7198,7 @@ def sprintf(strng, args):
         }
     }
     if (constructor != "tuple") {
-        args = @{{tuple}}.__new__(@{{tuple}}, [args]);
+        args = @{{_imm_tuple}}([args]);
     }
     nargs = args.__array.length;
     sprintf_list(strng, args);
@@ -7290,19 +7319,19 @@ def divmod(x, y):
             case 0x0401:
                 if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
                 var f = Math.floor(@{{x}} / @{{y}});
-                return @{{tuple}}.__new__(@{{tuple}}, [f, @{{x}} - f * @{{y}}]);
+                return @{{_imm_tuple}}([f, @{{x}} - f * @{{y}}]);
             case 0x0102:
                 if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
                 var f = Math.floor(@{{x}} / @{{y}}.__v);
-                return @{{tuple}}.__new__(@{{tuple}}, [f, @{{x}} - f * @{{y}}.__v]);
+                return @{{_imm_tuple}}([f, @{{x}} - f * @{{y}}.__v]);
             case 0x0201:
                 if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
                 var f = Math.floor(@{{x}}.__v / @{{y}});
-                return @{{tuple}}.__new__(@{{tuple}}, [f, @{{x}}.__v - f * @{{y}}]);
+                return @{{_imm_tuple}}([f, @{{x}}.__v - f * @{{y}}]);
             case 0x0202:
                 if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
                 var f = Math.floor(@{{x}}.__v / @{{y}}.__v);
-                return @{{tuple}}.__new__(@{{tuple}}, [new @{{int}}(f), new @{{int}}(@{{x}}.__v - f * @{{y}}.__v)]);
+                return @{{_imm_tuple}}([new @{{int}}(f), new @{{int}}(@{{x}}.__v - f * @{{y}}.__v)]);
             case 0x0204:
                 return @{{y}}.__rdivmod__(new @{{long}}(@{{x}}.__v));
             case 0x0402:
@@ -8575,6 +8604,11 @@ def __with(mgr, func):
 init()
 
 Ellipsis = EllipsisType()
+
+_slice_0_end = slice(0, None)
+_slice_1_end = slice(1, None)
+_slice_0_minus1 = slice(0, -1)
+_slice_1_minus1 = slice(1, -1)
 
 __nondynamic_modules__ = {}
 

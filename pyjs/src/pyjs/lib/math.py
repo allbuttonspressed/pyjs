@@ -17,6 +17,8 @@ def acos(x): return float(JS("Math.acos(@{{x}}.valueOf())"))
 def asin(x): return float(JS("Math.asin(@{{x}}.valueOf())"))
 def atan(x): return float(JS("Math.atan(@{{x}}.valueOf())"))
 def atan2(x, y): return float(JS("Math.atan2(@{{x}}.valueOf(), @{{y}}.valueOf())"))
+def hypot(x, y): return float(JS("Math.sqrt(@{{x}}.valueOf()*@{{x}}.valueOf()"
+                                 "+@{{y}}.valueOf()*@{{y}}.valueOf())"))
 
 pi = float(JS("Math.PI"))
 e = float(JS("Math.E"))

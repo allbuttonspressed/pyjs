@@ -401,6 +401,7 @@ PYJSLIB_STATIC_KINDS = {
     'int': ('func', 'number'),
     'long': ('func', 'number'),
     'float': ('func', 'number'),
+    'abs': ('func', 'number'),
     'set': ('func', ('set', None)),
     'tuple': ('func', ('tuple', None, None)),
     'list': ('func', ('list', None, None)),
@@ -420,7 +421,13 @@ STATIC_KINDS = {'pyjslib.' + key: value for key, value in PYJSLIB_STATIC_KINDS.i
 CONTEXT_OPTIONS = {
     'pyjslib.object.__setattr__': dict(function_argument_checking=False),
     'pyjslib.list.__new__': dict(function_argument_checking=False),
+    'pyjslib.list.__unchecked_getitem__': dict(function_argument_checking=False),
+    'pyjslib.list.__unchecked_setitem__': dict(function_argument_checking=False),
+    'pyjslib._imm_list': dict(function_argument_checking=False),
     'pyjslib.tuple.__new__': dict(function_argument_checking=False),
+    'pyjslib.tuple.__unchecked_getitem__': dict(function_argument_checking=False),
+    'pyjslib._imm_tuple': dict(function_argument_checking=False),
+    'pyjslib.float.__new__': dict(function_argument_checking=False),
     'pyjslib.dict.__new__': dict(function_argument_checking=False),
     'pyjslib.dict.pop': dict(function_argument_checking=False),
     'pyjslib.BaseSet.__new__': dict(function_argument_checking=False),
@@ -1506,19 +1513,32 @@ class Translator(object):
         except ValueError:
             index = None
         if index is not None and get_kind(expr_kind) in ('tuple', 'list') and \
-                get_kind(expr_kind, 1) is not None and (get_kind(expr_kind, 1) > index >= 0 or
-                                                        get_kind(expr_kind, 1) >= -index > 0):
-            if index < 0:
+                get_kind(expr_kind, 1) is not None and \
+                ((isinstance(get_kind(expr_kind, 1), (int, long)) and
+                    (get_kind(expr_kind, 1) > index >= 0 or get_kind(expr_kind, 1) >= -index > 0)) or
+                 get_kind(expr_kind, 1) == 'unchecked' or
+                 (get_kind(expr_kind, 1) == 'wrapunchecked' and index >= 0)):
+            if get_kind(expr_kind, 1) in ('unchecked', 'wrapunchecked'):
+                index = 0
+            if index < 0 and get_kind(expr_kind, 1) != 'unchecked':
                 index = get_kind(expr_kind, 1) + index
             return "%(e)s.__array[%(i)s]" % locals(), get_kind(expr_kind, 2 + index)
+        kind = None
+        if get_kind(expr_kind) in ('tuple', 'list'):
+            if get_kind(expr_kind, 1) in (None, 'unchecked', 'wrapunchecked'):
+                kind = get_kind(expr_kind, 2)
+            if get_kind(expr_kind, 1) == 'unchecked':
+                return "%(e)s.__array[%(i)s]" % locals(), kind
+            if get_kind(expr_kind, 1) == 'wrapunchecked':
+                return "%(e)s.__unchecked_getitem__(%(i)s)" % locals(), kind
         if self.inline_getitem:
             v1 = self.uniqid('$')
             self.add_lookup('variable', v1, v1)
             v2 = self.uniqid('$')
             self.add_lookup('variable', v2, v2)
             s = self.spacing()
-            return self.__inline_getitem_code_str % locals(), None
-        return "%(e)s.__getitem__(%(i)s)" % locals(), None
+            return self.__inline_getitem_code_str % locals(), kind
+        return "%(e)s.__getitem__(%(i)s)" % locals(), kind
 
     def md5(self, node):
         return md5(self.module_name + str(node.lineno) + repr(node)).hexdigest()
@@ -2486,7 +2506,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     is_builtin = True
                     if v.node.name == 'len' and len(v.args) == 1:
                         return self.inline_len_code(v, current_klass)
-                if name_type == 'builtin' and v.node.name == 'tuple' and len(v.args) == 1:
+                if name_type == 'builtin' and v.node.name in ('tuple', 'float') and len(v.args) == 1:
                     call_name = jsname + '.__new__'
                     call_args.append(jsname)
                 else:
@@ -2532,7 +2552,18 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 default = 'null'
             return "(typeof %s[%s] == 'undefined' ? %s : %s[%s][1])" % (
                 dict_name, key, default, dict_name, key), None
+        elif isinstance(v.node, self.ast.Getattr) and v.node.attrname == '__class__' and self._get_pure_getattr(v.node):
+            # Optimize <...>.__class__(...) calls
+            call_name = self.expr(v.node.expr, current_klass) + "['__class__']"
+            fast_instantiation = True
         elif not self.getattr_support and isinstance(v.node, self.ast.Getattr):
+            call_path = self._get_pure_getattr(v.node)
+            if call_path:
+                kind_path = '.'.join(self.kind_context + call_path)
+                if kind_path in self.static_kinds:
+                    call_kind = self.static_kinds[kind_path]
+                    if get_kind(call_kind) == 'func':
+                        kind = get_kind(call_kind, 1)
             method_name = self.attrib_remap(v.node.attrname)
             if isinstance(v.node.expr, self.ast.Name):
                 call_name, method_name = self._name2(v.node.expr, current_klass, method_name)
@@ -2543,7 +2574,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             else:
                 call_name = self.expr(v.node.expr, current_klass)
         else:
-            call_name = self.expr(v.node, current_klass)
+            call_name, call_kind = self._typed_expr(v.node, current_klass)
+            if get_kind(call_kind) == 'func':
+                kind = get_kind(call_kind, 1)
 
         if method_name in pyjs_attrib_remap:
             method_name = pyjs_attrib_remap[method_name]
@@ -3013,7 +3046,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             create_class += """
 %(s)svar $data = %(d)s.__new__(%(d)s);
 %(s)sfor (var $item in %(local_prefix)s) { $data.__setitem__($item.startswith('$$') ? $item.slice(2) : $item, %(local_prefix)s[$item]); }
-%(s)sreturn @{{_create_class}}('%(n)s', $p['tuple']($bases), $data);"""
+%(s)sreturn @{{_create_class}}('%(n)s', $p['_imm_tuple']($bases), $data);"""
         create_class %= {'n': node.name, 's': self.spacing(), 'local_prefix': local_prefix, 'bases': ",".join(map(lambda x: x[1], base_classes)),
                          'd': self.pyjslib_name('dict')}
         create_class += """
@@ -3395,7 +3428,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                         if 0 <= int_index < get_kind(kind, 1):
                             assigns.append('%s.__array[%s] = %s' % (obj, idx, expr))
                             return assigns
-                assigns.append(self.track_call("%s.__setitem__(%s, %s)" % (obj, idx, expr), v.lineno) + ';')
+                if get_kind(kind) == 'list' and get_kind(kind, 1) == 'unchecked':
+                    assigns.append(self.track_call("%s.__array[%s] = %s" % (obj, idx, expr), v.lineno) + ';')
+                elif get_kind(kind) == 'list' and get_kind(kind, 1) == 'wrapunchecked':
+                    assigns.append(self.track_call("%s.__unchecked_setitem__(%s, %s)" % (obj, idx, expr), v.lineno) + ';')
+                else:
+                    assigns.append(self.track_call("%s.__setitem__(%s, %s)" % (obj, idx, expr), v.lineno) + ';')
                 return assigns
             else:
                 raise TranslationError(
@@ -3403,7 +3441,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(v, self.ast.Slice):
             if v.flags == "OP_ASSIGN":
                 if not v.lower:
-                    lower = 0
+                    lower = '0'
                 else:
                     lower = self.expr(v.lower, current_klass)
                 if not v.upper:
@@ -3411,8 +3449,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 else:
                     upper = self.expr(v.upper, current_klass)
                 obj = self.expr(v.expr, current_klass)
+                slice_inst = self._make_slice_inst(lower, upper)
                 assigns.append(self.track_call(
-                    '%s.__setitem__($p["slice"](%s, %s), %s)' % (obj, lower, upper, expr),
+                    '%s.__setitem__(%s, %s)' % (obj, slice_inst, expr),
                     v.lineno) + ';')
                 return assigns
             else:
@@ -3764,8 +3803,34 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                                      accept_js_object=accept_js_object)
         elif isinstance(node, self.ast.Subscript):
             return self._typed_subscript(node, current_klass)
+        elif isinstance(node, self.ast.Getattr):
+            path = self._get_pure_getattr(node)
+            kind = None
+            if path is not None:
+                kind_path = '.'.join(self.kind_context + path)
+                if kind_path in self.static_kinds:
+                    kind = self.static_kinds[kind_path]
+                elif len(self.kind_context) >= 2:
+                    base_path = self.kind_context[:-1]
+                    base_path[-1] += '()'
+                    kind_path = '.'.join(base_path + path)
+                    if kind_path in self.static_kinds:
+                        kind = self.static_kinds[kind_path]
+            if kind is not None:
+                return self.expr(node, current_klass), kind
         return self.expr(node, current_klass), None
 
+    def _get_pure_getattr(self, node):
+        path = []
+        while True:
+            if isinstance(node, self.ast.Name):
+                path.insert(0, node.name)
+                return path
+            elif isinstance(node, self.ast.Getattr):
+                path.insert(0, node.attrname)
+                node = node.expr
+            else:
+                return None
 
     def _for(self, node, current_klass): # DANIEL KLUEV VERSION
         save_is_generator = self.is_generator
@@ -3778,12 +3843,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.add_lookup('variable', iterator_name, iterator_name)
         nextval = "%s_nextval" % iterid
         self.add_lookup('variable', nextval, nextval)
-        gentype = "%s_type" % iterid
-        self.add_lookup('variable', gentype, gentype)
-        array = "%s_array" % iterid
-        self.add_lookup('variable', array, array)
-        loopvar = "%s_idx" % iterid
-        self.add_lookup('variable', loopvar, loopvar)
         if node.else_:
             testvar = "%s_test" % iterid
             self.add_lookup('variable', testvar, testvar)
@@ -3795,7 +3854,15 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         # We have special optimizations when iterating over enumerate(), reversed(), and
         # reversed(list(enumerate())).
         special_optimization = None
-        if self._is_builtin_call(node.list, ('enumerate', 'reversed')):
+        if self._is_builtin_call(node.list, 'range'):
+            list_expr = self.expr(node.list.args[0], current_klass)
+            list_kind = 'range'
+            special_optimization = 'range'
+        elif self._is_builtin_call(node.list, 'range', 2):
+            list_expr = self.expr(node.list.args[1], current_klass)
+            list_kind = 'range'
+            special_optimization = 'range'
+        elif self._is_builtin_call(node.list, ('enumerate', 'reversed')):
             # First handle reversed(list(enumerate()))
             argnode = node.list.args[0]
             if (node.list.node.name == 'reversed' and
@@ -3825,14 +3892,16 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             list_expr, list_kind = self._typed_expr(node.list, current_klass,
                                                     accept_js_object=True)
 
-        if get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
+        if special_optimization == 'range':
+            rhs = nextval
+        elif get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
             rhs = '%(iterator_name)s[%(nextval)s]' % locals()
             # Even if we can't optimize the unpacking process we can at least optimize
             # the iteration, so fall back to generating a tuple, but at least efficiently
             if special_optimization in ('enumerate', 'reversed-enumerate') and (
                     not isinstance(node.assign, self.ast.AssTuple) or
                     len(node.assign.nodes) != 2):
-                rhs = '%s([%s, %s])' % (self.pyjslib_name('tuple'), nextval, rhs)
+                rhs = '%s([%s, %s])' % (self.pyjslib_name('_imm_tuple'), nextval, rhs)
                 if special_optimization == 'reversed-enumerate':
                     special_optimization = 'reversed'
                 else:
@@ -3843,7 +3912,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             rhs = "%s.$nextval" % nextval
 
         list_item_kind = None
-        if get_kind(list_kind) in ('list', 'tuple', 'generator', 'jsarray') and \
+        if special_optimization == 'range':
+            list_item_kind = 'number'
+        elif get_kind(list_kind) in ('list', 'tuple', 'generator', 'jsarray') and \
                 get_kind(list_kind, 1) in (1, None):
             list_item_kind = get_kind(list_kind, 2)
 
@@ -3861,7 +3932,15 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.add_lookup('variable', var_trackstack_size, var_trackstack_size)
             self.w( self.spacing() + "%s=$pyjs.trackstack.length;" % var_trackstack_size)
         s = self.spacing()
-        if get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
+        if special_optimization == 'range':
+            self.w("""%(s)s%(iterator_name)s = """ % locals() + self.track_call(list_expr, node.lineno) + ';')
+            if len(node.list.args) == 1:
+                start = '-1'
+            elif len(node.list.args) == 2:
+                start = '(%s) - 1' % self.expr(node.list.args[0], current_klass)
+            self.w("""%(s)s%(nextval)s = %(start)s;""" % locals())
+            condition = "++%(nextval)s < %(iterator_name)s" % locals()
+        elif get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
             if get_kind(list_kind) == 'jsarray':
                 iterator_value = list_expr
             else:
@@ -3877,6 +3956,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 self.w("""%(s)s%(nextval)s = -1;""" % locals())
                 condition = "++%(nextval)s < %(iterator_name)s.length" % locals()
         elif self.inline_code:
+            gentype = "%s_type" % iterid
+            self.add_lookup('variable', gentype, gentype)
+            loopvar = "%s_idx" % iterid
+            self.add_lookup('variable', loopvar, loopvar)
+            array = "%s_array" % iterid
+            self.add_lookup('variable', array, array)
             self.w( """\
 %(s)s%(iterator_name)s = """ % locals() + self.track_call("%(list_expr)s" % locals(), node.lineno) + ';')
             self.w( """\
@@ -3907,7 +3992,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.generator_add_state()
         self.generator_switch_open()
         self.generator_switch_case(increment=False)
-        
+
         for line in assigns:
             self.w( self.spacing() + line)
 
@@ -3926,7 +4011,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             for n in node.else_.nodes:
                 self._stmt(n, current_klass)
             self.w( self.dedent() + "}")
-
 
         if self.source_tracking:
             self.w( """\
@@ -4046,11 +4130,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         if not self.operator_funcs or get_kind(kind) == 'number':
             return "-(%s)" % e, kind
 
-        v = self.uniqid('$usub')
-        s = self.spacing()
-        return """(typeof (%(v)s=%(e)s)=='number'?
-%(s)s\t-%(v)s:
-%(s)s\t@{{op_usub}}(%(v)s))""" % locals(), kind
+        return """@{{op_usub}}(%(e)s)""" % locals(), kind
 
     def _typed_add(self, node, current_klass):
         e1, kind1 = self._typed_expr(node.left, current_klass)
@@ -4317,10 +4397,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         if len(node.nodes) == 0:
             return "$p['list'].__new__($p['list'])", kind
         exprs = [self.expr(x, current_klass) for x in node.nodes]
-        varname = self.uniqid('$list')
-        self.add_lookup('variable', varname, varname)
-        return self.track_call("(%s=$p['list'].__new__($p['list']), %s.__init__([%s]), %s)" % (
-                            varname, varname, ", ".join(exprs), varname), node.lineno), kind
+        return self.track_call("$p['_imm_list']([%s])" % ", ".join(exprs), node.lineno), kind
 
     def _dict(self, node, current_klass):
         if len(node.items) == 0:
@@ -4350,7 +4427,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             kind += (expr_kind,)
         if accept_js_object:
             return '[%s]' % ', '.join(exprs), kind
-        return self.track_call("$p['tuple'].__new__($p['tuple'], [%s])" % ", ".join(exprs), node.lineno), kind
+        return self.track_call("$p['_imm_tuple']([%s])" % ", ".join(exprs), node.lineno), kind
 
     def _set(self, node, current_klass):
         if len(node.nodes) == 0:
@@ -4508,6 +4585,17 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.pop_options()
         return captured_output
 
+    def _make_slice_inst(self, lower, upper):
+        if lower == '0' and upper == 'null':
+            return '$p["_slice_0_end"]'
+        elif lower == '1' and upper == 'null':
+            return '$p["_slice_1_end"]'
+        elif lower == '0' and upper in ('-1', '-(1)'):
+            return '$p["_slice_0_minus1"]'
+        elif lower == '1' and upper in ('-1', '-(1)'):
+            return '$p["_slice_1_minus1"]'
+        return '$p["slice"](%s, %s)' % (lower, upper)
+
     def _typed_slice(self, node, current_klass, accept_js_object=False):
         lower = "0"
         upper = "null"
@@ -4521,18 +4609,19 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 kind = None
             elif lower == '0' and upper == 'null':
                 # Optimization: Make a fast copy
+                expr = '(%s).__array.slice(0)' % expr
                 if accept_js_object:
-                    return '(%s).__array.slice(0)' % expr, ('jsarray',) + kind[1:]
-                return self.pyjslib_name(get_kind(kind), args=[expr]), kind
+                    return expr, ('jsarray',) + kind[1:]
+                return self.pyjslib_name('_imm_' + get_kind(kind), args=[expr]), kind
             elif get_kind(kind, 1) is not None:
                 # We have a list of a specific length, but we don't know the resulting
                 # length. So, let's return that we don't know what's inside.
                 kind = (get_kind(kind), None, None)
-            return '%s.__getitem__($p["slice"](%s, %s))' % (
-                expr, lower, upper), kind
+            return '%s.__getitem__(%s)' % (
+                expr, self._make_slice_inst(lower, upper)), kind
         elif node.flags == "OP_DELETE":
-            return '%s.__delitem__($p["slice"](%s, %s))' % (
-                self.expr(node.expr, current_klass), lower, upper), None
+            return '%s.__delitem__(%s)' % (
+                self.expr(node.expr, current_klass), self._make_slice_inst(lower, upper)), None
         else:
             raise TranslationError(
                 "unsupported flag (in _slice)", node, self.module_name)
