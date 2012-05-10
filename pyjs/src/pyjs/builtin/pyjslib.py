@@ -669,10 +669,10 @@ def op_sub(x, y):
         }
         if (!@{{x}}.__number__) {
             if (   !@{{y}}.__number__
-                && @{{x}}.__mro__.__array.length > @{{y}}.__mro__.__array.length
-                && @{{isinstance}}(@{{x}}, @{{y}})
-                && typeof @{{x}}['__sub__'] == 'function')
-                return @{{y}}.__sub__(@{{x}});
+                && @{{y}}.__mro__.__array.length > @{{x}}.__mro__.__array.length
+                && @{{isinstance}}(@{{y}}, @{{x}}.__class__)
+                && typeof @{{y}}['__rsub__'] == 'function')
+                return @{{y}}.__rsub__(@{{x}});
             if (typeof @{{x}}['__sub__'] == 'function') return @{{x}}.__sub__(@{{y}});
         }
         if (!@{{y}}.__number__ && typeof @{{y}}['__rsub__'] == 'function') return @{{y}}.__rsub__(@{{x}});
