@@ -6118,6 +6118,8 @@ def len(object):
     }
     if (@{{object}}=== null)
         return @{{v}};
+    else if (typeof @{{object}} == 'string')
+        @{{v}} = @{{object}}.length;
     else if (typeof @{{object}}.__array != 'undefined')
         @{{v}} = @{{object}}.__array.length;
     else if (typeof @{{object}}.__len__ == 'function')
