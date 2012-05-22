@@ -1585,7 +1585,7 @@ String.prototype.__contains__ = function(s){
 String.prototype.__split = String.prototype.split;
 
 String.prototype.$$split = function(sep, maxsplit) {
-    var items=@{{list}}();
+    var items=@{{list}}.__new__(@{{list}});
     var do_max=false;
     var subject=this;
     var start=0;
@@ -1621,7 +1621,7 @@ String.prototype.$$split = function(sep, maxsplit) {
 };
 
 String.prototype.rsplit = function(sep, maxsplit) {
-    var items=@{{list}}();
+    var items=@{{list}}.__new__(@{{list}});
     var do_max=false;
     var subject=this;
     var pos=0;
@@ -4564,9 +4564,9 @@ class list:
                 throw @{{ValueError}}("step is not yet supported");
             }
             if (@{{_index}}.stop === null) {
-                return @{{list}}(@{{self}}.__array.slice(@{{_index}}.start));
+                return @{{_imm_list}}(@{{self}}.__array.slice(@{{_index}}.start));
             } else {
-                return @{{list}}(@{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
+                return @{{_imm_list}}(@{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
             }
         } else {
             var index = @{{_index}}.valueOf();
@@ -5028,7 +5028,7 @@ class dict:
 
     def keys(self):
         JS("""
-        var keys=@{{list}}(),
+        var keys=@{{list}}.__new__(@{{list}}),
             selfObj = @{{self}}.__object,
             __array = keys.__array,
             i = 0;
@@ -5047,7 +5047,7 @@ class dict:
 
     def values(self):
         JS("""
-        var values=@{{list}}();
+        var values=@{{list}}.__new__(@{{list}});
         var i = 0;
         for (var key in @{{self}}.__object) {
             values.__array[i++] = @{{self}}.__object[key][1];
@@ -5057,7 +5057,7 @@ class dict:
 
     def items(self):
         JS("""
-        var items = @{{list}}();
+        var items = @{{list}}.__new__(@{{list}});
         var i = 0;
         for (var key in @{{self}}.__object) {
           var kv = @{{self}}.__object[key];
@@ -5986,7 +5986,7 @@ def range(start, stop = None, step = 1):
     JS("""
         @{{ilow}} += @{{step}};
     }
-    @{{r}} = @{{list}}(items);
+    @{{r}} = @{{_imm_list}}(items);
     """)
     return r
 
@@ -6518,7 +6518,7 @@ def dir(obj):
     if (typeof @{{obj}}== 'undefined') {
         throw @{{UndefinedValueError}}("dir() on undefined");
     }
-    var properties=@{{list}}();
+    var properties=@{{list}}.__new__(@{{list}});
     for (var property in @{{obj}}) {
         if (property.substring(0, 2) === '$$' && property in attrib_remap) {
             // handle back mapping of name
