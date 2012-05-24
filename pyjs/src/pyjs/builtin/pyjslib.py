@@ -4825,6 +4825,8 @@ class slice:
 
 JS("@{{slice}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type slice>'; };")
 
+# IMPORTANT: We have cached slice values at the bottom of this file.
+
 class dict:
     def __new__(cls):
         # initialize memory
