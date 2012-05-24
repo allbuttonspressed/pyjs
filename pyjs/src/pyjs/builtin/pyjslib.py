@@ -5492,11 +5492,10 @@ class set(BaseSet):
         // We deal with the Array of data after this if block.
           }
           
-          // We may have some other set-like thing with __object
-          else if (typeof @{{!data}}.__object == 'object') {
+          else if (@{{isinstance}}(@{{!data}}, @{{dict}})) {
             var dataObj = @{{!data}}.__object;
             for (var sKey in dataObj) {
-                selfObj[sKey] = dataObj[sKey];
+                selfObj[sKey] = dataObj[sKey][0];
             }
             return null;
           }
@@ -5700,11 +5699,10 @@ class frozenset(BaseSet):
         // We deal with the Array of data after this if block.
           }
           
-          // We may have some other set-like thing with __object
-          else if (typeof @{{!data}}.__object == 'object') {
+          else if (@{{isinstance}}(@{{!data}}, @{{dict}})) {
             var dataObj = @{{!data}}.__object;
             for (var sKey in dataObj) {
-                selfObj[sKey] = dataObj[sKey];
+                selfObj[sKey] = dataObj[sKey][0];
             }
             return @{{self}};
           }
@@ -6907,15 +6905,8 @@ def isSet(a):
     JS("""
     if (@{{a}}=== null) return 0;
     if (typeof @{{a}}.__object == 'undefined') return 0;
-    var a_mro = @{{a}}.__mro__.__array;
-    if (a_mro.length > 2) {
-        switch (a_mro[a_mro.length-3].__md5__) {
-            case @{{set}}.__md5__:
-                return 1;
-            case @{{frozenset}}.__md5__:
-                return 2;
-        }
-    }
+    if (@{{a}}.__class__ === @{{set}}) return 1;
+    if (@{{a}}.__class__ === @{{frozenset}}) return 2;
     return 0;
 """)
 def toJSObjects(x):
