@@ -3683,6 +3683,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             elif get_kind(rhs_type) in ('tuple', 'list'):
                 if get_kind(lhs_type) in ('string', 'number', 'class'):
                     return '%s.__array.indexOf(%s) >= 0' % (rhs, lhs)
+            elif get_kind(rhs_type) == get_kind(lhs_type) == 'string':
+                return '%s.indexOf(%s) >= 0' % (rhs, lhs)
             return rhs + ".__contains__(" + lhs + ")"
         elif op == "not in":
             return "!" + self.compare_code('in', lhs, rhs, lhs_type, rhs_type)
