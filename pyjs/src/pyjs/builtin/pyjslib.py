@@ -6298,6 +6298,20 @@ _wrap_unbound_method = JS("""function(method) {
 };
 """)
 
+_wrap_unchecked_unbound_method = JS("""function(method) {
+    var fnwrap = function() {
+        return method.apply(arguments[0], $pyjs_array_slice.call(arguments, 1));
+    };
+    fnwrap.__name__ = method.__name__;
+    fnwrap.__args__ = method.__args__;
+    fnwrap.__is_staticmethod__ = true;
+    fnwrap.__class__ = method.__class__;
+    fnwrap.__doc__ = method.__doc__ || '';
+    fnwrap.__is_instance__ = method.__is_instance__;
+    return fnwrap;
+};
+""")
+
 _undefined = object()
 def getattr(obj, name, default_value=_undefined):
     JS("""
@@ -6364,13 +6378,15 @@ def getattr(obj, name, default_value=_undefined):
                     && @{{obj}}.hasOwnProperty(re_mapped))))
         || re_mapped == '__class__') {
 
-        if (($pyjs.options.arg_instance_type || $pyjs.options.arg_is_instance)
-                && typeof method == 'function'
+        if (typeof method == 'function'
                 && typeof method.__is_instance__ == 'undefined'
                 && method.__is_classmethod__ !== true
                 && method.__is_staticmethod__ !== true
                 && @{{obj}}.__is_instance__ === false) {
-            return @{{_wrap_unbound_method}}(method);
+            if ($pyjs.options.arg_instance_type || $pyjs.options.arg_is_instance) {
+                return @{{_wrap_unbound_method}}(method);
+            }
+            return @{{_wrap_unchecked_unbound_method}}(method);
         }
 
         return method;
