@@ -2110,13 +2110,12 @@ class float:
         JS("""
         if (typeof @{{num}} == 'string') {
             @{{num}} = @{{num}}.lstrip();
-            if (@{{num}} === "") {
-                throw @{{ValueError}}("empty string for float()");
-            }
         }
         var v = Number(@{{num}});
         if (isNaN(v)) {
-            throw @{{ValueError}}("invalid literal for float(): " + @{{!num}});
+            if (typeof @{{num}} == 'string')
+                throw @{{ValueError}}("could not convert string to float: " + @{{!num}});
+            throw @{{TypeError}}("float() argument must be a string or a number");
         }
         return v;
 """)
