@@ -1873,6 +1873,8 @@ String.prototype.__rmul__ = String.prototype.__mul__;
 String.prototype.__number__ = null;
 String.prototype.__name__ = 'str';
 String.prototype.__class__ = String.prototype;
+String.prototype.__$super_cache__ = @{{str}}.__$super_cache__;
+String.prototype.$H = @{{str}}.$H;
 String.prototype.__is_instance__ = null;
 String.prototype.__str__ = function () {
     if (typeof this == 'function') return "<type '" + this.__name__ + "'>";
@@ -1890,6 +1892,8 @@ String.prototype.__mro__ = @{{tuple}}([@{{basestring}}, @{{object}}]);
 Boolean.prototype.__number__ = 0x01;
 Boolean.prototype.__name__ = 'bool';
 Boolean.prototype.__class__ = Boolean.prototype;
+Boolean.prototype.__$super_cache__ = @{{bool}}.__$super_cache__;
+Boolean.prototype.$H = @{{bool}}.$H;
 Boolean.prototype.__is_instance__ = null;
 Boolean.prototype.__str__= function () {
     if (typeof this == 'function') return "<type '" + this.__name__ + "'>";
@@ -2103,6 +2107,9 @@ def bool(v):
     }
     return true;
     """)
+JS("@{{bool}}.__$super_cache__ = {};")
+JS("@{{bool}}.$H = ++@{{next_hash_id}};")
+JS("@{{bool}}.__$super_cache__[@{{bool}}.$H] = @{{type}};")
 
 class float:
     __number__ = JS("0x01")
@@ -2124,6 +2131,9 @@ class float:
 JS("""
 Number.prototype.__number__ = 0x01;
 Number.prototype.__name__ = 'float';
+Number.prototype.__class__ = Number.prototype;
+Number.prototype.__$super_cache__ = @{{float}}.__$super_cache__;
+Number.prototype.$H = @{{float}}.$H;
 Number.prototype.__init__ = function (value, radix) {
     return null;
 };
@@ -2256,6 +2266,8 @@ float_int = JS("""function $fn$pyjslib$float_int(value, radix) {
     }
     return @{{_float_int}}(value, radix);
 }""")
+JS("@{{float_int}}.__$super_cache__ = Number.prototype.__$super_cache__;")
+JS("@{{float_int}}.$H = Number.prototype.$H;")
 
 def _float_int(value, radix):
     JS("""
