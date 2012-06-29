@@ -528,6 +528,11 @@ function $pyjs__class_function(cls_fn, prop, bases) {
             super_cache[hash] = $pyjs_type('super', __mro__.slice(index + 1),
                                            {$_fast_super: true});
         }
+        if (typeof $p['object'] == 'function') {
+          super_cache[$p['object']['$H']] = null;
+        } else if (class_name === 'object') {
+          super_cache[cls_fn['$H']] = null;
+        }
         cls_fn.__$super_cache__ = super_cache;
     }
 
