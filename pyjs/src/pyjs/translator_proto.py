@@ -1056,7 +1056,7 @@ class Translator(object):
         self.w( captured_output, False)
 
         if attribute_checking:
-            self.w( self.dedent() + "} catch ($pyjs_attr_err) {throw @{{_errorMapping}}($pyjs_attr_err);};")
+            self.w( self.dedent() + "} catch ($pyjs_attr_err) {throw $pyjs_create_exception(@{{_errorMapping}}($pyjs_attr_err));};")
 
         self.w( self.spacing() + "return this;")
         self.w( self.dedent() + "}; /* end %s */"  % module_name)
@@ -1560,7 +1560,7 @@ class Translator(object):
 (function(){try{try{$pyjs.in_try_except += 1;
 %(s)sreturn %(call_code)s;
 }finally{$pyjs.in_try_except-=1;}}catch(%(dbg)s_err){\
-if (!@{{isinstance}}(%(dbg)s_err, @{{StopIteration}}))\
+if (!$p['isinstance'](%(dbg)s_err['$pyjs_exc'] || %(dbg)s_err, $p['StopIteration']))\
 {@{{_handle_exception}}(%(dbg)s_err);}\
 throw %(dbg)s_err;
 }})()""" % locals()
@@ -1581,13 +1581,13 @@ $generator['next'] = function (noStop) {
                 $generator_state[0] = -1;
                 return;
             }
-            throw @{{StopIteration}}();
+            throw $pyjs_create_exception($p['StopIteration']());
         }
     } catch (e) {
 %(src2)s
         $is_executing=false;
         $generator_state[0] = -1;
-        if (noStop === true && @{{isinstance}}(e, @{{StopIteration}})) {
+        if (noStop === true && $p['isinstance'](e['$pyjs_exc'] || e, $p['StopIteration'])) {
             return;
         }
         throw e;
@@ -1601,7 +1601,7 @@ $generator['send'] = function ($val) {
     $exc = null;
     try {
         var $res = $generator['$genfunc']();
-        if (typeof $res == 'undefined') throw @{{StopIteration}}();
+        if (typeof $res == 'undefined') throw $pyjs_create_exception($p['StopIteration']());
     } catch (e) {
 %(src2)s
         $generator_state[0] = -1;
@@ -1615,7 +1615,7 @@ $generator['$$throw'] = function ($exc_type, $exc_value) {
 %(src1)s
     $yield_value = null;
     $exc=(typeof $exc_value == 'undefined' ? $exc_type() :
-                                            (@{{isinstance}}($exc_value, $exc_type)
+                                            ($p['isinstance']($exc_value, $exc_type)
                                              ? $exc_value : $exc_type($exc_value)));
     try {
         var $res = $generator['$genfunc']();
@@ -1631,23 +1631,23 @@ $generator['$$throw'] = function ($exc_type, $exc_value) {
 $generator['close'] = function () {
 %(src1)s
     $yield_value = null;
-    $exc=@{{GeneratorExit}}();
+    $exc=$p['GeneratorExit']();
     try {
         var $res = $generator['$genfunc']();
         $is_executing=false;
-        if (typeof $res != 'undefined') throw @{{RuntimeError}}('generator ignored GeneratorExit');
+        if (typeof $res != 'undefined') throw $pyjs_create_exception($p['RuntimeError']('generator ignored GeneratorExit'));
     } catch (e) {
 %(src2)s
         $generator_state[0] = -1;
         $is_executing=false;
-        if (@{{isinstance}}(e, @{{StopIteration}}) || @{{isinstance}}(e, @{{GeneratorExit}})) return null;
+        if ($p['isinstance'](e['$pyjs_exc'] || e, $p['StopIteration']) || $p['isinstance'](e['$pyjs_exc'] || e, $p['GeneratorExit'])) return null;
         throw (e);
     }
     return null;
 };
 $generator['$genfunc'] = function () {
     var $yielding = false;
-    if ($is_executing) throw @{{ValueError}}('generator already executing');
+    if ($is_executing) throw $pyjs_create_exception($p['ValueError']('generator already executing'));
     $is_executing = true;
 """
     __generator_code_str = __generator_code_str.replace("    ", "\t").replace("\n", "\n%(s)s")
@@ -2385,7 +2385,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         else:
             fail = ''
         self.w( self.spacing() + "if (!( " + expr + " )) {")
-        self.w( self.spacing() + "   throw @{{AssertionError}}(%s);" % fail)
+        self.w( self.spacing() + "   throw $pyjs_create_exception($p['AssertionError'](%s));" % fail)
         self.w( self.spacing() + " }")
 
     def _return(self, node, current_klass):
@@ -2704,6 +2704,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         save_state_max_depth = self.state_max_depth
         start_states = len(self.generator_states)
         pyjs_try_err = '$pyjs_try_err'
+        real_pyjs_try_err = '$real_pyjs_try_err'
         if self.source_tracking:
             self.w( self.spacing() + "var $pyjs__trackstack_size_%d = $pyjs.trackstack.length;" % self.stacksize_depth)
         self.generator_switch_case(increment=True)
@@ -2739,20 +2740,21 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         has_handlers = getattr(node, 'handlers', None) or getattr(node, 'else_', None)
 
         if has_handlers:
-            self.w( self.dedent() + "} catch(%s) {" % pyjs_try_err)
+            self.w( self.dedent() + "} catch(%s) {" % real_pyjs_try_err)
             self.indent()
+            self.w( self.spacing() + "%(e)s = %(r)s['$pyjs_exc'] || %(r)s;" % {'e': pyjs_try_err, 'r': real_pyjs_try_err})
 
             if self.source_tracking:
                 self.w( self.spacing() + "$pyjs_last_exception_stack = $pyjs.__last_exception_stack__ = sys.save_exception_stack($pyjs__trackstack_size_%d - 1);" % self.stacksize_depth)
                 self.w( self.spacing() + "$pyjs.__active_exception_stack__ = null;")
             if self.is_generator:
-                self.w( self.spacing() + "$generator_exc[%d] = %s;" % (self.try_depth, pyjs_try_err))
+                self.w( self.spacing() + "$generator_exc[%d] = %s;" % (self.try_depth, real_pyjs_try_err))
             try_state_max_depth = self.state_max_depth
             self.generator_states += [0 for i in range(save_state_max_depth+1, try_state_max_depth)]
 
             if getattr(node, 'else_', None):
                 self.w( self.indent() + """\
-    if (%(e)s.__name__ == 'TryElse') {""" % {'e': pyjs_try_err})
+    if (%(e)s.__name__ == 'TryElse') {""" % {'e': real_pyjs_try_err})
 
                 self.generator_add_state()
                 self.generator_switch_open()
@@ -2774,7 +2776,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self.w( self.spacing() + """\
 var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__name__ );\
 """ % {'e': pyjs_try_err})
-            self.w( self.spacing() + "$pyjs_last_exception = $pyjs.__last_exception__ = {error: %s, module: %s__name__};" % (pyjs_try_err, self.module_prefix))
+            self.w( self.spacing() + "$pyjs_last_exception = $pyjs.__last_exception__ = {error: %s, module: %s__name__};" % (real_pyjs_try_err, self.module_prefix))
             if self.source_tracking:
                 self.w( """\
     %(s)sif ($pyjs.trackstack.length > $pyjs__trackstack_size_%(d)d) {
@@ -2783,6 +2785,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
     %(s)s}
     %(s)s$pyjs.track.module=%(mp)s__name__;""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'mp': self.module_prefix})
 
+            real_pyjs_try_err = self.add_lookup('variable', real_pyjs_try_err, real_pyjs_try_err)
             pyjs_try_err = self.add_lookup('variable', pyjs_try_err, pyjs_try_err)
             if hasattr(node, 'handlers'):
                 else_str = self.spacing()
@@ -2833,7 +2836,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
                 if node.handlers[-1][0]:
                     # No default catcher, create one to fall through
-                    self.w( "%s{ $pyjs.__active_exception_stack__ = $pyjs.__last_exception_stack__; $pyjs.__last_exception_stack__ = null; throw %s; }" % (else_str, pyjs_try_err))
+                    self.w( "%s{ $pyjs.__active_exception_stack__ = $pyjs.__last_exception_stack__; $pyjs.__last_exception_stack__ = null; throw %s; }" % (else_str, real_pyjs_try_err))
                 else:
                     self.w(None)
             if hasattr(node, 'else_') and node.else_:
@@ -3074,13 +3077,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
     %(s)svar $pyjs__raise_expr2 = %(expr2)s;
     %(s)svar $pyjs__raise_expr3 = %(expr3)s;
     %(s)sif ($pyjs__raise_expr2 !== null && $pyjs__raise_expr1.__is_instance__ === true) {
-    %(s)s\tthrow @{{TypeError}}('instance exception may not have a separate value');
+    %(s)s\tthrow $pyjs_create_exception($p['TypeError']('instance exception may not have a separate value'));
     %(s)s}
-    %(s)sif (!@{{isinstance}}($pyjs__raise_expr2, $pyjs__raise_expr1)) {
+    %(s)sif (!$p['isinstance']($pyjs__raise_expr2, $pyjs__raise_expr1)) {
     %(s)s\t$pyjs__raise_expr2 = $pyjs__raise_expr1($pyjs__raise_expr2);
     %(s)s}
     %(s)s$pyjs.__active_exception_stack__ = $pyjs__raise_expr3;
-    %(s)sthrow $pyjs__raise_expr2;
+    %(s)sthrow $pyjs_create_exception($pyjs__raise_expr2);
     """ % { 's': self.spacing(),
             'expr1': self.expr(node.expr1, current_klass),
             'expr2': self.expr(node.expr2, current_klass),
@@ -3091,19 +3094,19 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 %(s)svar $pyjs__raise_expr1 = %(expr1)s;
 %(s)svar $pyjs__raise_expr2 = %(expr2)s;
 %(s)sif ($pyjs__raise_expr2 !== null && $pyjs__raise_expr1.__is_instance__ === true) {
-%(s)s\tthrow @{{TypeError}}('instance exception may not have a separate value');
+%(s)s\tthrow $pyjs_create_exception($p['TypeError']('instance exception may not have a separate value'));
 %(s)s}
-%(s)sif (@{{isinstance}}($pyjs__raise_expr2, $p['tuple'])) {
-%(s)s\tthrow ($pyjs__raise_expr1.apply($pyjs__raise_expr1, $pyjs__raise_expr2.getArray()));
+%(s)sif ($p['isinstance']($pyjs__raise_expr2, $p['tuple'])) {
+%(s)s\tthrow $pyjs_create_exception($pyjs__raise_expr1.apply($pyjs__raise_expr1, $pyjs__raise_expr2.getArray()));
 %(s)s} else {
-%(s)s\tthrow ($pyjs__raise_expr1($pyjs__raise_expr2));
+%(s)s\tthrow $pyjs_create_exception($pyjs__raise_expr1($pyjs__raise_expr2));
 %(s)s}
 """ % { 's': self.spacing(),
         'expr1': self.expr(node.expr1, current_klass),
         'expr2': self.expr(node.expr2, current_klass),
       })
             else:
-                self.w( self.spacing() + "throw (%s);" % self.expr(
+                self.w( self.spacing() + "throw $pyjs_create_exception(%s);" % self.expr(
                     node.expr1, current_klass))
         else:
             self.needs_last_exception[tuple(self.kind_context)] = True
@@ -3116,7 +3119,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.w( """\
 %(s)sthrow ($pyjs.__last_exception__?
 %(s)s\t$pyjs.__last_exception__.error:
-%(s)s\t@{{TypeError}}('exceptions must be classes, instances, or strings (deprecated), not NoneType'));\
+%(s)s\t$pyjs_create_exception($p['TypeError']('exceptions must be classes, instances, or strings (deprecated), not NoneType')));\
 """ % locals())
         self.generator_switch_case(increment=True)
 

@@ -8,6 +8,12 @@ var $pyjs_module_type = {
     __name__: 'module'
 };
 
+function $pyjs_create_exception(exc) {
+    var err = new Error($p['repr'](exc));
+    err['$pyjs_exc'] = exc;
+    return err;
+};
+
 function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
 {
     if (obj !== null && typeof func != 'function') {
@@ -22,14 +28,14 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
             obj = func;
             func = func.__call__;
         } else {
-            throw (pyjslib.TypeError(func + ' object is not callable'));
+            throw $pyjs_create_exception(pyjslib.TypeError(func + ' object is not callable'));
         }
     }
 
     // Merge dstar_args into kwargs
     if (dstar_args) {
         if (pyjslib.get_pyjs_classtype(dstar_args) != 'dict') {
-            throw (pyjslib.TypeError(func.__name__ + "() arguments after ** must be a dictionary " + pyjslib.repr(dstar_args)));
+            throw $pyjs_create_exception(pyjslib.TypeError(func.__name__ + "() arguments after ** must be a dictionary " + pyjslib.repr(dstar_args)));
         }
         var i;
         /* use of __iter__ and next is horrendously expensive,
@@ -57,7 +63,7 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
     // Append star_args to args
     if (star_args) {
         if (star_args === null || typeof star_args.__iter__ != 'function') {
-            throw (pyjslib.TypeError(func.__name__ + "() arguments after * must be a sequence" + pyjslib.repr(star_args)));
+            throw $pyjs_create_exception(pyjslib.TypeError(func.__name__ + "() arguments after * must be a sequence" + pyjslib.repr(star_args)));
         }
         if (star_args.__array != null && star_args.__array.constructor == Array) {
             args = args.concat(star_args.__array);
@@ -206,19 +212,17 @@ function $pyjs__exception_func_param(func_name, minargs, maxargs, nargs) {
         return;
     }
     if (typeof pyjslib.TypeError == 'function') {
-        throw pyjslib.TypeError(String(msg));
+        throw $pyjs_create_exception(pyjslib.TypeError(String(msg)));
     }
     throw msg;
 }
 
 function $pyjs__exception_func_multiple_values(func_name, key) {
-    //throw func_name + "() got multiple values for keyword argument '" + key + "'";
-    throw pyjslib.TypeError(String(func_name + "() got multiple values for keyword argument '" + key + "'"));
+    throw $pyjs_create_exception(pyjslib.TypeError(String(func_name + "() got multiple values for keyword argument '" + key + "'")));
 }
 
 function $pyjs__exception_func_unexpected_keyword(func_name, key) {
-    //throw func_name + "() got an unexpected keyword argument '" + key + "'";
-    throw pyjslib.TypeError(String(func_name + "() got an unexpected keyword argument '" + key + "'"));
+    throw $pyjs_create_exception(pyjslib.TypeError(String(func_name + "() got an unexpected keyword argument '" + key + "'")));
 }
 
 function $pyjs__exception_func_class_expected(func_name, class_name, instance) {
@@ -229,8 +233,7 @@ function $pyjs__exception_func_class_expected(func_name, class_name, instance) {
         } else {
             instance = String(instance);
         }
-        //throw "unbound method "+func_name+"() must be called with "+class_name+" class as first argument (got "+instance+" instead)";
-        throw pyjslib.TypeError(String("unbound method "+func_name+"() must be called with "+class_name+" class as first argument (got "+instance+" instead)"));
+        throw $pyjs_create_exception(pyjslib.TypeError(String("unbound method "+func_name+"() must be called with "+class_name+" class as first argument (got "+instance+" instead)")));
 }
 
 function $pyjs_check_instance_type(instance, func, first_arg) {
@@ -277,8 +280,7 @@ function $pyjs__exception_func_instance_expected(func_name, class_name, instance
     } else {
         instance = String(instance);
     }
-    //throw "unbound method "+func_name+"() must be called with "+class_name+" instance as first argument (got "+instance+" instead)";
-    throw pyjslib.TypeError(String("unbound method "+func_name+"() must be called with "+class_name+" instance as first argument (got "+instance+" instead)"));
+    throw $pyjs_create_exception(pyjslib.TypeError(String("unbound method "+func_name+"() must be called with "+class_name+" instance as first argument (got "+instance+" instead)")));
 }
 
 function $pyjs__prepare_func(func_name, func, args) {
@@ -292,8 +294,7 @@ function $pyjs__mro_merge(seqs) {
     var i = 0;
     var cand = null;
     function resolve_error(candidates) {
-        //throw "Cannot create a consistent method resolution order (MRO) for bases " + candidates[0].__name__ + ", "+ candidates[1].__name__;
-        throw (pyjslib.TypeError("Cannot create a consistent method resolution order (MRO) for bases " + candidates[0].__name__ + ", "+ candidates[1].__name__));
+        throw $pyjs_create_exception(pyjslib.TypeError("Cannot create a consistent method resolution order (MRO) for bases " + candidates[0].__name__ + ", "+ candidates[1].__name__));
     }
     for (;;) {
         var nonemptyseqs = new Array();
@@ -366,7 +367,7 @@ function $pyjs__class_instance(class_name, module_name) {
                 instance.__init__.apply(instance, args);
                 /* this check is not really critical...
                 if (instance.__init__.apply(instance, args) != null) {
-                    throw pyjslib.TypeError('__init__() should return None');
+                    throw $pyjs_create_exception(pyjslib.TypeError('__init__() should return None'));
                 } */
             // }
         } else if (pyjslib.isinstance(cls_fn, pyjslib.type)) {

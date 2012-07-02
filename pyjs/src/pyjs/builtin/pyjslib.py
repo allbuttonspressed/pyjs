@@ -57,7 +57,7 @@ _handle_exception = JS("""function(err) {
 
 _check_name = JS("""function(name, value) {
     if (typeof value == 'undefined')
-        throw (@{{NameError}}("name '" + name + "' is not defined"));
+        throw $pyjs_create_exception(@{{NameError}}("name '" + name + "' is not defined"));
     return value;
 };
 """)
@@ -180,7 +180,7 @@ class object:
     def __setattr__(self, name, value):
 #        // This is unnecessarily inefficient
 #        if (typeof @{{name}} != 'string') {
-#            throw @{{TypeError}}("attribute name must be string");
+#            throw $pyjs_create_exception(@{{TypeError}}("attribute name must be string"));
 #        }
         JS("""
         if ('$$' + @{{name}} in attrib_remap) {
@@ -236,7 +236,7 @@ class tuple:
         data = JS("arguments[1]")
         JS("""
         if (@{{data}} === null) {
-            throw @{{TypeError}}("'NoneType' is not iterable");
+            throw $pyjs_create_exception(@{{TypeError}}("'NoneType' is not iterable"));
         }
         if (@{{data}}.constructor === Array) {
             @{{self}}.__array = @{{data}}.slice();
@@ -265,13 +265,13 @@ class tuple:
                     }
                 }
                 catch (e) {
-                    if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
+                    if (!@{{isinstance}}(e['$pyjs_exc'] || e, @{{StopIteration}})) throw e;
                 }
             }
             @{{self}}.__array = @{{data}};
             return @{{self}};
         }
-        throw @{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable");
+        throw $pyjs_create_exception(@{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable"));
         """)
 
     def __hash__(self):
@@ -300,7 +300,7 @@ class tuple:
         if (@{{isinstance}}(@{{_index}}, @{{slice}})) {
             if (@{{_index}}.step !== null) {
                 // TODO/IMPLEMENTME:
-                throw @{{ValueError}}("step is not yet supported");
+                throw $pyjs_create_exception(@{{ValueError}}("step is not yet supported"));
             }
             if (@{{_index}}.stop === null) {
                 return @{{_imm_tuple}}(@{{self}}.__array.slice(@{{_index}}.start));
@@ -312,7 +312,7 @@ class tuple:
             if (typeof index == 'boolean') index = @{{int}}(index);
             if (index < 0) index += @{{self}}.__array.length;
             if (index < 0 || index >= @{{self}}.__array.length) {
-                throw @{{IndexError}}("tuple index out of range");
+                throw $pyjs_create_exception(@{{IndexError}}("tuple index out of range"));
             }
             return @{{self}}.__array[index];
         }
@@ -368,7 +368,7 @@ class tuple:
         return {
             'next': function() {
                 if (i >= l.length) {
-                    throw @{{StopIteration}}();
+                    throw $pyjs_create_exception(@{{StopIteration}}());
                 }
                 return l[i++];
             },
@@ -698,16 +698,16 @@ def op_floordiv(x, y):
             case 0x0101:
             case 0x0104:
             case 0x0401:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return Math.floor(@{{x}} / @{{y}});
             case 0x0102:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return Math.floor(@{{x}} / @{{y}}.__v);
             case 0x0201:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return Math.floor(@{{x}}.__v / @{{y}});
             case 0x0202:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('integer division or modulo by zero'));
                 return new @{{int}}(Math.floor(@{{x}}.__v / @{{y}}.__v));
             case 0x0204:
                 return (new @{{long}}(@{{x}}.__v)).__floordiv(@{{y}});
@@ -736,16 +736,16 @@ def op_div(x, y):
             case 0x0101:
             case 0x0104:
             case 0x0401:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return @{{x}} / @{{y}};
             case 0x0102:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return @{{x}} / @{{y}}.__v;
             case 0x0201:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return @{{x}}.__v / @{{y}};
             case 0x0202:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return new @{{int}}(@{{x}}.__v / @{{y}}.__v);
             case 0x0204:
                 return (new @{{long}}(@{{x}}.__v)).__div(@{{y}});
@@ -777,16 +777,16 @@ def op_truediv(x, y):
             case 0x0204:
             case 0x0402:
             case 0x0404:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return @{{x}} / @{{y}};
             case 0x0102:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return @{{x}} / @{{y}}.__v;
             case 0x0201:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return @{{x}}.__v / @{{y}};
             case 0x0202:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return @{{x}}.__v / @{{y}}.__v;
         }
         if (!@{{x}}.__number__) {
@@ -843,19 +843,19 @@ def op_mod(x, y):
             case 0x0101:
             case 0x0104:
             case 0x0401:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 var v = @{{x}} % @{{y}};
                 return (v < 0 && @{{y}} > 0 ? v + @{{y}} : v);
             case 0x0102:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 var v = @{{x}} % @{{y}}.__v;
                 return (v < 0 && @{{y}}.__v > 0 ? v + @{{y}}.__v : v);
             case 0x0201:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 var v = @{{x}}.__v % @{{y}};
                 return (v < 0 && @{{y}}.__v > 0 ? v + @{{y}}.__v : v);
             case 0x0202:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('integer division or modulo by zero'));
                 var v = @{{x}}.__v % @{{y}}.__v;
                 return new @{{int}}(v < 0 && @{{y}}.__v > 0 ? v + @{{y}}.__v : v);
             case 0x0204:
@@ -888,13 +888,13 @@ def op_pow(x, y):
             case 0x0101:
             case 0x0104:
             case 0x0401:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return Math.pow(@{{x}}, @{{y}});
             case 0x0102:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return Math.pow(@{{x}},@{{y}}.__v);
             case 0x0201:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return Math.pow(@{{x}}.__v,@{{y}});
             case 0x0202:
                 return @{{x}}.__pow__(@{{y}});
@@ -1419,7 +1419,7 @@ def init():
         var message = '';
         try {
             message = err.message;
-        } catch ( e) {
+        } catch (e) {
         }
         return @{{AttributeError}}(message);
     }
@@ -1465,7 +1465,7 @@ String.prototype.find = function(sub, start, end) {
 String.prototype.index = function(sub, start, end) {
     var pos = this.find(sub, start, end);
     if (pos < 0)
-        throw @{{ValueError}}('substring not found');
+        throw $pyjs_create_exception(@{{ValueError}}('substring not found'));
     return pos;
 }
 String.prototype.count = function(sub, start, end) {
@@ -1524,7 +1524,7 @@ String.prototype.join = function(data) {
                 }
             }
             catch (e) {
-                if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
+                if (!@{{isinstance}}(e['$pyjs_exc'] || e, @{{StopIteration}})) throw e;
             }
         }
         return data.join(this);
@@ -1677,7 +1677,7 @@ if (typeof "a"[0] == 'undefined' ) {
                     if (noStop === true) {
                         return;
                     }
-                    throw @{{StopIteration}}();
+                    throw $pyjs_create_exception(@{{StopIteration}}());
                 }
                 return s.charAt(i++);
             },
@@ -1697,7 +1697,7 @@ if (typeof "a"[0] == 'undefined' ) {
                     if (noStop === true) {
                         return;
                     }
-                    throw @{{StopIteration}}();
+                    throw $pyjs_create_exception(@{{StopIteration}}());
                 }
                 return s.charAt(i++);
             },
@@ -1753,12 +1753,12 @@ String.prototype.ljust = function(width, fillchar) {
         case 0x01:
             if (Math.floor(width) == width) break;
         default:
-            throw @{{TypeError}}("an integer is required (got '" + width + "')");
+            throw $pyjs_create_exception(@{{TypeError}}("an integer is required (got '" + width + "')"));
     }
     if (typeof fillchar == 'undefined') fillchar = ' ';
     if (typeof(fillchar) != 'string' ||
         fillchar.length != 1) {
-        throw @{{TypeError}}("ljust() argument 2 must be char, not " + typeof(fillchar));
+        throw $pyjs_create_exception(@{{TypeError}}("ljust() argument 2 must be char, not " + typeof(fillchar)));
     }
     if (this.length >= width) return this;
     return this + new Array(width+1 - this.length).join(fillchar);
@@ -1773,12 +1773,12 @@ String.prototype.rjust = function(width, fillchar) {
         case 0x01:
             if (Math.floor(width) == width) break;
         default:
-            throw @{{TypeError}}("an integer is required (got '" + width + "')");
+            throw $pyjs_create_exception(@{{TypeError}}("an integer is required (got '" + width + "')"));
     }
     if (typeof fillchar == 'undefined') fillchar = ' ';
     if (typeof(fillchar) != 'string' ||
         fillchar.length != 1) {
-        throw @{{TypeError}}("rjust() argument 2 must be char, not " + typeof(fillchar));
+        throw $pyjs_create_exception(@{{TypeError}}("rjust() argument 2 must be char, not " + typeof(fillchar)));
     }
     if (this.length >= width) return this;
     return new Array(width + 1 - this.length).join(fillchar) + this;
@@ -1793,12 +1793,12 @@ String.prototype.center = function(width, fillchar) {
         case 0x01:
             if (Math.floor(width) == width) break;
         default:
-            throw @{{TypeError}}("an integer is required (got '" + width + "')");
+            throw $pyjs_create_exception(@{{TypeError}}("an integer is required (got '" + width + "')"));
     }
     if (typeof fillchar == 'undefined') fillchar = ' ';
     if (typeof(fillchar) != 'string' ||
         fillchar.length != 1) {
-        throw @{{TypeError}}("center() argument 2 must be char, not " + typeof(fillchar));
+        throw $pyjs_create_exception(@{{TypeError}}("center() argument 2 must be char, not " + typeof(fillchar)));
     }
     if (this.length >= width) return this;
     var padlen = width - this.length;
@@ -1824,14 +1824,14 @@ String.prototype.__getitem__ = function(idx) {
     } else {
         if (idx < 0) idx += this.length;
         if (idx < 0 || idx > this.length) {
-            throw @{{IndexError}}("string index out of range");
+            throw $pyjs_create_exception(@{{IndexError}}("string index out of range"));
         }
         return this.charAt(idx);
     }
 };
 
 String.prototype.__setitem__ = function(idx, val) {
-    throw @{{TypeError}}("'str' object does not support item assignment");
+    throw $pyjs_create_exception(@{{TypeError}}("'str' object does not support item assignment"));
 };
 
 String.prototype.upper = String.prototype.toUpperCase;
@@ -1847,7 +1847,7 @@ String.prototype.zfill = function(width) {
 
 String.prototype.__add__ = function(y) {
     if (typeof y != "string") {
-        throw @{{TypeError}}("cannot concatenate 'str' and non-str objects");
+        throw $pyjs_create_exception(@{{TypeError}}("cannot concatenate 'str' and non-str objects"));
     }
     return this + y;
 };
@@ -1861,7 +1861,7 @@ String.prototype.__mul__ = function(y) {
         case 0x01:
             if (Math.floor(y) == y) break;
         default:
-            throw @{{TypeError}}("can't multiply sequence by non-int of type 'str'");
+            throw $pyjs_create_exception(@{{TypeError}}("can't multiply sequence by non-int of type 'str'"));
     }
     var s = '';
     while (y-- > 0) {
@@ -2089,7 +2089,7 @@ def bool(v):
     #return False
     JS("""
     if (typeof @{{v}} == 'undefined')
-        throw @{{TypeError}}('bool() called with undefined as argument');
+        throw $pyjs_create_exception(@{{TypeError}}('bool() called with undefined as argument'));
 
     switch (@{{v}}) {
         case null:
@@ -2121,8 +2121,8 @@ class float:
         var v = Number(@{{num}});
         if (isNaN(v)) {
             if (typeof @{{num}} == 'string')
-                throw @{{ValueError}}("could not convert string to float: " + @{{!num}});
-            throw @{{TypeError}}("float() argument must be a string or a number");
+                throw $pyjs_create_exception(@{{ValueError}}("could not convert string to float: " + @{{!num}}));
+            throw $pyjs_create_exception(@{{TypeError}}("float() argument must be a string or a number"));
         }
         return v;
 """)
@@ -2203,25 +2203,25 @@ Number.prototype.__rsub__ = function (y) {
 
 Number.prototype.__floordiv__ = function (y) {
     if (!y.__number__ || isNaN(y = y.valueOf())) return @{{NotImplemented}};
-    if (y == 0) throw @{{ZeroDivisionError}}('float divmod()');
+    if (y == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
     return Math.floor(this / y);
 };
 
 Number.prototype.__rfloordiv__ = function (y) {
     if (!y.__number__ || isNaN(y = y.valueOf())) return @{{NotImplemented}};
-    if (this == 0) throw @{{ZeroDivisionError}}('float divmod');
+    if (this == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod'));
     return Math.floor(y / this);
 };
 
 Number.prototype.__div__ = function (y) {
     if (!y.__number__ || isNaN(y = y.valueOf())) return @{{NotImplemented}};
-    if (y == 0) throw @{{ZeroDivisionError}}('float division');
+    if (y == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float division'));
     return this / y;
 };
 
 Number.prototype.__rdiv__ = function (y) {
     if (!y.__number__ || isNaN(y = y.valueOf())) return @{{NotImplemented}};
-    if (this == 0) throw @{{ZeroDivisionError}}('float division');
+    if (this == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float division'));
     return y / this;
 };
 
@@ -2237,13 +2237,13 @@ Number.prototype.__rmul__ = function (y) {
 
 Number.prototype.__mod__ = function (y) {
     if (!y.__number__ || isNaN(y = y.valueOf())) return @{{NotImplemented}};
-    if (y == 0) throw @{{ZeroDivisionError}}('float modulo');
+    if (y == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float modulo'));
     return this % y;
 };
 
 Number.prototype.__rmod__ = function (y) {
     if (!y.__number__ || isNaN(y = y.valueOf())) return @{{NotImplemented}};
-    if (this == 0) throw @{{ZeroDivisionError}}('float modulo');
+    if (this == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float modulo'));
     return y % this;
 };
 
@@ -2277,7 +2277,7 @@ def _float_int(value, radix):
     }
     if (@{{value}}.__number__) {
         if (@{{radix}} !== null) {
-            throw @{{TypeError}}("int() can't convert non-string with explicit base");
+            throw $pyjs_create_exception(@{{TypeError}}("int() can't convert non-string with explicit base"));
         }
         v = @{{value}}.valueOf();
         if (v > 0) {
@@ -2305,10 +2305,10 @@ def _float_int(value, radix):
             v = parseInt(v, @{{radix}});
         }
     } else {
-        throw @{{TypeError}}("TypeError: int() argument must be a string or a number");
+        throw $pyjs_create_exception(@{{TypeError}}("TypeError: int() argument must be a string or a number"));
     }
     if (isNaN(v) || !isFinite(v)) {
-        throw @{{ValueError}}("invalid literal for int() with base " + @{{!radix}} + ": '" + @{{!value}} + "'");
+        throw $pyjs_create_exception(@{{ValueError}}("invalid literal for int() with base " + @{{!radix}} + ": '" + @{{!value}} + "'"));
     }
     return v;
 """)
@@ -2360,7 +2360,7 @@ var $radix_regex = [
         var v, i;
         if (typeof radix == 'undefined' || radix === null) {
             if (typeof value == 'undefined') {
-                throw @{{TypeError}}("int() takes at least 1 argument");
+                throw $pyjs_create_exception(@{{TypeError}}("int() takes at least 1 argument"));
             }
             if (typeof value['__int__'] != 'undefined') {
                 return value['__int__']();
@@ -2380,7 +2380,7 @@ var $radix_regex = [
         }
         if (typeof this != 'object' || this.__number__ != 0x02) return new $int(value, radix);
         if (value.__number__) {
-            if (radix !== null) throw @{{TypeError}}("int() can't convert non-string with explicit base");
+            if (radix !== null) throw $pyjs_create_exception(@{{TypeError}}("int() can't convert non-string with explicit base"));
             v = value.valueOf();
         } else if (typeof value == 'string') {
             if (radix === null) {
@@ -2394,10 +2394,10 @@ var $radix_regex = [
                 v = parseInt(value, radix);
             }
         } else {
-            throw @{{TypeError}}("TypeError: int() argument must be a string or a number");
+            throw $pyjs_create_exception(@{{TypeError}}("TypeError: int() argument must be a string or a number"));
         }
         if (isNaN(v) || !isFinite(v)) {
-            throw @{{ValueError}}("invalid literal for int() with base " + @{{!radix}} + ": '" + @{{!value}} + "'");
+            throw $pyjs_create_exception(@{{ValueError}}("invalid literal for int() with base " + @{{!radix}} + ": '" + @{{!value}} + "'"));
         }
         if ($min_int <= v && v <= $max_int) {
             this.__v = v;
@@ -2601,28 +2601,28 @@ var $radix_regex = [
     $int.__floordiv__ = function (y) {
         if (y.__number__ != 0x02) return @{{NotImplemented}};
         y = y.__v;
-        if (y == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
+        if (y == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('integer division or modulo by zero'));
         return new $int(Math.floor(this.__v / y));
     };
 
     $int.__rfloordiv__ = function (y) {
         if (y.__number__ != 0x02) return @{{NotImplemented}};
         y = y.__v;
-        if (this.__v == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
+        if (this.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('integer division or modulo by zero'));
         return new $int(Math.floor(y / this.__v));
     };
 
     $int.__div__ = function (y) {
         if (y.__number__ != 0x02) return @{{NotImplemented}};
         y = y.__v;
-        if (y == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
+        if (y == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('integer division or modulo by zero'));
         return new $int(this.__v / y);
     };
 
     $int.__rdiv__ = function (y) {
         if (y.__number__ != 0x02) return @{{NotImplemented}};
         y = y.__v;
-        if (this.__v == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
+        if (this.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('integer division or modulo by zero'));
         return new $int(y / this.__v);
     };
 
@@ -2644,14 +2644,14 @@ var $radix_regex = [
     $int.__mod__ = function (y) {
         if (y.__number__ != 0x02) return @{{NotImplemented}};
         y = y.__v;
-        if (y == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
+        if (y == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('integer division or modulo by zero'));
         return new $int(this.__v % y);
     };
 
     $int.__rmod__ = function (y) {
         if (y.__number__ != 0x02) return @{{NotImplemented}};
         y = y.__v;
-        if (this.__v == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
+        if (this.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('integer division or modulo by zero'));
         return new $int(y % this.__v);
     };
 
@@ -2866,7 +2866,7 @@ JS("""
             j = size_a * PyLong_SHIFT + bits - 1;
             sz = Math.floor(i + j / bits);
             if (j / PyLong_SHIFT < size_a || sz < i) {
-                throw @{{OverflowError}}("long is too large to format");
+                throw $pyjs_create_exception(@{{OverflowError}}("long is too large to format"));
             }
             str = new Array();
             p = sz;
@@ -2953,7 +2953,7 @@ JS("""
         var z = null;
 
         if (size_b == 0) {
-            throw @{{ZeroDivisionError}}("long division or modulo by zero");
+            throw $pyjs_create_exception(@{{ZeroDivisionError}}("long division or modulo by zero"));
         }
         if (size_a < size_b ||
             (size_a == size_b &&
@@ -3227,7 +3227,7 @@ JS("""
         var v, i;
         if (!radix || radix.valueOf() == 0) {
             if (typeof value == 'undefined') {
-                throw @{{TypeError}}("long() takes at least 1 argument");
+                throw $pyjs_create_exception(@{{TypeError}}("long() takes at least 1 argument"));
             }
             switch (value.__number__) {
                 case 0x01:
@@ -3247,7 +3247,7 @@ JS("""
         this.ob_digit = new Array();
         if (v.__number__) {
             if (radix) {
-                throw @{{TypeError}}("long() can't convert non-string with explicit base");
+                throw $pyjs_create_exception(@{{TypeError}}("long() can't convert non-string with explicit base"));
             }
             if (v.__number__ == 0x04) {
                 var size = v.ob_size < 0 ? -v.ob_size:v.ob_size;
@@ -3281,10 +3281,10 @@ JS("""
                 var neg = false;
 
                 if (isNaN(v)) {
-                    throw @{{ValueError}}('cannot convert float NaN to integer');
+                    throw $pyjs_create_exception(@{{ValueError}}('cannot convert float NaN to integer'));
                 }
                 if (!isFinite(v)) {
-                    throw @{{OverflowError}}('cannot convert float infinity to integer');
+                    throw $pyjs_create_exception(@{{OverflowError}}('cannot convert float infinity to integer'));
                 }
                 if (v == 0) {
                     this.ob_digit[0] = 0;
@@ -3319,7 +3319,7 @@ JS("""
                 this.ob_size = neg ? -ndig : ndig;
                 return this;
             }
-            throw @{{ValueError}}('cannot convert ' + @{{repr}}(@{{value}}) + 'to integer');
+            throw $pyjs_create_exception(@{{ValueError}}('cannot convert ' + @{{repr}}(@{{value}}) + 'to integer'));
         } else if (typeof v == 'string') {
             var nchars;
             var text = value.lstrip();
@@ -3356,7 +3356,7 @@ JS("""
                     }
                 }
             } else if (radix < 1 || radix > 36) {
-                throw @{{ValueError}}("long() arg 2 must be >= 2 and <= 36");
+                throw $pyjs_create_exception(@{{ValueError}}("long() arg 2 must be >= 2 and <= 36"));
             }
             if (text.charAt(0) == '0' && text.length > 1) {
                 switch (text.charAt(1)) {
@@ -3391,7 +3391,7 @@ JS("""
                 nchars = p;
                 n = p * bits_per_char + PyLong_SHIFT-1; //14 = PyLong_SHIFT - 1
                 if (n / bits_per_char < p) {
-                    throw @{{ValueError}}("long string too large to convert");
+                    throw $pyjs_create_exception(@{{ValueError}}("long string too large to convert"));
                 }
                 this.ob_size = n = Math.floor(n/PyLong_SHIFT);
                 for (var i = 0; i < n; i++) {
@@ -3481,13 +3481,13 @@ JS("""
             if (text.length === 0) {
                 return this;
             }
-            throw @{{ValueError}}("invalid literal for long() with base " +
-                                     @{{!radix}} + ": " + @{{!value}});
+            throw $pyjs_create_exception(@{{ValueError}}("invalid literal for long() with base " +
+                                                         @{{!radix}} + ": " + @{{!value}}));
         } else {
-            throw @{{TypeError}}("TypeError: long() argument must be a string or a number");
+            throw $pyjs_create_exception(@{{TypeError}}("TypeError: long() argument must be a string or a number"));
         }
         if (isNaN(v) || !isFinite(v)) {
-            throw @{{ValueError}}("invalid literal for long() with base " + @{{!radix}} + ": '" + @{{!v}} + "'");
+            throw $pyjs_create_exception(@{{ValueError}}("invalid literal for long() with base " + @{{!radix}} + ": '" + @{{!v}} + "'"));
         }
         return this;
     };
@@ -3524,7 +3524,7 @@ JS("""
         // ldexp(a,b) == a * (2**b)
         v = x[0] * Math.pow(2.0, x[1] * PyLong_SHIFT);
         if (!isFinite(v)) {
-            throw @{{OverflowError}}('long int too large to convert to float');
+            throw $pyjs_create_exception(@{{OverflowError}}('long int too large to convert to float'));
         }
         return v;
     };
@@ -3596,10 +3596,10 @@ JS("""
         var a, z, wordshift, remshift, oldsize, newsize,
             accum, i, j;
         if (y < 0) {
-            throw @{{ValueError}}('negative shift count');
+            throw $pyjs_create_exception(@{{ValueError}}('negative shift count'));
         }
         if (y >= $max_float_int) {
-            throw @{{ValueError}}('outrageous left shift count');
+            throw $pyjs_create_exception(@{{ValueError}}('outrageous left shift count'));
         }
         a = this;
 
@@ -3658,14 +3658,14 @@ JS("""
             y = y.valueOf();
         } else {
             if (y != Math.floor(y)) {
-                throw @{{TypeError}}("unsupported operand type(s) for >>: 'long' and 'float'");
+                throw $pyjs_create_exception(@{{TypeError}}("unsupported operand type(s) for >>: 'long' and 'float'"));
             }
         }
         if (y < 0) {
-            throw @{{ValueError}}('negative shift count');
+            throw $pyjs_create_exception(@{{ValueError}}('negative shift count'));
         }
         if (y >= $max_float_int) {
-            throw @{{ValueError}}('shift count too big');
+            throw $pyjs_create_exception(@{{ValueError}}('shift count too big'));
         }
         a = this;
         size = this.ob_size;
@@ -4190,14 +4190,14 @@ JS("""
 
         if (b.ob_size < 0) {
             if (c !== null) {
-                throw @{{TypeError}}("pow() 2nd argument cannot be negative when 3rd argument specified");
+                throw $pyjs_create_exception(@{{TypeError}}("pow() 2nd argument cannot be negative when 3rd argument specified"));
             }
             return Math.pow(v.valueOf(), w.valueOf());
         }
 
         if (c !== null) {
             if (c.ob_size == 0) {
-                throw @{{ValueError}}("pow() 3rd argument cannot be 0");
+                throw $pyjs_create_exception(@{{ValueError}}("pow() 3rd argument cannot be 0"));
             }
             if (c.ob_size < 0) {
                 negativeOutput = 1;
@@ -4341,7 +4341,7 @@ $iter_array.prototype.next = function (noStop) {
         if (noStop === true) {
             return;
         }
-        throw @{{StopIteration}}();
+        throw $pyjs_create_exception(@{{StopIteration}}());
     }
     return this.__array[this.i];
 };
@@ -4357,7 +4357,7 @@ $reversed_iter_array.prototype.next = function (noStop) {
         if (noStop === true) {
             return;
         }
-        throw @{{StopIteration}}();
+        throw $pyjs_create_exception(@{{StopIteration}}());
     }
     return this.___array[this.i];
 };
@@ -4378,7 +4378,7 @@ $enumerate_array.prototype.next = function (noStop, reuseTuple) {
         if (noStop === true) {
             return;
         }
-        throw @{{StopIteration}}();
+        throw $pyjs_create_exception(@{{StopIteration}}());
     }
     this.tl[1] = this.array[this.i];
     if (this.tl[0].__number__ == 0x01) {
@@ -4408,7 +4408,7 @@ class list:
         # Basically the same as extend, but to save expensive function calls...
         JS("""
         if (@{{data}} === null) {
-            throw @{{TypeError}}("'NoneType' is not iterable");
+            throw $pyjs_create_exception(@{{TypeError}}("'NoneType' is not iterable"));
         }
         if (@{{data}}.constructor === Array) {
             @{{self}}.__array = @{{data}}.slice();
@@ -4437,13 +4437,13 @@ class list:
                     }
                 }
                 catch (e) {
-                    if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
+                    if (!@{{isinstance}}(e['$pyjs_exc'] || e, @{{StopIteration}})) throw e;
                 }
             }
             @{{self}}.__array = @{{data}};
             return null;
         }
-        throw @{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable");
+        throw $pyjs_create_exception(@{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable"));
         """)
 
     def __hash__(self):
@@ -4457,7 +4457,7 @@ class list:
         # Transform data into an array and append to self.__array
         JS("""
         if (@{{data}} === null) {
-            throw @{{TypeError}}("'NoneType' is not iterable");
+            throw $pyjs_create_exception(@{{TypeError}}("'NoneType' is not iterable"));
         }
         if (@{{data}}.constructor === Array) {
         } else if (typeof @{{data}}.__iter__ == 'function') {
@@ -4481,12 +4481,12 @@ class list:
                         }
                     }
                     catch (e) {
-                        if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
+                        if (!@{{isinstance}}(e['$pyjs_exc'] || e, @{{StopIteration}})) throw e;
                     }
                 }
             }
         } else {
-            throw @{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable");
+            throw $pyjs_create_exception(@{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable"));
         }
         var l = @{{self}}.__array;
         var j = @{{self}}.__array.length;
@@ -4500,7 +4500,7 @@ class list:
         JS("""
         var index=@{{self}}.index(@{{value}});
         if (index<0) {
-            throw @{{ValueError}}("list.remove(x): x not in list");
+            throw $pyjs_create_exception(@{{ValueError}}("list.remove(x): x not in list"));
         }
         @{{self}}.__array.splice(index, 1);
         return true;
@@ -4540,9 +4540,9 @@ class list:
         if (index<0) index += @{{self}}.__array.length;
         if (index < 0 || index >= @{{self}}.__array.length) {
             if (@{{self}}.__array.length == 0) {
-                throw @{{IndexError}}("pop from empty list");
+                throw $pyjs_create_exception(@{{IndexError}}("pop from empty list"));
             }
-            throw @{{IndexError}}("pop index out of range");
+            throw $pyjs_create_exception(@{{IndexError}}("pop index out of range"));
         }
         var a = @{{self}}.__array[index];
         @{{self}}.__array.splice(index, 1);
@@ -4572,7 +4572,7 @@ class list:
         if (@{{isinstance}}(@{{_index}}, @{{slice}})) {
             if (@{{_index}}.step !== null) {
                 // TODO/IMPLEMENTME:
-                throw @{{ValueError}}("step is not yet supported");
+                throw $pyjs_create_exception(@{{ValueError}}("step is not yet supported"));
             }
             if (@{{_index}}.stop === null) {
                 return @{{_imm_list}}(@{{self}}.__array.slice(@{{_index}}.start));
@@ -4584,7 +4584,7 @@ class list:
             if (typeof index == 'boolean') index = @{{int}}(index);
             if (index < 0) index += @{{self}}.__array.length;
             if (index < 0 || index >= @{{self}}.__array.length) {
-                throw @{{IndexError}}("list index out of range");
+                throw $pyjs_create_exception(@{{IndexError}}("list index out of range"));
             }
             return @{{self}}.__array[index];
         }
@@ -4601,11 +4601,11 @@ class list:
         if (@{{isinstance}}(@{{_index}}, @{{slice}})) {
             if (@{{_index}}.step !== null) {
                 // TODO/IMPLEMENTME:
-                throw @{{ValueError}}("step is not yet supported");
+                throw $pyjs_create_exception(@{{ValueError}}("step is not yet supported"));
             }
             if (@{{_index}}.start < 0 || @{{_index}}.stop < 0) {
                 // TODO/IMPLEMENTME:
-                throw @{{ValueError}}("negative slices not yet supported");
+                throw $pyjs_create_exception(@{{ValueError}}("negative slices not yet supported"));
             }
             var lower = @{{_index}}.start;
             var n = @{{_index}}.stop - lower;
@@ -4619,7 +4619,7 @@ class list:
             var index = @{{_index}}.valueOf();
             if (index < 0) index += @{{self}}.__array.length;
             if (index < 0 || index >= @{{self}}.__array.length) {
-                throw @{{IndexError}}("list assignment index out of range");
+                throw $pyjs_create_exception(@{{IndexError}}("list assignment index out of range"));
             }
             @{{self}}.__array[index]=@{{value}};
         }
@@ -4636,11 +4636,11 @@ class list:
         if (@{{isinstance}}(@{{_index}}, @{{slice}})) {
             if (@{{_index}}.step !== null) {
                 // TODO/IMPLEMENTME:
-                throw @{{ValueError}}("step is not yet supported");
+                throw $pyjs_create_exception(@{{ValueError}}("step is not yet supported"));
             }
             if (@{{_index}}.start < 0 || @{{_index}}.stop < 0) {
                 // TODO/IMPLEMENTME:
-                throw @{{ValueError}}("negative slices not yet supported");
+                throw $pyjs_create_exception(@{{ValueError}}("negative slices not yet supported"));
             }
             var lower = @{{_index}}.start;
             var n = @{{_index}}.stop - lower;
@@ -4653,7 +4653,7 @@ class list:
             var index = @{{_index}}.valueOf();
             if (index < 0) index += @{{self}}.__array.length;
             if (index < 0 || index >= @{{self}}.__array.length) {
-                throw @{{IndexError}}("list assignment index out of range");
+                throw $pyjs_create_exception(@{{IndexError}}("list assignment index out of range"));
             }
             @{{self}}.__array.splice(index, 1);
         }
@@ -4857,7 +4857,7 @@ class dict:
         var data = @{{_data}};
 
         if (data === null) {
-            throw @{{TypeError}}("'NoneType' is not iterable");
+            throw $pyjs_create_exception(@{{TypeError}}("'NoneType' is not iterable"));
         }
         if (data.constructor === Array) {
         } else if (typeof data.__object == 'object') {
@@ -4887,7 +4887,7 @@ class dict:
                         }
                     }
                     catch (e) {
-                        if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
+                        if (!@{{isinstance}}(e['$pyjs_exc'] || e, @{{StopIteration}})) throw e;
                     }
                 }
             }
@@ -4907,7 +4907,7 @@ class dict:
             }
             return null;
         } else {
-            throw @{{TypeError}}("'" + @{{repr}}(data) + "' is not iterable");
+            throw $pyjs_create_exception(@{{TypeError}}("'" + @{{repr}}(data) + "' is not iterable"));
         }
         // Assume uniform array content...
         if ((n = data.length) == 0) {
@@ -4953,7 +4953,7 @@ class dict:
     def __setitem__(self, key, value):
         JS("""
         if (typeof @{{value}} == 'undefined') {
-            throw @{{ValueError}}("Value for key '" + @{{key}} + "' is undefined");
+            throw $pyjs_create_exception(@{{ValueError}}("Value for key '" + @{{key}} + "' is undefined"));
         }
         var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         @{{self}}.__object[sKey] = [@{{key}}, @{{value}}];
@@ -4964,7 +4964,7 @@ class dict:
         var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         var value=@{{self}}.__object[sKey];
         if (typeof value == 'undefined'){
-            throw @{{KeyError}}(@{{key}});
+            throw $pyjs_create_exception(@{{KeyError}}(@{{key}}));
         }
         return value[1];
         """)
@@ -5149,15 +5149,15 @@ class dict:
     def pop(self, key):
         JS("""
         if (arguments.length > 2) {
-            throw @{{TypeError}}("pop expected at most 3 arguments, got "
-                                 + (1 + arguments.length).toString());
+            throw $pyjs_create_exception(@{{TypeError}}("pop expected at most 3 arguments, got "
+                                         + (1 + arguments.length).toString()));
         }
         var default_value = arguments.length == 2 ? arguments[1] : undefined;
         var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
         var value = @{{self}}.__object[sKey];
         if (typeof value == 'undefined') {
             if (default_value === undefined) {
-                throw @{{KeyError}}(@{{key}});
+                throw $pyjs_create_exception(@{{KeyError}}(@{{key}}));
             }
             return default_value;
         }
@@ -5235,7 +5235,7 @@ class BaseSet(object):
             selfMismatch = false,
             otherMismatch = false;
         if (selfObj === otherObj) {
-            throw @{{TypeError}}("Set operations must use two sets.");
+            throw $pyjs_create_exception(@{{TypeError}}("Set operations must use two sets."));
             }
         for (var sVal in selfObj) {
             if (!(sVal in otherObj)) {
@@ -5541,7 +5541,7 @@ class set(BaseSet):
                         }
                     }
                     catch (e) {
-                        if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
+                        if (!@{{isinstance}}(e['$pyjs_exc'] || e, @{{StopIteration}})) throw e;
                     }
                 }
             }
@@ -5553,7 +5553,7 @@ class set(BaseSet):
             }
             return null;
         } else {
-            throw @{{TypeError}}("'" + @{{repr}}(@{{!data}}) + "' is not iterable");
+            throw $pyjs_create_exception(@{{TypeError}}("'" + @{{repr}}(@{{!data}}) + "' is not iterable"));
         }
         // Assume uniform array content...
         if ((n = @{{!data}}.length) == 0) {
@@ -5635,7 +5635,7 @@ class set(BaseSet):
         JS("""
         var h = @{{hash}}(@{{val}});
         if (!(h in @{{self}}.__object)) {
-            throw @{{KeyError}}(@{{value}});
+            throw $pyjs_create_exception(@{{KeyError}}(@{{value}}));
         }
         delete @{{self}}.__object[h];
         """)
@@ -5749,7 +5749,7 @@ class frozenset(BaseSet):
                         }
                     }
                     catch (e) {
-                        if (!@{{isinstance}}(e, @{{StopIteration}})) throw e;
+                        if (!@{{isinstance}}(e['$pyjs_exc'] || e, @{{StopIteration}})) throw e;
                     }
                 }
             }
@@ -5761,7 +5761,7 @@ class frozenset(BaseSet):
             }
             return @{{self}};
         } else {
-            throw @{{TypeError}}("'" + @{{repr}}(@{{!data}}) + "' is not iterable");
+            throw $pyjs_create_exception(@{{TypeError}}("'" + @{{repr}}(@{{!data}}) + "' is not iterable"));
         }
         // Assume uniform array content...
         if ((n = @{{!data}}.length) == 0) {
@@ -5925,7 +5925,7 @@ def xrange(start, stop = None, step = 1):
                 if (noStop === true) {
                     return;
                 }
-                throw @{{StopIteration}}();
+                throw $pyjs_create_exception(@{{StopIteration}}());
             }
             @{{rval}} = @{{nval}};
             @{{nval}} += @{{step}};
@@ -6029,7 +6029,7 @@ def ord(x):
     if(JS("typeof @{{x}}== 'string'") and len(x) is 1):
         return INT(x.charCodeAt(0));
     else:
-        JS("""throw @{{TypeError}}("ord() expected string of length 1");""")
+        JS("""throw $pyjs_create_exception(@{{TypeError}}("ord() expected string of length 1"));""")
     return None
 
 def chr(x):
@@ -6125,7 +6125,7 @@ def len(object):
     v = 0
     JS("""
     if (typeof @{{object}}== 'undefined') {
-        throw @{{UndefinedValueError}}("len() on undefined");
+        throw $pyjs_create_exception(@{{UndefinedValueError}}("len() on undefined"));
     }
     if (@{{object}}=== null)
         return @{{v}};
@@ -6138,7 +6138,7 @@ def len(object):
     else if (@{{isArray}}(@{{object}}) && typeof @{{object}}.length != 'undefined')
         @{{v}} = @{{object}}.length;
     else
-        throw @{{TypeError}}("object has no len()");
+        throw $pyjs_create_exception(@{{TypeError}}("object has no len()"));
     if (@{{v}}.__number__ & 0x06) return @{{v}};
     """)
     return INT(v)
@@ -6328,7 +6328,7 @@ def getattr(obj, name, default_value=_undefined):
     JS("""
     if (@{{obj}} === null || typeof @{{obj}} == 'undefined') {
         if (arguments.length != 3 || typeof @{{obj}} == 'undefined') {
-            throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}} + "'");
+            throw $pyjs_create_exception(@{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}} + "'"));
         }
         return @{{default_value}};
     }
@@ -6358,7 +6358,7 @@ def getattr(obj, name, default_value=_undefined):
                 try {
                     return @{{obj}}.__getattr__(@{{name}});
                 } catch (e) {
-                    if (@{{isinstance}}(e, @{{AttributeError}})) {
+                    if (@{{isinstance}}(e['$pyjs_exc'] || e, @{{AttributeError}})) {
                         return @{{default_value}}; 
                     }
                     throw e;
@@ -6366,7 +6366,7 @@ def getattr(obj, name, default_value=_undefined):
             }
         }
         if (@{{default_value}} === @{{_undefined}}) {
-            throw @{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'");
+            throw $pyjs_create_exception(@{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'"));
         }
         return @{{default_value}};
     }
@@ -6450,10 +6450,10 @@ def _del(obj):
 def delattr(obj, name):
     JS("""
     if (typeof @{{obj}}== 'undefined') {
-        throw @{{UndefinedValueError}}("delattr() on undefined");
+        throw $pyjs_create_exception(@{{UndefinedValueError}}("delattr() on undefined"));
     }
     if (typeof @{{name}}!= 'string') {
-        throw @{{TypeError}}("attribute name must be string");
+        throw $pyjs_create_exception(@{{TypeError}}("attribute name must be string"));
     }
     if (@{{obj}}.__is_instance__ && typeof @{{obj}}.__delattr__ == 'function') {
         // pass in the pure name instead of the remapped one (users should not
@@ -6475,24 +6475,24 @@ def delattr(obj, name):
         return;
     }
     if (@{{obj}}=== null) {
-        throw @{{AttributeError}}("'NoneType' object"+
-                                  "has no attribute '"+@{{name}}+"'");
+        throw $pyjs_create_exception(@{{AttributeError}}("'NoneType' object"+
+                                     "has no attribute '"+@{{name}}+"'"));
     }
     if (typeof @{{obj}}!= 'object' && typeof @{{obj}}== 'function') {
-       throw @{{AttributeError}}("'"+typeof(@{{obj}})+
-                                 "' object has no attribute '"+@{{name}}+"'");
+       throw $pyjs_create_exception(@{{AttributeError}}("'"+typeof(@{{obj}})+
+                                    "' object has no attribute '"+@{{name}}+"'"));
     }
-    throw @{{AttributeError}}(@{{obj}}.__name__+
-                              " instance has no attribute '"+ @{{name}}+"'");
+    throw $pyjs_create_exception(@{{AttributeError}}(@{{obj}}.__name__+
+                                 " instance has no attribute '"+ @{{name}}+"'"));
     """)
 
 def setattr(obj, name, value):
     JS("""
     if (typeof @{{obj}}== 'undefined') {
-        throw @{{UndefinedValueError}}("setattr() on undefined");
+        throw $pyjs_create_exception(@{{UndefinedValueError}}("setattr() on undefined"));
     }
     if (typeof @{{name}}!= 'string') {
-        throw @{{TypeError}}("attribute name must be string");
+        throw $pyjs_create_exception(@{{TypeError}}("attribute name must be string"));
     }
     if (@{{obj}}.__is_instance__ && typeof @{{obj}}.__setattr__ == 'function' && @{{obj}}.__setattr__ !== @{{object}}.__setattr__) {
         @{{obj}}.__setattr__(@{{name}}, @{{value}})
@@ -6514,10 +6514,10 @@ def setattr(obj, name, value):
 def hasattr(obj, name):
     JS("""
     if (typeof @{{obj}} == 'undefined') {
-        throw @{{UndefinedValueError}}("hasattr() on undefined");
+        throw $pyjs_create_exception(@{{UndefinedValueError}}("hasattr() on undefined"));
     }
     if (typeof @{{name}} != 'string') {
-        throw @{{TypeError}}("attribute name must be string");
+        throw $pyjs_create_exception(@{{TypeError}}("attribute name must be string"));
     }
 
     if (@{{obj}} === null) {
@@ -6543,7 +6543,7 @@ def hasattr(obj, name):
 def dir(obj):
     JS("""
     if (typeof @{{obj}}== 'undefined') {
-        throw @{{UndefinedValueError}}("dir() on undefined");
+        throw $pyjs_create_exception(@{{UndefinedValueError}}("dir() on undefined"));
     }
     var properties=@{{list}}.__new__(@{{list}});
     for (var property in @{{obj}}) {
@@ -7123,7 +7123,7 @@ def sprintf(strng, args):
                 }
                 break;
             default:
-                throw @{{ValueError}}("unsupported format character '" + conversion + "' ("+@{{hex}}(conversion.charCodeAt(0))+") at index " + (@{{strng}}.length - remainder.length - 1));
+                throw $pyjs_create_exception(@{{ValueError}}("unsupported format character '" + conversion + "' ("+@{{hex}}(conversion.charCodeAt(0))+") at index " + (@{{strng}}.length - remainder.length - 1)));
         }
         if (minlen && subst.length < minlen) {
             if (numeric && left_padding && flags.indexOf('0') >= 0) {
@@ -7152,7 +7152,7 @@ def sprintf(strng, args):
             __array[__array.length] = left;
             if (minlen == '*') {
                 if (argidx == nargs) {
-                    throw @{{TypeError}}("not enough arguments for format string");
+                    throw $pyjs_create_exception(@{{TypeError}}("not enough arguments for format string"));
                 }
                 minlen = args.__getitem__(argidx++);
                 switch (minlen.__number__) {
@@ -7164,12 +7164,12 @@ def sprintf(strng, args):
                             break;
                         }
                     default:
-                        throw @{{TypeError}}('* wants int');
+                        throw $pyjs_create_exception(@{{TypeError}}('* wants int'));
                 }
             }
             if (conversion != '%') {
                 if (argidx == nargs) {
-                    throw @{{TypeError}}("not enough arguments for format string");
+                    throw $pyjs_create_exception(@{{TypeError}}("not enough arguments for format string"));
                 }
                 param = args.__getitem__(argidx++);
             }
@@ -7213,7 +7213,7 @@ def sprintf(strng, args):
     if (strng.indexOf("%(") >= 0) {
         if (re_dict.exec(strng) !== null) {
             if (constructor != "dict") {
-                throw @{{TypeError}}("format requires a mapping");
+                throw $pyjs_create_exception(@{{TypeError}}("format requires a mapping"));
             }
             sprintf_dict(strng, args);
             return result.join("");
@@ -7225,7 +7225,7 @@ def sprintf(strng, args):
     nargs = args.__array.length;
     sprintf_list(strng, args);
     if (argidx != nargs) {
-        throw @{{TypeError}}('not all arguments converted during string formatting');
+        throw $pyjs_create_exception(@{{TypeError}}('not all arguments converted during string formatting'));
     }
     return result.join("");
 """)
@@ -7339,19 +7339,19 @@ def divmod(x, y):
             case 0x0101:
             case 0x0104:
             case 0x0401:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 var f = Math.floor(@{{x}} / @{{y}});
                 return @{{_imm_tuple}}([f, @{{x}} - f * @{{y}}]);
             case 0x0102:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 var f = Math.floor(@{{x}} / @{{y}}.__v);
                 return @{{_imm_tuple}}([f, @{{x}} - f * @{{y}}.__v]);
             case 0x0201:
-                if (@{{y}} == 0) throw @{{ZeroDivisionError}}('float divmod()');
+                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 var f = Math.floor(@{{x}}.__v / @{{y}});
                 return @{{_imm_tuple}}([f, @{{x}}.__v - f * @{{y}}]);
             case 0x0202:
-                if (@{{y}}.__v == 0) throw @{{ZeroDivisionError}}('integer division or modulo by zero');
+                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('integer division or modulo by zero'));
                 var f = Math.floor(@{{x}}.__v / @{{y}}.__v);
                 return @{{_imm_tuple}}([new @{{int}}(f), new @{{int}}(@{{x}}.__v - f * @{{y}}.__v)]);
             case 0x0204:
@@ -8513,7 +8513,7 @@ def format(val, spec=''):
 __iter_prepare = JS("""function(iter, reuse_tuple) {
 
     if (typeof iter == 'undefined') {
-        throw @{{TypeError}}("iter is undefined");
+        throw $pyjs_create_exception(@{{TypeError}}("iter is undefined"));
     }
     var it = {};
     it.$iter = iter;
@@ -8541,7 +8541,7 @@ wrapped_next = JS("""function (iter) {
     try {
         var res = iter.next();
     } catch (e) {
-        if (@{{isinstance}}(e, @{{StopIteration}})) {
+        if (@{{isinstance}}(e['$pyjs_exc'] || e, @{{StopIteration}})) {
             return;
         }
         throw e;
@@ -8554,7 +8554,7 @@ wrapped_next = JS("""function (iter) {
 # Otherwise put all excessive elements in new array at `extended` position
 __ass_unpack = JS("""function (data, count, extended) {
     if (data === null) {
-        throw @{{TypeError}}("'NoneType' is not iterable");
+        throw $pyjs_create_exception(@{{TypeError}}("'NoneType' is not iterable"));
     }
     if (data.constructor === Array) {
     } else if (typeof data.__iter__ == 'function') {
@@ -8578,26 +8578,26 @@ __ass_unpack = JS("""function (data, count, extended) {
                     }
                 }
                 catch (e) {
-                    if (e.__name__ != 'StopIteration') throw e;
+                    if (!@{{isinstance}}(e['$pyjs_exc'] || e, @{{StopIteration}})) throw e;
                 }
             }
         }
     } else {
-        throw @{{TypeError}}("'" + @{{repr}}(data) + "' is not iterable");
+        throw $pyjs_create_exception(@{{TypeError}}("'" + @{{repr}}(data) + "' is not iterable"));
     }
     var res = new Array();
     if (typeof extended == 'undefined' || extended === null)
     {
         if (data.length != count)
         if (data.length > count)
-            throw @{{ValueError}}("too many values to unpack");
+            throw $pyjs_create_exception(@{{ValueError}}("too many values to unpack"));
         else
-            throw @{{ValueError}}("need more than "+data.length+" values to unpack");
+            throw $pyjs_create_exception(@{{ValueError}}("need more than "+data.length+" values to unpack"));
         return data;
     }
     else
     {
-        throw @{{NotImplemented}}("Extended unpacking is not implemented");
+        throw $pyjs_create_exception(@{{NotImplemented}}("Extended unpacking is not implemented"));
     }
 }""")
 
