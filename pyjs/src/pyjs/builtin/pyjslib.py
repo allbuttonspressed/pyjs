@@ -426,6 +426,10 @@ class tuple:
     __rmul__ = __mul__
 
 JS("@{{object}}.__mro__ = @{{tuple}}([@{{object}}]);")
+JS("@{{object}}.__mro__ = @{{tuple}}([@{{object}}]);")
+JS("@{{object}}.$H = ++@{{next_hash_id}};")
+JS("@{{object}}.__$super_cache__[@{{object}}.$H] = null;")
+
 JS("@{{type}}.__mro__ = @{{tuple}}([@{{type}}, @{{object}}]);")
 JS("@{{tuple}}.__mro__ = @{{tuple}}([@{{tuple}}, @{{object}}]);")
 
@@ -2109,7 +2113,7 @@ def bool(v):
     """)
 JS("@{{bool}}.__$super_cache__ = {};")
 JS("@{{bool}}.$H = ++@{{next_hash_id}};")
-JS("@{{bool}}.__$super_cache__[@{{bool}}.$H] = @{{type}};")
+JS("@{{bool}}.__$super_cache__[@{{bool}}.$H] = null;")
 
 class float:
     __number__ = JS("0x01")
