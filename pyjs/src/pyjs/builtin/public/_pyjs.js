@@ -455,11 +455,7 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     }
 
     cls_fn.__inherited_properties__ = inherited;
-    cls_fn.$__instancector__ = function(cls) {
-        this.__class__ = cls;
-        this.__dict__ = this;
-        this.__is_instance__ = true;
-    };
+    eval("cls_fn.$__instancector__ = function " + class_name + "$inst(cls) { this.__class__ = cls; this.__dict__ = this; this.__is_instance__ = true; };");
     cls_fn.$__instancector__.prototype = cls_fn;
 
     if (cls_fn['__new__'] == null) {
