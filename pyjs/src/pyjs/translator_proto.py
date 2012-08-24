@@ -431,6 +431,7 @@ CONTEXT_OPTIONS = {
     'pyjslib.dict.__new__': dict(function_argument_checking=False),
     'pyjslib.dict.pop': dict(function_argument_checking=False),
     'pyjslib.BaseSet.__new__': dict(function_argument_checking=False),
+    'pyjslib.set.update': dict(function_argument_checking=False),
     'pyjslib.frozenset.__new__': dict(function_argument_checking=False),
     'pyjslib.isSet': dict(function_argument_checking=False),
     'pyjslib.BaseSet.__nonzero__': dict(function_argument_checking=False),

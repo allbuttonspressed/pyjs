@@ -5667,15 +5667,19 @@ class set(BaseSet):
 """)
         return None
 
-    def update(self, data):
-        if not isSet(data):
-            data = frozenset(data)
+    def update(self):
         JS("""
-        var selfObj = @{{self}}.__object,
-            dataObj = @{{data}}.__object;
-        for (var sVal in dataObj) {
-            if (!(sVal in selfObj)) {
-                selfObj[sVal] = dataObj[sVal];
+        for (var i = 0; i < arguments.length; i++) {
+            var data = arguments[i];
+            if (!@{{isSet}}(data)) {
+                data = frozenset(data);
+            }
+            var selfObj = @{{self}}.__object,
+                dataObj = data.__object;
+            for (var sVal in dataObj) {
+                if (!(sVal in selfObj)) {
+                    selfObj[sVal] = dataObj[sVal];
+                }
             }
         }
         """)
