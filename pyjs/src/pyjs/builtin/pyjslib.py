@@ -892,13 +892,10 @@ def op_pow(x, y):
             case 0x0101:
             case 0x0104:
             case 0x0401:
-                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return Math.pow(@{{x}}, @{{y}});
             case 0x0102:
-                if (@{{y}}.__v == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return Math.pow(@{{x}},@{{y}}.__v);
             case 0x0201:
-                if (@{{y}} == 0) throw $pyjs_create_exception(@{{ZeroDivisionError}}('float divmod()'));
                 return Math.pow(@{{x}}.__v,@{{y}});
             case 0x0202:
                 return @{{x}}.__pow__(@{{y}});
