@@ -2561,10 +2561,17 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             call_path = self._get_pure_getattr(v.node)
             if call_path:
                 kind_path = '.'.join(self.kind_context + call_path)
+                call_kind = None
                 if kind_path in self.static_kinds:
                     call_kind = self.static_kinds[kind_path]
-                    if get_kind(call_kind) == 'func':
-                        kind = get_kind(call_kind, 1)
+                elif len(self.kind_context) >= 2:
+                    base_path = self.kind_context[:-1]
+                    base_path[-1] += '()'
+                    kind_path = '.'.join(base_path + call_path)
+                    if kind_path in self.static_kinds:
+                        call_kind = self.static_kinds[kind_path]
+                if get_kind(call_kind) == 'func':
+                    kind = get_kind(call_kind, 1)
             method_name = self.attrib_remap(v.node.attrname)
             if isinstance(v.node.expr, self.ast.Name):
                 call_name, method_name = self._name2(v.node.expr, current_klass, method_name)
