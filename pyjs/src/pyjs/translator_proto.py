@@ -1626,6 +1626,10 @@ $generator['$$throw'] = function ($exc_type, $exc_value) {
         throw (e);
     }
     $is_executing=false;
+    if (typeof $res == 'undefined') {
+        $generator_state[0] = -1;
+        throw $exc;
+    }
     return $res;
 };
 $generator['close'] = function () {
