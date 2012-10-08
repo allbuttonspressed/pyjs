@@ -8590,18 +8590,16 @@ __ass_unpack = JS("""function (data, count, extended) {
     } else {
         throw $pyjs_create_exception(@{{TypeError}}("'" + @{{repr}}(data) + "' is not iterable"));
     }
-    var res = new Array();
-    if (typeof extended == 'undefined' || extended === null)
-    {
-        if (data.length != count)
-        if (data.length > count)
-            throw $pyjs_create_exception(@{{ValueError}}("too many values to unpack"));
-        else
-            throw $pyjs_create_exception(@{{ValueError}}("need more than "+data.length+" values to unpack"));
+    if (typeof extended == 'undefined' || extended === null) {
+        if (data.length != count) {
+            if (data.length > count) {
+                throw $pyjs_create_exception(@{{ValueError}}("too many values to unpack"));
+            } else {
+                throw $pyjs_create_exception(@{{ValueError}}("need more than "+data.length+" values to unpack"));
+            }
+        }
         return data;
-    }
-    else
-    {
+    } else {
         throw $pyjs_create_exception(@{{NotImplemented}}("Extended unpacking is not implemented"));
     }
 }""")
