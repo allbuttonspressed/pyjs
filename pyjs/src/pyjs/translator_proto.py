@@ -1972,7 +1972,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
     def _varargs_handler(self, node, varargname, start, lp, prepend_this=False):
         if node.kwargs:
             end = "arguments.length-1"
-            start -= 1
+            start = max(start - 1, 0)
         else:
             end = "arguments.length"
         if not lp:
