@@ -3334,9 +3334,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
     def _lhsFromName(self, name, current_klass, set_name_type='variable', kind=None):
         name_type, pyname, jsname, depth, is_local, varkind = self.lookup(name)
-        if name_type == "__javascript__":
-            lhs = jsname
-        elif is_local:
+        if name_type == "__javascript__" or is_local:
             lhs = jsname
             self.add_lookup(set_name_type, name, jsname, kind=kind)
         elif self.top_level:
