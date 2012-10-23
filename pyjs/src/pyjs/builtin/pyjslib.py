@@ -4854,7 +4854,7 @@ class dict:
         self.__object = JS("{}")
         def init(_data):
             JS("""
-        var item, i, n, sKey;
+        var item, i, n, sKey, key;
         var data = @{{_data}};
 
         if (data === null) {
@@ -4893,7 +4893,7 @@ class dict:
                 }
             }
         } else if (typeof data == 'object' || typeof data == 'function') {
-            for (var key in data) {
+            for (key in data) {
                 var _key = key;
                 if (key.substring(0,2) == '$$') {
                     // handle back mapping of name
@@ -4904,7 +4904,7 @@ class dict:
                         _key = key;
                     }
                 }
-                @{{self}}.__object['$'+_key] = [_key, data[key]];
+                @{{self}}.__object['$s'+_key] = [_key, data[key]];
             }
             return null;
         } else {
@@ -4919,7 +4919,7 @@ class dict:
             while (i < n) {
                 item = data[i++];
                 key = item[0];
-                sKey = (key===null?null:(key.hasOwnProperty("$H")?key.$H:((typeof key=='string'||key.__number__)?'$'+key:@{{__hash}}(key))));
+                sKey = (key===null?null:(key.hasOwnProperty("$H")?key.$H:(typeof key == 'string' ? '$s' + key : (key.__number__ ? '$n' + key: @{{__hash}}(key)))));
                 @{{self}}.__object[sKey] = [key, item[1]];
             }
             return null;
@@ -4928,16 +4928,15 @@ class dict:
             while (i < n) {
                 item = data[i++].__array;
                 key = item[0];
-                sKey = (key===null?null:(key.hasOwnProperty("$H")?key.$H:((typeof key=='string'||key.__number__)?'$'+key:@{{__hash}}(key))));
+                sKey = (key===null?null:(key.hasOwnProperty("$H")?key.$H:(typeof key == 'string' ? '$s' + key : (key.__number__ ? '$n' + key: @{{__hash}}(key)))));
                 @{{self}}.__object[sKey] = [key, item[1]];
             }
             return null;
         }
         i = -1;
-        var key;
         while (++i < n) {
             key = data[i].__getitem__(0);
-            sKey = (key===null?null:(key.hasOwnProperty("$H")?key.$H:((typeof key=='string'||key.__number__)?'$'+key:@{{__hash}}(key))));
+            sKey = (key===null?null:(key.hasOwnProperty("$H")?key.$H:(typeof key == 'string' ? '$s' + key : (key.__number__ ? '$n' + key: @{{__hash}}(key)))));
             @{{self}}.__object[sKey] = [key, data[i].__getitem__(1)];
         }
         return null;
@@ -4956,13 +4955,13 @@ class dict:
         if (typeof @{{value}} == 'undefined') {
             throw $pyjs_create_exception(@{{ValueError}}("Value for key '" + @{{key}} + "' is undefined"));
         }
-        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:(typeof @{{key}} == 'string' ? '$s' + @{{key}} : (@{{key}}.__number__ ? '$n' + @{{key}}: @{{__hash}}(@{{key}})))));
         @{{self}}.__object[sKey] = [@{{key}}, @{{value}}];
         """)
 
     def __getitem__(self, key):
         JS("""
-        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:(typeof @{{key}} == 'string' ? '$s' + @{{key}} : (@{{key}}.__number__ ? '$n' + @{{key}}: @{{__hash}}(@{{key}})))));
         var value=@{{self}}.__object[sKey];
         if (typeof value == 'undefined'){
             throw $pyjs_create_exception(@{{KeyError}}(@{{key}}));
@@ -5028,13 +5027,13 @@ class dict:
 
     def __delitem__(self, key):
         JS("""
-        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:(typeof @{{key}} == 'string' ? '$s' + @{{key}} : (@{{key}}.__number__ ? '$n' + @{{key}}: @{{__hash}}(@{{key}})))));
         delete @{{self}}.__object[sKey];
         """)
 
     def __contains__(self, key):
         JS("""
-        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:(typeof @{{key}} == 'string' ? '$s' + @{{key}} : (@{{key}}.__number__ ? '$n' + @{{key}}: @{{__hash}}(@{{key}})))));
         return typeof @{{self}}.__object[sKey] == 'undefined' ? false : true;
         """)
     
@@ -5113,7 +5112,7 @@ class dict:
 
     def setdefault(self, key, default_value):
         JS("""
-        var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:(typeof @{{key}} == 'string' ? '$s' + @{{key}} : (@{{key}}.__number__ ? '$n' + @{{key}}: @{{__hash}}(@{{key}})))));
         return typeof @{{self}}.__object[sKey] == 'undefined' ? (@{{self}}.__object[sKey]=[@{{key}}, @{{default_value}}])[1] : @{{self}}.__object[sKey][1];
 """)
 
@@ -5125,7 +5124,7 @@ class dict:
             break;
         }
         if (empty) return @{{default_value}};
-        var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:(typeof @{{key}} == 'string' ? '$s' + @{{key}} : (@{{key}}.__number__ ? '$n' + @{{key}}: @{{__hash}}(@{{key}})))));
         return typeof @{{self}}.__object[sKey] == 'undefined' ? @{{default_value}} : @{{self}}.__object[sKey][1];
         """)
 
@@ -5154,7 +5153,7 @@ class dict:
                                          + (1 + arguments.length).toString()));
         }
         var default_value = arguments.length == 2 ? arguments[1] : undefined;
-        var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:((typeof @{{key}}=='string'||@{{key}}.__number__)?'$'+@{{key}}:@{{__hash}}(@{{key}}))));
+        var sKey = (@{{key}}===null?null:(@{{key}}.hasOwnProperty("$H")?@{{key}}.$H:(typeof @{{key}} == 'string' ? '$s' + @{{key}} : (@{{key}}.__number__ ? '$n' + @{{key}}: @{{__hash}}(@{{key}})))));
         var value = @{{self}}.__object[sKey];
         if (typeof value == 'undefined') {
             if (default_value === undefined) {
@@ -6760,7 +6759,7 @@ class complex:
 
 JS("@{{complex}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type complex>'; };")
 
-# hash(obj) == (obj === null? null : (obj.hasOwnProperty("$H") ? obj.$H : ((typeof obj == 'string' || obj.__number__) ? '$'+obj : @{{__hash}}(obj))))
+# hash(obj) == (obj === null? null : (obj.hasOwnProperty("$H") ? obj.$H : (typeof obj == 'string' ? '$s' + obj : (obj.__number__ ? '$n' + obj : @{{__hash}}(obj)))))
 if JS("typeof 'a'[0] == 'undefined'"):
     # IE: cannot do "abc"[idx]
     # IE has problems with setting obj.$H on certain DOM objects
@@ -6768,9 +6767,11 @@ if JS("typeof 'a'[0] == 'undefined'"):
     JS("""@{{__hash}} = function(obj) {
         switch (obj.constructor) {
             case String:
+                return '$s' + obj;
             case Number:
+                return '$n' + obj;
             case Date:
-                return '$'+obj;
+                return '$d' + obj;
         }
         if (obj.__is_instance__ !== false && typeof obj.__hash__ == 'function') {
             return obj.__hash__();
@@ -6803,12 +6804,18 @@ if JS("typeof 'a'[0] == 'undefined'"):
         if (obj === null) return null;
 
         if (obj.hasOwnProperty("$H")) return obj.$H;
-        if (typeof obj == 'string' || obj.__number__) return '$'+obj;
+        if (typeof obj == 'string') {
+            return '$s' + obj;
+        } else if (obj.__number__) {
+            return '$n' + obj;
+        }
         switch (obj.constructor) {
             case String:
+                return '$s' + obj;
             case Number:
+                return '$n' + obj;
             case Date:
-                return '$'+obj;
+                return '$d' + obj;
         }
         if (obj.__is_instance__ !== false && typeof obj.__hash__ == 'function') {
             return obj.__hash__();
@@ -6840,9 +6847,11 @@ else:
     JS("""@{{__hash}} = function(obj) {
         switch (obj.constructor) {
             case String:
+                return '$s' + obj;
             case Number:
+                return '$n' + obj;
             case Date:
-                return '$'+obj;
+                return '$d' + obj;
         }
         if (obj.__is_instance__ !== false && typeof obj.__hash__ == 'function') {
             return obj.__hash__();
@@ -6857,14 +6866,18 @@ else:
         if (obj === null) return null;
 
         if (obj.hasOwnProperty("$H")) return obj.$H;
-        if (typeof obj == 'string' || obj.__number__) {
-            return '$'+obj;
+        if (typeof obj == 'string') {
+            return '$s' + obj;
+        } else if(obj.__number__) {
+            return '$n' + obj;
         }
         switch (obj.constructor) {
             case String:
+                return '$s' + obj;
             case Number:
+                return '$n' + obj;
             case Date:
-                return '$'+obj;
+                return '$d' + obj;
         }
         if (obj.__is_instance__ !== false && typeof obj.__hash__ == 'function') {
             return obj.__hash__();
