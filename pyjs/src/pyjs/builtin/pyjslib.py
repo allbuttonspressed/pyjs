@@ -5668,7 +5668,7 @@ class set(BaseSet):
         for (var i = 0; i < arguments.length; i++) {
             var data = arguments[i];
             if (!@{{isSet}}(data)) {
-                data = frozenset(data);
+                data = @{{frozenset}}(data);
             }
             var selfObj = @{{self}}.__object,
                 dataObj = data.__object;
