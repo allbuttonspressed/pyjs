@@ -4408,6 +4408,9 @@ class list:
     def __init__(self, data=JS("[]")):
         # Basically the same as extend, but to save expensive function calls...
         JS("""
+        if (@{{data}} === @{{_empty_tuple}}) {
+            return null;
+        }
         if (@{{data}} === null) {
             throw $pyjs_create_exception(@{{TypeError}}("'NoneType' is not iterable"));
         }
