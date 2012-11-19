@@ -455,7 +455,10 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     }
 
     cls_fn.__inherited_properties__ = inherited;
-    eval("cls_fn.$__instancector__ = function " + class_name + "$inst(cls) { this.__class__ = cls; this.__dict__ = this; this.__is_instance__ = true; };");
+    // in the following eval statement we are only allowd to use vars defined inside eval
+    // (vars defined outside are not allowd since a filter like slimmit will rename vars)
+    eval("var _cls_fn_$ = function " + class_name + "$inst(cls) { this.__class__ = cls; this.__dict__ = this; this.__is_instance__ = true; }");
+    cls_fn.$__instancector__ = _cls_fn_$ 
     cls_fn.$__instancector__.prototype = cls_fn;
 
     if (cls_fn['__new__'] == null) {
