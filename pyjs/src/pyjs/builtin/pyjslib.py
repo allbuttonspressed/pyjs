@@ -1437,6 +1437,8 @@ def init():
 
     # Patching of the standard javascript String object
     JS("""
+String.prototype.__init__ = @{{object}}.__init__;
+
 String.prototype.rfind = function(sub, start, end) {
     var pos;
     if (typeof start != 'undefined') {
@@ -4948,7 +4950,7 @@ class dict:
         if kwargs:
             init(kwargs)
 
-    __new__.__args__ = __init__.__args
+    __new__.__args__ = __init__.__args__
 
     def __hash__(self):
         raise TypeError("dict objects are unhashable")
@@ -6009,8 +6011,11 @@ def range(start, stop = None, step = 1):
     return r
 
 class str(basestring):
-    def __new__(self, text=''):
+    def __new__(self, text):
         JS("""
+        if (@{{text}}===undefined) {
+            return '';
+        }
         if (@{{text}}==='') {
             return @{{text}};
         }

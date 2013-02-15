@@ -420,6 +420,7 @@ STATIC_KINDS = {'pyjslib.' + key: value for key, value in PYJSLIB_STATIC_KINDS.i
 
 CONTEXT_OPTIONS = {
     'pyjslib.object.__setattr__': dict(function_argument_checking=False),
+    'pyjslib.str.__new__': dict(function_argument_checking=False),
     'pyjslib.list.__new__': dict(function_argument_checking=False),
     'pyjslib.list.__unchecked_getitem__': dict(function_argument_checking=False),
     'pyjslib.list.__unchecked_setitem__': dict(function_argument_checking=False),
@@ -2511,7 +2512,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     is_builtin = True
                     if v.node.name == 'len' and len(v.args) == 1:
                         return self.inline_len_code(v, current_klass)
-                if name_type == 'builtin' and v.node.name in ('tuple', 'float') and len(v.args) == 1:
+                if name_type == 'builtin' and v.node.name in ('tuple', 'float', 'str', 'unicode') and len(v.args) == 1:
                     call_name = jsname + '.__new__'
                     call_args.append(jsname)
                 else:
