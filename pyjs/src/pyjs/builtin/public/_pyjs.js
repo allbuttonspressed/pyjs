@@ -425,7 +425,7 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     var class_name = cls_fn.__name__;
     var class_module = cls_fn.__module__;
     cls_fn.__number__ = null;
-    var base_mro_list = new Array();
+    var base_mro_list = [];
     for (var i = 0; i < bases.length; i++) {
         if (bases[i].__mro__ != null) {
             base_mro_list.push([].concat(bases[i].__mro__.__array));
@@ -456,10 +456,15 @@ function $pyjs__class_function(cls_fn, prop, bases) {
 
     cls_fn.__inherited_properties__ = inherited;
     // in the following eval statement we are only allowd to use vars defined inside eval
-    // (vars defined outside are not allowd since a filter like slimmit will rename vars)
-    eval("var _cls_fn_$ = function " + class_name + "$inst(cls) { this.__class__ = cls; this.__dict__ = this; this.__is_instance__ = true; }");
-    cls_fn.$__instancector__ = _cls_fn_$ 
-    cls_fn.$__instancector__.prototype = cls_fn;
+    // (vars defined outside are not allowd since a filter like slimit will rename vars)
+    eval("var _cls_fn_$ = function " + class_name + "$inst(cls) { this.__class__ = cls; }");
+    cls_fn.$__instancector__ = _cls_fn_$;
+    var wrapper = function() {};
+    wrapper.prototype = cls_fn;
+    // This is an optimization
+    cls_fn.$__instancector__.prototype = new wrapper();
+    cls_fn.$__instancector__.prototype.__is_instance__ = true;
+    cls_fn.$__instancector__.prototype.__dict__ = {};
 
     if (cls_fn['__new__'] == null) {
       cls_fn['__new__'] = $pyjs__prepare_func('__new__',
@@ -485,7 +490,7 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     }
     cls_fn.__name__ = class_name;
     cls_fn.__module__ = class_module;
-    __mro__ = new Array(cls_fn).concat(__mro__);
+    __mro__ = [cls_fn].concat(__mro__);
     if (typeof pyjslib.tuple != 'undefined') {
         cls_fn.__mro__ = pyjslib.tuple(__mro__);
     }
@@ -543,7 +548,7 @@ function $pyjs__class_function(cls_fn, prop, bases) {
 function $pyjs_type(clsname, bases, methods)
 {
     var cls_instance = $pyjs__class_instance(clsname, methods['__module__']);
-    var obj = new Object;
+    var obj = {};
     for (var i in methods) {
         if (typeof methods[i] == 'function' && typeof methods[i].__class__ == 'undefined') {
             if (i == '__new__') {
