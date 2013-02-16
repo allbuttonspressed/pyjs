@@ -8,13 +8,15 @@ var $pyjs_module_type = {
     __name__: 'module'
 };
 
-function $pyjs_create_exception(exc) {
+// create_exception
+function $pyce(exc) {
     var err = new Error($p['repr'](exc));
     err['$pyjs_exc'] = exc;
     return err;
 };
 
-function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
+// kwargs_call
+function $pykc(obj, func, star_args, dstar_args, args, kwargs)
 {
     if (obj !== null && typeof func != 'function') {
         func = obj[func];
@@ -28,14 +30,14 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
             obj = func;
             func = func.__call__;
         } else {
-            throw $pyjs_create_exception(pyjslib.TypeError(func + ' object is not callable'));
+            throw $pyce($p['TypeError'](func + ' object is not callable'));
         }
     }
 
     // Merge dstar_args into kwargs
     if (dstar_args) {
-        if (pyjslib.get_pyjs_classtype(dstar_args) != 'dict') {
-            throw $pyjs_create_exception(pyjslib.TypeError(func.__name__ + "() arguments after ** must be a dictionary " + pyjslib.repr(dstar_args)));
+        if ($p['get_pyjs_classtype'](dstar_args) != 'dict') {
+            throw $pyce($p['TypeError'](func.__name__ + "() arguments after ** must be a dictionary " + $p['repr'](dstar_args)));
         }
         var i;
         /* use of __iter__ and next is horrendously expensive,
@@ -45,7 +47,7 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
             var k = dstar_args.__object[keys][0];
             var v = dstar_args.__object[keys][1];
 
-            if ('$$' + k in pyjslib.var_remap) {
+            if ('$$' + k in $p['var_remap']) {
                 k = '$$' + k;
             }
             if (kwargs == null) {
@@ -63,7 +65,7 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
     // Append star_args to args
     if (star_args) {
         if (star_args === null || typeof star_args.__iter__ != 'function') {
-            throw $pyjs_create_exception(pyjslib.TypeError(func.__name__ + "() arguments after * must be a sequence" + pyjslib.repr(star_args)));
+            throw $pyce($p['TypeError'](func.__name__ + "() arguments after * must be a sequence" + $p['repr'](star_args)));
         }
         if (star_args.__array != null && star_args.__array.constructor == Array) {
             args = args.concat(star_args.__array);
@@ -174,7 +176,7 @@ function $pyjs_kwargs_call(obj, func, star_args, dstar_args, args, kwargs)
         }
         return func.apply(obj, _args);
     }
-    a = pyjslib.dict(kwargs);
+    a = $p['dict'](kwargs);
     if (a.__len__() > 0) {
         a['$pyjs_is_kwarg'] = true;
         _args.push(a);
@@ -211,18 +213,18 @@ function $pyjs__exception_func_param(func_name, minargs, maxargs, nargs) {
     } else {
         return;
     }
-    if (typeof pyjslib.TypeError == 'function') {
-        throw $pyjs_create_exception(pyjslib.TypeError(String(msg)));
+    if (typeof $p['TypeError'] == 'function') {
+        throw $pyce($p['TypeError'](String(msg)));
     }
     throw msg;
 }
 
 function $pyjs__exception_func_multiple_values(func_name, key) {
-    throw $pyjs_create_exception(pyjslib.TypeError(String(func_name + "() got multiple values for keyword argument '" + key + "'")));
+    throw $pyce($p['TypeError'](String(func_name + "() got multiple values for keyword argument '" + key + "'")));
 }
 
 function $pyjs__exception_func_unexpected_keyword(func_name, key) {
-    throw $pyjs_create_exception(pyjslib.TypeError(String(func_name + "() got an unexpected keyword argument '" + key + "'")));
+    throw $pyce($p['TypeError'](String(func_name + "() got an unexpected keyword argument '" + key + "'")));
 }
 
 function $pyjs__exception_func_class_expected(func_name, class_name, instance) {
@@ -233,7 +235,7 @@ function $pyjs__exception_func_class_expected(func_name, class_name, instance) {
         } else {
             instance = String(instance);
         }
-        throw $pyjs_create_exception(pyjslib.TypeError(String("unbound method "+func_name+"() must be called with "+class_name+" class as first argument (got "+instance+" instead)")));
+        throw $pyce($p['TypeError'](String("unbound method "+func_name+"() must be called with "+class_name+" class as first argument (got "+instance+" instead)")));
 }
 
 function $pyjs_check_instance_type(instance, func, first_arg) {
@@ -243,10 +245,10 @@ function $pyjs_check_instance_type(instance, func, first_arg) {
         return;
     }
 
-    var is_subtype = pyjslib._isinstance;
+    var is_subtype = $p['_isinstance'];
     if (instance.__is_instance__ === false) {
         if (func.__is_classmethod__ === true) {
-            is_subtype = pyjslib.issubclass;
+            is_subtype = $p['issubclass'];
         } else {
             if (typeof first_arg != 'undefined' && first_arg !== null)
                 $pyjs_check_instance_type(first_arg, func);
@@ -280,14 +282,25 @@ function $pyjs__exception_func_instance_expected(func_name, class_name, instance
     } else {
         instance = String(instance);
     }
-    throw $pyjs_create_exception(pyjslib.TypeError(String("unbound method "+func_name+"() must be called with "+class_name+" instance as first argument (got "+instance+" instead)")));
+    throw $pyce($p['TypeError'](String("unbound method "+func_name+"() must be called with "+class_name+" instance as first argument (got "+instance+" instead)")));
 }
 
-function $pyjs__prepare_func(func_name, func, args) {
+// prepare_func
+function $pypf(func_name, func, args) {
     func.__name__ = func.func_name = func_name;
     func.__args__ = args;
     func.__$pyjs_accepts_kwargs__ = args[1] !== null;
     return func;
+}
+
+// assign_function
+function $pyaf(ctx, func_name, func, args) {
+    ctx[func_name] = $pypf(func_name, func, args);
+}
+
+// assign_remapped
+function $pyar(ctx, name, func_name, func, args) {
+  ctx[name] = $pypf(func_name, func, args);
 }
 
 function $pyjs__mro_merge(seqs) {
@@ -295,7 +308,7 @@ function $pyjs__mro_merge(seqs) {
     var i = 0;
     var cand = null;
     function resolve_error(candidates) {
-        throw $pyjs_create_exception(pyjslib.TypeError("Cannot create a consistent method resolution order (MRO) for bases " + candidates[0].__name__ + ", "+ candidates[1].__name__));
+        throw $pyce($p['TypeError']("Cannot create a consistent method resolution order (MRO) for bases " + candidates[0].__name__ + ", "+ candidates[1].__name__));
     }
     for (;;) {
         var nonemptyseqs = new Array();
@@ -366,14 +379,14 @@ function $pyjs__class_instance(class_name, module_name) {
             return instance;
         }
         if (instance.__is_instance__ !== false) {
-            // costly... if (pyjslib.isinstance(instance, cls_fn)) {
+            // costly... if ($p['isinstance'](instance, cls_fn)) {
                 instance.__init__.apply(instance, args);
                 /* this check is not really critical...
                 if (instance.__init__.apply(instance, args) != null) {
-                    throw $pyjs_create_exception(pyjslib.TypeError('__init__() should return None'));
+                    throw $pyce($p['TypeError']('__init__() should return None'));
                 } */
             // }
-        } else if (pyjslib.isinstance(cls_fn, pyjslib.type)) {
+        } else if ($p['isinstance'](cls_fn, $p['type'])) {
             // __metaclass__ returns a class instead of an instance. Don't pass the
             // class via this because otherwise the __init__ function fails to unpack
             // the arguments.
@@ -395,7 +408,7 @@ function $pyjs__class_instance(class_name, module_name) {
     };
     cls_fn.__name__ = class_name;
     cls_fn.__module__ = module_name;
-    cls_fn.__class__ = pyjslib['type'];
+    cls_fn.__class__ = $p['type'];
     cls_fn.toString = function() {
         if (this.__is_instance__ === true) {
             if (typeof this.__repr__ == 'function') {
@@ -470,7 +483,7 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     cls_fn.$__instancector__.prototype.__dict__ = {};
 
     if (cls_fn['__new__'] == null) {
-      cls_fn['__new__'] = $pyjs__prepare_func('__new__',
+      cls_fn['__new__'] = $pypf('__new__',
           ($pyjs.options.arg_count ? $pyjs__class_function_checked__new__ : $pyjs__class_function_unchecked__new__),
           ['args', 'kwargs', ['cls']]);
       cls_fn['__new__'].__$pyjs_autogenerated__ = true;
@@ -487,7 +500,7 @@ function $pyjs__class_function(cls_fn, prop, bases) {
             if ($pyjs.options.arg_is_instance && self.__is_instance__ !== true) $pyjs__exception_func_instance_expected(arguments.callee.__name__, arguments.callee.__class__.__name__, self);
             if ($pyjs.options.arg_count && arguments.length != 1) $pyjs__exception_func_param(arguments.callee.__name__, 1, 1, arguments.length);
         } */
-      cls_fn['__init__'] = $pyjs__prepare_func('__init__', function () {
+      cls_fn['__init__'] = $pypf('__init__', function () {
       }, [null, null, ['self']]);
       cls_fn['__init__'].__$pyjs_autogenerated__ = true;
       cls_fn['__init__'].__class__ = cls_fn;
@@ -495,8 +508,8 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     cls_fn.__name__ = class_name;
     cls_fn.__module__ = class_module;
     __mro__ = [cls_fn].concat(__mro__);
-    if (typeof pyjslib.tuple != 'undefined') {
-        cls_fn.__mro__ = pyjslib.tuple(__mro__);
+    if (typeof $p['tuple'] != 'undefined') {
+        cls_fn.__mro__ = $p['tuple'](__mro__);
     }
     cls_fn.__dict__ = cls_fn;
     cls_fn.__is_instance__ = false;
@@ -577,7 +590,7 @@ function $pyjs_varargs_handler(args, start, has_kwargs)
     } else {
         end = args.length;
     }
-    pyjslib['tuple']($pyjs_array_slice.call(args, start, end));
+    $p['tuple']($pyjs_array_slice.call(args, start, end));
 }
 
 function $pyjs_get_vararg_and_kwarg($l, args, kwargname, varargname,
@@ -763,7 +776,7 @@ function $pyjs_default_args_handler($l, args, defaults_count,
     {
         /*
             # This is necessary when **kwargs in function definition
-            # and the call didn't pass the pyjs_kwargs_call().
+            # and the call didn't pass the $pykc().
             # See libtest testKwArgsInherit
             # This is not completely safe: if the last element in arguments
             # is an dict and the corresponding argument shoud be a dict and
@@ -773,7 +786,7 @@ function $pyjs_default_args_handler($l, args, defaults_count,
             # def fn(a = {}, **kwargs): pass
             # fn({'a':1}) -> a gets undefined and kwargs gets {'a':1}
         */
-        $l[kwargname] = pyjslib['__empty_dict']();
+        $l[kwargname] = $p['__empty_dict']();
         for (var i = arg_names.length-1; i >= 0; --i)
         {
             var arg_name = arg_names[i][0];

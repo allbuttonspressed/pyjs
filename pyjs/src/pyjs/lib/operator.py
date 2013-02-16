@@ -67,7 +67,7 @@ __pow__ = pow
 rshift = p.op_bitshiftright
 __rshift__ = rshift
 
-add = p.__op_add
+add = p.oa
 __add__ = add
 
 sub = p.op_sub
