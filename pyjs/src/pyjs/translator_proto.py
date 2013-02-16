@@ -481,8 +481,11 @@ for a in ECMAScipt_Reserved_Words:
 def bracket_fn(s):
     return s # "(%s)" % s
 
-def get_kind(kind, level=0):
+_nodefault = object()
+def get_kind(kind, level=0, default=_nodefault):
     if isinstance(kind, tuple):
+        if level >= len(kind) and default is not _nodefault:
+            return default
         return kind[level]
     assert level == 0
     return kind
@@ -1232,12 +1235,17 @@ class Translator(object):
             return "$p['%(name)s'](%(args)s)" % dict(name=name, args=args)
 
     def add_lookup(self, name_type, pyname, jsname, depth=-1, kind=None):
+        kind_path2 = None
         if name_type in ('class', 'function', 'method'):
             kind_path = '.'.join(self.kind_context)
         else:
             kind_path = '.'.join(self.kind_context + [pyname])
+            if len(self.kind_context) >= 3:
+                kind_path2 = '%s().%s' % ('.'.join(self.kind_context[:-1]), pyname)
         if kind_path in self.static_kinds:
             kind = self.static_kinds[kind_path]
+        elif kind_path2 in self.static_kinds:
+            kind = self.static_kinds[kind_path2]
 
         if len(self.lookup_stack) == 1 and depth in (-1, 0) and \
                 self.module_name == 'pyjslib' and \
@@ -1509,7 +1517,7 @@ class Translator(object):
 
     def inline_getitem_code(self, node, current_klass):
         e, expr_kind = self._typed_expr(node.expr, current_klass)
-        i = self.expr(node.subs[0], current_klass)
+        i, index_kind = self._typed_expr(node.subs[0], current_klass)
         try:
             index = int(i)
         except ValueError:
@@ -1533,6 +1541,14 @@ class Translator(object):
                 return "%(e)s.__array[%(i)s]" % locals(), kind
             if get_kind(expr_kind, 1) == 'wrapunchecked':
                 return "%(e)s.__unchecked_getitem__(%(i)s)" % locals(), kind
+        if get_kind(expr_kind) == 'dict':
+            key = self.get_hash_key(node.subs[0], i, index_kind)
+            if key is not None:
+                if get_kind(expr_kind, 3, None) == 'unchecked' or \
+                        (isinstance(node.subs[0], self.ast.Const) and
+                         node.subs[0].value in get_kind(expr_kind, 3, ())):
+                    return "%(e)s.__object[%(key)s][1]" % locals(), kind
+                return "%(e)s.__hashed_getitem__(%(key)s)" % locals(), kind
         if self.inline_getitem:
             v1 = self.uniqid('$')
             self.add_lookup('variable', v1, v1)
@@ -1541,6 +1557,21 @@ class Translator(object):
             s = self.spacing()
             return self.__inline_getitem_code_str % locals(), kind
         return "%(e)s.__getitem__(%(i)s)" % locals(), kind
+
+    def get_hash_key(self, node, i, index_kind):
+        if isinstance(node, self.ast.Const):
+            value = node.value
+            if isinstance(value, (int, long)):
+                return "'$n%s'" % str(value)
+            elif isinstance(value, basestring):
+                return i[0] + '$s' + i[1:]
+        elif get_kind(index_kind) == 'number':
+            return "('$n' + %s)" % i
+        elif get_kind(index_kind) == 'string':
+            return "('$s' + %s)" % i
+        elif get_kind(index_kind) == 'class':
+            return '(%s).$H' % i
+        return None
 
     def md5(self, node):
         return md5(self.module_name + str(node.lineno) + repr(node)).hexdigest()
@@ -2513,6 +2544,10 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     if v.node.name == 'len' and len(v.args) == 1:
                         return self.inline_len_code(v, current_klass)
                 if name_type == 'builtin' and v.node.name in ('tuple', 'float', 'str', 'unicode') and len(v.args) == 1:
+                    if v.node.name in ('str', 'unicode') and \
+                            (isinstance(v.args[0], self.ast.Name) and
+                             self.lookup(v.args[0].name)[5] == 'number'):
+                        return self.lookup(v.args[0].name)[2] + '.toString()', 'string'
                     call_name = jsname + '.__new__'
                     call_args.append(jsname)
                 else:
@@ -2545,13 +2580,13 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             return '%s.__new__(%s, [%s])' % (self.pyjslib_name('tuple'), cls_name, elems), None
         elif (isinstance(v.node, self.ast.Getattr) and
                 v.node.attrname == 'get' and 2 >= len(v.args) >= 1 and
-                isinstance(v.args[0], self.ast.Name) and
-                get_kind(self.lookup(v.args[0].name)[-1]) == 'class' and
                 isinstance(v.node.expr, self.ast.Name) and
-                get_kind(self.lookup(v.node.expr.name)[-1]) == 'dict'):
+                get_kind(self.lookup(v.node.expr.name)[5]) == 'dict' and
+                isinstance(v.args[0], (self.ast.Name, self.ast.Const)) and
+                self.get_hash_key(v.args[0], *self._typed_expr(v.args[0], current_klass))):
             # Optimize <dict>.get(<class> [, default_value]) calls
             dict_name = '%s.__object' % self.expr(v.node.expr, current_klass)
-            key = '%s.$H' % self.expr(v.args[0], current_klass)
+            key = self.get_hash_key(v.args[0], *self._typed_expr(v.args[0], current_klass))
             if len(v.args) == 2:
                 default = self.expr(v.args[1], current_klass)
             else:
@@ -2569,7 +2604,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 call_kind = None
                 if kind_path in self.static_kinds:
                     call_kind = self.static_kinds[kind_path]
-                elif len(self.kind_context) >= 2:
+                elif len(self.kind_context) >= 3:
                     base_path = self.kind_context[:-1]
                     base_path[-1] += '()'
                     kind_path = '.'.join(base_path + call_path)
@@ -3432,7 +3467,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 if len(v.subs) != 1:
                     raise TranslationError(
                         "must have one sub (in _assign)", v, self.module_name)
-                idx = self.expr(v.subs[0], current_klass)
+                idx, index_kind = self._typed_expr(v.subs[0], current_klass)
+                idxkey = None
+                if get_kind(kind) == 'dict':
+                    idxkey = self.get_hash_key(v.subs[0], idx, index_kind)
                 if get_kind(kind) == 'list' and get_kind(kind, 1) is not None:
                     try:
                         int_index = int(idx)
@@ -3446,6 +3484,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     assigns.append(self.track_call("%s.__array[%s] = %s" % (obj, idx, expr), v.lineno) + ';')
                 elif get_kind(kind) == 'list' and get_kind(kind, 1) == 'wrapunchecked':
                     assigns.append(self.track_call("%s.__unchecked_setitem__(%s, %s)" % (obj, idx, expr), v.lineno) + ';')
+                elif get_kind(kind) == 'dict' and idxkey is not None and \
+                        isinstance(v.subs[0], (self.ast.Const, self.ast.Name)):
+                    assigns.append(self.track_call("%s.__object[%s] = [%s, %s]" % (obj, idxkey, idx, expr), v.lineno) + ';')
                 else:
                     assigns.append(self.track_call("%s.__setitem__(%s, %s)" % (obj, idx, expr), v.lineno) + ';')
                 return assigns
@@ -3649,7 +3690,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.w( self.dedent() + "}")
 
     def _compare(self, node, current_klass):
-        lhs, lhs_kind = self._typed_expr(node.expr, current_klass)
+        lhs_node = node.expr
+        lhs, lhs_kind = self._typed_expr(lhs_node, current_klass)
 
         if len(node.ops) != 1:
             cmp = []
@@ -3657,9 +3699,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 rhsname = self.uniqid("$compare")
                 rhs, rhs_kind = self._typed_expr(rhs_node, current_klass)
                 rhs = "(%s = %s)" % (rhsname, rhs)
-                cmp.append(self.compare_code(op, lhs, rhs, lhs_kind, rhs_kind))
+                cmp.append(self.compare_code(op, lhs_node, lhs, rhs, lhs_kind, rhs_kind))
                 lhs = rhsname
                 lhs_kind = rhs_kind
+                lhs_node = rhs_node
             return "(%s)" % "&&".join(cmp)
             raise TranslationError(
                 "only one ops supported (in _compare)", node,  self.module_name)
@@ -3667,9 +3710,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         op = node.ops[0][0]
         rhs_node = node.ops[0][1]
         rhs, rhs_kind = self._typed_expr(rhs_node, current_klass)
-        return self.compare_code(op, lhs, rhs, lhs_kind, rhs_kind)
+        return self.compare_code(op, lhs_node, lhs, rhs, lhs_kind, rhs_kind)
 
-    def compare_code(self, op, lhs, rhs, lhs_type=None, rhs_type=None):
+    def compare_code(self, op, lhs_node, lhs, rhs, lhs_type=None, rhs_type=None):
         primitive = lhs_type == rhs_type and lhs_type in ('number', 'string', 'bool')
 
         if op == "==":
@@ -3692,8 +3735,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 return "(((%s)|1) == 1)" % self.inline_cmp_code(lhs, rhs)
         if op == "in":
             if get_kind(rhs_type) in ('dict', 'set'):
-                if get_kind(lhs_type) == 'class':
-                    return '%s.$H in %s.__object' % (lhs, rhs)
+                key = self.get_hash_key(lhs_node, lhs, lhs_type)
+                if key is not None:
+                    return '%s in %s.__object' % (key, rhs)
             elif get_kind(rhs_type) in ('tuple', 'list'):
                 if get_kind(lhs_type) in ('string', 'number', 'class'):
                     return '%s.__array.indexOf(%s) >= 0' % (rhs, lhs)
@@ -3701,7 +3745,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 return '%s.indexOf(%s) >= 0' % (rhs, lhs)
             return rhs + ".__contains__(" + lhs + ")"
         elif op == "not in":
-            return "!" + self.compare_code('in', lhs, rhs, lhs_type, rhs_type)
+            return "!" + self.compare_code('in', lhs_node, lhs, rhs, lhs_type, rhs_type)
         if op == "is":
             if self.number_classes:
                 return "@{{op_is}}(%s, %s)" % (lhs, rhs)
@@ -3711,6 +3755,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 return "!@{{op_is}}(%s, %s)" % (lhs, rhs)
             op = "!=="
 
+        if primitive and op in ('==', '!='):
+            op += '='
         return "(" + lhs + " " + op + " " + rhs + ")"
 
     def _not(self, node, current_klass):
@@ -3826,7 +3872,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 kind_path = '.'.join(self.kind_context + path)
                 if kind_path in self.static_kinds:
                     kind = self.static_kinds[kind_path]
-                elif len(self.kind_context) >= 2:
+                elif len(self.kind_context) >= 3:
                     base_path = self.kind_context[:-1]
                     base_path[-1] += '()'
                     kind_path = '.'.join(base_path + path)
@@ -3931,7 +3977,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         if special_optimization == 'range':
             list_item_kind = 'number'
         elif get_kind(list_kind) in ('list', 'tuple', 'generator', 'jsarray') and \
-                get_kind(list_kind, 1) in (1, None):
+                get_kind(list_kind, 1) in (1, None, 'unchecked', 'wrapunchecked'):
             list_item_kind = get_kind(list_kind, 2)
 
         if special_optimization in ('enumerate', 'reversed-enumerate'):
@@ -4154,6 +4200,15 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         kind = None
         if kind1 == kind2 and get_kind(kind1) in ('number', 'string', 'tuple', 'list'):
             kind = kind1
+            if get_kind(kind) == 'string':
+                if self._is_builtin_call(node.left, ('str', 'unicode')):
+                    arge, argkind = self._typed_expr(node.left.args[0], current_klass)
+                    if argkind == 'number':
+                        e1 = arge
+                elif self._is_builtin_call(node.right, ('str', 'unicode')):
+                    arge, argkind = self._typed_expr(node.right.args[0], current_klass)
+                    if argkind == 'number':
+                        e2 = arge
         elif get_kind(kind1) == get_kind(kind2):
             if get_kind(kind1) in ('tuple', 'list'):
                 if get_kind(kind1, 1) is None and get_kind(kind2, 1) is None and \
@@ -4248,6 +4303,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         e2, kind2 = self._typed_expr(node.right, current_klass)
         kind = None
         if kind1 == kind2 and get_kind(kind1) == 'number':
+            if e1 in ('1', '1.0'):
+                return e2, kind2
+            if e2 in ('1', '1.0'):
+                return e1, kind1
             kind = kind1
         else:
             for multype in ('string', 'tuple', 'list'):

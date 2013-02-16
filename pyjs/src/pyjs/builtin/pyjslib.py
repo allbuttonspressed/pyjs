@@ -226,6 +226,11 @@ JS("@{{type}}.__module__ = @{{object}}.__module__;")
 
 class tuple:
     def __new__(cls):
+        JS("""
+        if (arguments.length == 2 && arguments[1].__class__ === @{{tuple}}) {
+            return arguments[1];
+        }
+        """)
         self = object.__new__(cls)
         JS("""
         if (arguments.length == 1) {
@@ -4968,9 +4973,16 @@ class dict:
         JS("""
         var sKey = (@{{key}}===null?null:(key.hasOwnProperty("$H")?@{{key}}.$H:(typeof @{{key}} == 'string' ? '$s' + @{{key}} : (@{{key}}.__number__ ? '$n' + @{{key}}: @{{__hash}}(@{{key}})))));
         var value=@{{self}}.__object[sKey];
-        if (typeof value == 'undefined'){
+        if (typeof value == 'undefined')
             throw $pyjs_create_exception(@{{KeyError}}(@{{key}}));
-        }
+        return value[1];
+        """)
+
+    def __hashed_getitem__(self, sKey):
+        JS("""
+        var value=@{{self}}.__object[sKey];
+        if (typeof value == 'undefined')
+            throw $pyjs_create_exception(@{{KeyError}}(@{{sKey}}));
         return value[1];
         """)
 
