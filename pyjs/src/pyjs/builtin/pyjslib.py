@@ -85,8 +85,7 @@ def classmethod(func):
     return fnwrap;
     """)
 
-# create class
-def cc(clsname, bases=None, methods=None):
+def _create_class(clsname, bases=None, methods=None):
     # Creates a new class, emulating parts of Python's new-style classes
     if methods and '__metaclass__' in methods:
         return methods['__metaclass__'](clsname, bases, methods)
@@ -309,9 +308,9 @@ class tuple:
                 throw $pyce(@{{ValueError}}("step is not yet supported"));
             }
             if (@{{_index}}.stop === null) {
-                return @{{it}}(@{{self}}.__array.slice(@{{_index}}.start));
+                return @{{_imm_tuple}}(@{{self}}.__array.slice(@{{_index}}.start));
             } else {
-                return @{{it}}(@{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
+                return @{{_imm_tuple}}(@{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
             }
         } else {
             var index = @{{_index}}.valueOf();
@@ -447,7 +446,7 @@ JS("@{{tuple}}.toString = function() { return this.__is_instance__ ? this.__repr
 # This is used for efficiency e.g. when handling empty *args
 _empty_tuple = tuple()
 
-def it(data):
+def _imm_tuple(data):
     self = object.__new__(tuple)
     self.__array = data
     return self
@@ -616,8 +615,7 @@ def op_usub(v):
 """)
     raise TypeError("bad operand type for unary -: '%r'" % v)
 
-# __op_add
-def oa(x, y):
+def __op_add(x, y):
     JS("""
         return (typeof (@{{x}})==typeof (@{{y}}) &&
                 (typeof @{{x}}=='number'||typeof @{{x}}=='string')?
@@ -1147,13 +1145,13 @@ JS("""
 
 
 # All modules (do and should) take care of checking their parent:
-#   - If the parent is not loaded and initialized, call im(parent, null)
+#   - If the parent is not loaded and initialized, call ___import___(parent, null)
 # All modules are placed in sys.modules dict
 # The module is first tried within the context
 # If the depth > 1 (i.e. one or more dots in the path) then:
 #     Try the parent if it has an object that resolves to [context.]path
 # If the module doesn't exist and dynamic loading is enabled, try dynamic loading
-def im(path, context, module_name=None, get_base=True):
+def ___import___(path, context, module_name=None, get_base=True):
     save_track_module = JS("$pyjs.track.module")
     sys = JS("$pyjs.loaded_modules['sys']")
     pyjslib = JS("$pyjs.loaded_modules['pyjslib']")
@@ -1312,7 +1310,7 @@ def __dynamic_load__(importName):
     return module
 
 def __import_all__(path, context, namespace, module_name=None, get_base=True):
-    module = im(path, context, module_name, get_base)
+    module = ___import___(path, context, module_name, get_base)
     if JS("""typeof @{{module}}['__all__'] == 'undefined'"""):
         for name in dir(module):
             if not name.startswith('_'):
@@ -4135,7 +4133,7 @@ JS("""
         var div = new $long(0);
         var mod = new $long(0);
         l_divmod(this, b, div, mod);
-        return @{{it}}([div, mod]);
+        return @{{_imm_tuple}}([div, mod]);
     };
 
     $long.__divmod__ = function (y) {
@@ -4378,9 +4376,7 @@ $reversed_iter_array.prototype.__iter__ = function ( ) {
 var $enumerate_array = function (l) {
     this.array = l;
     this.i = -1;
-    this.tuple = """)
-tuple([0, ""])
-JS("""
+    this.tuple = @{{_imm_tuple}}([0, '']);
     this.tl = this.tuple.__array;
 };
 $enumerate_array.prototype.next = function (noStop, reuseTuple) {
@@ -4588,9 +4584,9 @@ class list:
                 throw $pyce(@{{ValueError}}("step is not yet supported"));
             }
             if (@{{_index}}.stop === null) {
-                return @{{il}}(@{{self}}.__array.slice(@{{_index}}.start));
+                return @{{:_imm_list}}(@{{self}}.__array.slice(@{{_index}}.start));
             } else {
-                return @{{il}}(@{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
+                return @{{:_imm_list}}(@{{self}}.__array.slice(@{{_index}}.start, @{{_index}}.stop));
             }
         } else {
             var index = @{{_index}}.valueOf();
@@ -4756,7 +4752,7 @@ class list:
 
 JS("@{{list}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type list>'; };")
 
-def il(data):
+def _imm_list(data):
     self = object.__new__(list)
     self.__array = data
     return self
@@ -6020,7 +6016,7 @@ def range(start, stop = None, step = 1):
     JS("""
         @{{ilow}} += @{{step}};
     }
-    @{{r}} = @{{il}}(items);
+    @{{r}} = @{{:_imm_list}}(items);
     """)
     return r
 
@@ -6350,8 +6346,7 @@ _wrap_unchecked_unbound_method = JS("""function(method) {
 """)
 
 _undefined = object()
-# getattr
-def g(obj, name, default_value=_undefined):
+def getattr(obj, name, default_value=_undefined):
     JS("""
     if (@{{obj}} === null || typeof @{{obj}} == 'undefined') {
         if (arguments.length != 3 || typeof @{{obj}} == 'undefined') {
@@ -6513,8 +6508,7 @@ def delattr(obj, name):
                                  " instance has no attribute '"+ @{{name}}+"'"));
     """)
 
-# setattr
-def s(obj, name, value):
+def setattr(obj, name, value):
     JS("""
     if (typeof @{{obj}}== 'undefined') {
         throw $pyce(@{{UndefinedValueError}}("setattr() on undefined"));
@@ -7262,7 +7256,7 @@ def sprintf(strng, args):
         }
     }
     if (constructor != "tuple") {
-        args = @{{it}}([args]);
+        args = @{{_imm_tuple}}([args]);
     }
     nargs = args.__array.length;
     sprintf_list(strng, args);
@@ -7383,19 +7377,19 @@ def divmod(x, y):
             case 0x0401:
                 if (@{{y}} == 0) throw $pyce(@{{ZeroDivisionError}}('float divmod()'));
                 var f = Math.floor(@{{x}} / @{{y}});
-                return @{{it}}([f, @{{x}} - f * @{{y}}]);
+                return @{{_imm_tuple}}([f, @{{x}} - f * @{{y}}]);
             case 0x0102:
                 if (@{{y}}.__v == 0) throw $pyce(@{{ZeroDivisionError}}('float divmod()'));
                 var f = Math.floor(@{{x}} / @{{y}}.__v);
-                return @{{it}}([f, @{{x}} - f * @{{y}}.__v]);
+                return @{{_imm_tuple}}([f, @{{x}} - f * @{{y}}.__v]);
             case 0x0201:
                 if (@{{y}} == 0) throw $pyce(@{{ZeroDivisionError}}('float divmod()'));
                 var f = Math.floor(@{{x}}.__v / @{{y}});
-                return @{{it}}([f, @{{x}}.__v - f * @{{y}}]);
+                return @{{_imm_tuple}}([f, @{{x}}.__v - f * @{{y}}]);
             case 0x0202:
                 if (@{{y}}.__v == 0) throw $pyce(@{{ZeroDivisionError}}('integer division or modulo by zero'));
                 var f = Math.floor(@{{x}}.__v / @{{y}}.__v);
-                return @{{it}}([new @{{int}}(f), new @{{int}}(@{{x}}.__v - f * @{{y}}.__v)]);
+                return @{{_imm_tuple}}([new @{{int}}(f), new @{{int}}(@{{x}}.__v - f * @{{y}}.__v)]);
             case 0x0204:
                 return @{{y}}.__rdivmod__(new @{{long}}(@{{x}}.__v));
             case 0x0402:
@@ -8552,8 +8546,7 @@ def format(val, spec=''):
 
 ### end from pypy 2.7.1 string formatter (newformat.py)
 
-# iter_prepare
-ip = JS("""function(iter, reuse_tuple) {
+__iter_prepare = JS("""function(iter, reuse_tuple) {
 
     if (typeof iter == 'undefined') {
         throw $pyce(@{{TypeError}}("iter is undefined"));
@@ -8571,8 +8564,7 @@ ip = JS("""function(iter, reuse_tuple) {
     return i;
 }""")
 
-# wrapped_next
-wn = JS("""function(i) {
+__wrapped_next = JS("""function(i) {
     var iterator = i.$iter;
     i.$nextval = i.$gentype?(i.$gentype > 0?
         iterator.next(true,i.$reuse_tuple):@{{wrapped_next}}(iterator)
@@ -8677,11 +8669,11 @@ _slice_1_minus1 = slice(1, -1)
 __nondynamic_modules__ = {}
 
 def __import__(name, globals={}, locals={}, fromlist=[], level=-1):
-    module = im(name, None)
+    module = ___import___(name, None)
     if not module is None and hasattr(module, '__was_initialized__'):
         return module
     raise ImportError("No module named " + name)
 
 import sys # needed for debug option
-import dynamic # needed for im
+import dynamic # needed for ___import___
 

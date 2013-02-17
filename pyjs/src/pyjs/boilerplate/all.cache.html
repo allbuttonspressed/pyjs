@@ -86,7 +86,7 @@ function app_imported() {
     if (typeof $p != "undefined") {
         $p('pyjslib');
         $pyjs.__modules__.pyjslib = $p['pyjslib'];
-        $p.im(
+        $p.___import___(
             '%(app_name)s',
             null,
             '__main__');

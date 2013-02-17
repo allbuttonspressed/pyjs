@@ -1,11 +1,11 @@
-import pyjslib as p
+from __pyjamas__ import JS
 
 def _noimpl(*args):
     raise Exception("This operator is not implemented")
 
 lt = _noimpl
 le = _noimpl
-eq = p.op_eq
+eq = JS("@{{:op_eq}}")
 ne = _noimpl
 ge = _noimpl
 gt = _noimpl
@@ -19,9 +19,9 @@ __gt__ = gt
 not_ = _noimpl
 __not__ = not_
 
-truth = p.bool
+truth = JS("@{{:bool}}")
 
-is_ = p.op_is
+is_ = JS("@{{:op_is}}")
 
 def is_not(a, b):
     return not is_(a, b)
@@ -32,48 +32,48 @@ __abs__ = abs
 and_ = _noimpl
 __and__ = and_
 
-floordiv = p.op_floordiv
+floordiv = JS("@{{:op_floordiv}}")
 __floordiv__ = floordiv
 
 index = _noimpl
 __index__ = index
 
 inv = _noimpl
-invert = p.op_invert
+invert = JS("@{{:op_invert}}")
 __inv__ = inv
 __invert__ = invert
 
-lshift = p.op_bitshiftleft
+lshift = JS("@{{:op_bitshiftleft}}")
 __lshift__ = lshift
 
-mod = p.op_mod
+mod = JS("@{{:op_mod}}")
 __mod__ = mod
 
-mul = p.op_mul
+mul = JS("@{{:op_mul}}")
 __mul__ = mul
 
-neg = p.op_usub
+neg = JS("@{{:op_usub}}")
 __neg__ = neg
 
 or_ = _noimpl
 oper__ = _noimpl
 
-pos = p.op_uadd
+pos = JS("@{{:op_uadd}}")
 __pos__ = pos
 
-pow = p.op_pow
+pow = JS("@{{:op_pow}}")
 __pow__ = pow
 
-rshift = p.op_bitshiftright
+rshift = JS("@{{:op_bitshiftright}}")
 __rshift__ = rshift
 
-add = p.oa
+add = JS("@{{:__op_add}}")
 __add__ = add
 
-sub = p.op_sub
+sub = JS("@{{:op_sub}}")
 __sub__ = sub
 
-truediv = p.op_truediv
+truediv = JS("@{{:op_truediv}}")
 __truediv__ = truediv
 
 xor = _noimpl
@@ -142,12 +142,12 @@ ixor = _noimpl
 __ixor__ = ixor
 
 # Removed in 3.x
-delslice = p.__delslice
-getslice = p.__getslice
-setslice = p.__setslice
-div = p.op_div
-isCallable = p.isFunction
-isMappingType = p.isIteratable
-isNumberType = p.isNumber
-isSequenceType = p.isIteratable
+delslice = JS("@{{:__delslice}}")
+getslice = JS("@{{:__getslice}}")
+setslice = JS("@{{:__setslice}}")
+div = JS("@{{:op_div}}")
+isCallable = JS("@{{:isFunction}}")
+isMappingType = JS("@{{:isIteratable}}")
+isNumberType = JS("@{{:isNumber}}")
+isSequenceType = JS("@{{:isIteratable}}")
 repeat = _noimpl
