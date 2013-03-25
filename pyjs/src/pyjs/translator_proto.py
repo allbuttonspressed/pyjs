@@ -882,7 +882,8 @@ class Translator(object):
 
     def __init__(self, compiler,
                  module_name, module_file_name, src, mod, output,
-                 dynamic=0, findFile=None, context_options=None, static_kinds=None, **kw):
+                 dynamic=0, findFile=None, context_options=None, static_kinds=None,
+                 shortname_mapping=False, **kw):
 
         #monkey_patch_broken_transformer(compiler) #TODO - still necessary ??
 
@@ -903,7 +904,13 @@ class Translator(object):
         self.output = output
         self.dynamic = dynamic
         self.findFile = findFile
-        
+
+        if shortname_mapping:
+            self.pyjslib_shortname_mapping = PYJSLIB_SHORTNAME_MAPPING
+        else:
+            self.pyjslib_shortname_mapping = {f: '$_' + f
+                                              for f in PYJSLIB_SHORTNAME_MAPPING}
+
         self.set_compile_options(kw)
         # compile options
 
@@ -1079,7 +1086,7 @@ class Translator(object):
             self.w( self.dedent() + "} catch ($pyjs_attr_err) {throw $pyce(@{{:_errorMapping}}($pyjs_attr_err));};")
 
         if self.module_name == 'pyjslib':
-            for k, v in PYJSLIB_SHORTNAME_MAPPING.items():
+            for k, v in self.pyjslib_shortname_mapping.items():
                 self.w(self.spacing() + "$p['%s'] = $p['%s'];" % (self.attrib_remap(k), self.attrib_remap(v)))
 
         self.w( self.spacing() + "return this;")
@@ -1245,7 +1252,7 @@ class Translator(object):
         return self.attrib_join(words)
     
     def pyjslib_name(self, name, args=None):
-        name = PYJSLIB_SHORTNAME_MAPPING.get(name, name)
+        name = self.pyjslib_shortname_mapping.get(name, name)
         if args is None:
             return "$p['" + name + "']"
         else:
@@ -1280,7 +1287,7 @@ class Translator(object):
                 self.module_name == 'pyjslib' and \
                 name_type in ('variable', 'function', 'class'):
             name_type = 'builtin'
-            jsname = PYJSLIB_SHORTNAME_MAPPING.get(jsname, jsname)
+            jsname = self.pyjslib_shortname_mapping.get(jsname, jsname)
 
         jsname = self.jsname(name_type, jsname)
         if self.local_prefix and name_type not in ('__javascript__', '__pyjamas__'):
@@ -1319,12 +1326,12 @@ class Translator(object):
             if name in PYJSLIB_BUILTIN_FUNCTIONS:
                 name_type = 'builtin'
                 pyname = name
-                name = PYJSLIB_SHORTNAME_MAPPING.get(name, name)
+                name = self.pyjslib_shortname_mapping.get(name, name)
                 jsname = "$p['%s']" % self.attrib_remap(name)
             elif name in PYJSLIB_BUILTIN_CLASSES:
                 name_type = 'builtin'
                 pyname = name
-                name = PYJSLIB_SHORTNAME_MAPPING.get(name, name)
+                name = self.pyjslib_shortname_mapping.get(name, name)
                 if not self.number_classes:
                     if pyname in ['int', 'long']:
                         name = 'float_int'
@@ -1385,7 +1392,7 @@ class Translator(object):
                 return scopeName + name
             depth -= 1
         if self.module_name == 'pyjslib':
-            name = PYJSLIB_SHORTNAME_MAPPING.get(name, name)
+            name = self.pyjslib_shortname_mapping.get(name, name)
         return self.modpfx() + name
 
     def attrib_remap_decl(self):
