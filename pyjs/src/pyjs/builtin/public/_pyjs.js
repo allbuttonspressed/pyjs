@@ -15,6 +15,31 @@ function $pyce(exc) {
     return err;
 };
 
+// make_generator
+function $pymg()
+{
+  var $generator = function () {};
+  $generator['__iter__'] = function () {
+    return $generator;
+  };
+  $generator['next'] = function (noStop) {
+    return $generator['$run'](null, null, false, noStop);
+  };
+  $generator['send'] = function ($val) {
+    return $generator['$run']($val, null);
+  };
+  $generator['$$throw'] = function ($exc_type, $exc_value) {
+      var exc=(typeof $exc_value == 'undefined' ? $exc_type() :
+                                              ($p['isinstance']($exc_value, $exc_type)
+                                               ? $exc_value : $exc_type($exc_value)));
+      return $generator['$run'](null, exc);
+  };
+  $generator['close'] = function () {
+    return $generator['$run'](null, $p['GeneratorExit'](), true);
+  };
+  return $generator;
+};
+
 // kwargs_call
 function $pykc(obj, func, star_args, dstar_args, args, kwargs)
 {

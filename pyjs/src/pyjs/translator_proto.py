@@ -1632,86 +1632,34 @@ throw %(dbg)s_err;
 
     __generator_code_str = """\
 var $generator_state = [0], $generator_exc = [null], $yield_value = null, $exc = null, $is_executing=false;
-var $generator = function () {};
-$generator['next'] = function (noStop) {
+var $generator = $pymg();
+$generator['$run'] = function ($val, $exc_inst, $close, noStop) {
 %(src1)s
-    var $res;
-    $yield_value = $exc = null;
+    $yield_value = $val;
+    $exc = $exc_inst;
     try {
-        $res = $generator['$genfunc']();
+        var $res = $generator['$genfunc']();
         $is_executing=false;
         if (typeof $res == 'undefined') {
             if (noStop === true) {
                 $generator_state[0] = -1;
                 return;
             }
-            throw $pyce(@{{:StopIteration}}());
+            else if ($close === true) throw $pyce(@{{:RuntimeError}}('generator ignored GeneratorExit'));
+            else throw $pyce(@{{:StopIteration}}());
         }
     } catch (e) {
 %(src2)s
         $is_executing=false;
         $generator_state[0] = -1;
-        if (noStop === true && @{{:isinstance}}(e['$pyjs_exc'] || e, @{{:StopIteration}})) {
+        if (noStop === true && @{{:isinstance}}(e['$pyjs_exc'] || e, @{{:StopIteration}}))
             return;
-        }
+        else if ($close === true && (@{{:isinstance}}(e['$pyjs_exc'] || e, @{{:StopIteration}}) || @{{:isinstance}}(e['$pyjs_exc'] || e, @{{:GeneratorExit}})))
+            return null;
         throw e;
     }
+    if ($close === true) return null;
     return $res;
-};
-$generator['__iter__'] = function () {return $generator;};
-$generator['send'] = function ($val) {
-%(src1)s
-    $yield_value = $val;
-    $exc = null;
-    try {
-        var $res = $generator['$genfunc']();
-        if (typeof $res == 'undefined') throw $pyce(@{{:StopIteration}}());
-    } catch (e) {
-%(src2)s
-        $generator_state[0] = -1;
-        $is_executing=false;
-        throw e;
-    }
-    $is_executing=false;
-    return $res;
-};
-$generator['$$throw'] = function ($exc_type, $exc_value) {
-%(src1)s
-    $yield_value = null;
-    $exc=(typeof $exc_value == 'undefined' ? $exc_type() :
-                                            (@{{:isinstance}}($exc_value, $exc_type)
-                                             ? $exc_value : $exc_type($exc_value)));
-    try {
-        var $res = $generator['$genfunc']();
-    } catch (e) {
-%(src2)s
-        $generator_state[0] = -1;
-        $is_executing=false;
-        throw (e);
-    }
-    $is_executing=false;
-    if (typeof $res == 'undefined') {
-        $generator_state[0] = -1;
-        throw $exc;
-    }
-    return $res;
-};
-$generator['close'] = function () {
-%(src1)s
-    $yield_value = null;
-    $exc=@{{:GeneratorExit}}();
-    try {
-        var $res = $generator['$genfunc']();
-        $is_executing=false;
-        if (typeof $res != 'undefined') throw $pyce(@{{:RuntimeError}}('generator ignored GeneratorExit'));
-    } catch (e) {
-%(src2)s
-        $generator_state[0] = -1;
-        $is_executing=false;
-        if (@{{:isinstance}}(e['$pyjs_exc'] || e, @{{:StopIteration}}) || @{{:isinstance}}(e['$pyjs_exc'] || e, @{{:GeneratorExit}})) return null;
-        throw (e);
-    }
-    return null;
 };
 $generator['$genfunc'] = function () {
     var $yielding = false;
@@ -2876,7 +2824,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     expr = handler[0]
                     as_ = handler[1]
                     if as_:
-                        errName = as_.name
+                        errName = self.add_var(as_.name)
                     else:
                         errName = None
 
@@ -2897,8 +2845,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                         self.w( "%sif (%s) {" % (else_str, "||".join(l)))
                     self.indent()
                     if errName:
-                        tnode = self.ast.Assign([self.ast.AssName(errName, "OP_ASSIGN", lineno)], self.ast.Name(pyjs_try_err, lineno), lineno)
-                        self._assign(tnode, current_klass)
+                        self.w( self.spacing() + '%s = %s;' % (errName, pyjs_try_err))
 
                     self.generator_add_state()
                     self.generator_switch_open()
