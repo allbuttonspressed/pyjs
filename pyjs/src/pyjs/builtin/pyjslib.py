@@ -451,6 +451,11 @@ def _imm_tuple(data):
     self.__array = data
     return self
 
+def _imm_tuple_new(cls, data):
+    self = object.__new__(cls)
+    self.__array = data
+    return self
+
 class basestring(object):
     pass
 

@@ -393,6 +393,7 @@ PYJSLIB_SHORTNAME_MAPPING = {
     'setattr': 'A',
     '_imm_list': 'IL',
     '_imm_tuple': 'IT',
+    '_imm_tuple_new': 'IN',
     '__iter_prepare': 'IP',
     '__wrapped_next': 'WN',
     '_create_class': 'CC',
@@ -445,6 +446,7 @@ CONTEXT_OPTIONS = {
     'pyjslib.tuple.__new__': dict(function_argument_checking=False),
     'pyjslib.tuple.__unchecked_getitem__': dict(function_argument_checking=False),
     'pyjslib._imm_tuple': dict(function_argument_checking=False),
+    'pyjslib._imm_tuple_new': dict(function_argument_checking=False),
     'pyjslib.float.__new__': dict(function_argument_checking=False),
     'pyjslib.dict.__new__': dict(function_argument_checking=False),
     'pyjslib.dict.pop': dict(function_argument_checking=False),
@@ -2562,7 +2564,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             # (which is a common CPython-specific optimization)
             cls_name = self.expr(v.args[0], current_klass)
             elems = ','.join(self.expr(elem, current_klass) for elem in v.args[1].nodes)
-            return '%s.__new__(%s, [%s])' % (self.pyjslib_name('tuple'), cls_name, elems), None
+            return '%s(%s, [%s])' % (self.pyjslib_name('_imm_tuple_new'), cls_name, elems), None
         elif (isinstance(v.node, self.ast.Getattr) and
                 v.node.attrname == 'get' and 2 >= len(v.args) >= 1 and
                 isinstance(v.node.expr, self.ast.Name) and
