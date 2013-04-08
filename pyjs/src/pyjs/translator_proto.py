@@ -1648,6 +1648,7 @@ $generator['$run'] = function ($val, $exc_inst, $close, noStop) {
                 return;
             }
             else if ($close === true) throw $pyce(@{{:RuntimeError}}('generator ignored GeneratorExit'));
+            else if ($exc_inst !== null) throw $exc_inst;
             else throw $pyce(@{{:StopIteration}}());
         }
     } catch (e) {
