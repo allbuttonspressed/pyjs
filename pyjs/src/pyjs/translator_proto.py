@@ -1648,7 +1648,7 @@ $generator['$run'] = function ($val, $exc_inst, $close, noStop) {
                 return;
             }
             else if ($close === true) throw $pyce(@{{:RuntimeError}}('generator ignored GeneratorExit'));
-            else if ($exc_inst !== null) throw $exc_inst;
+            else if ($exc !== null) throw $exc_inst;
             else throw $pyce(@{{:StopIteration}}());
         }
     } catch (e) {
@@ -2424,6 +2424,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 if node.value.value is None:
                     if self.source_tracking:
                         self.w( self.spacing() + "$pyjs.trackstack.pop();$pyjs.track=$pyjs.trackstack.pop();$pyjs.trackstack.push($pyjs.track);")
+                    self.w( self.spacing() + "$exc = null;")
                     self.w( self.spacing() + "return;")
                     return
             raise TranslationError(
@@ -2869,6 +2870,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     self.w( "%s{ $pyjs.__active_exception_stack__ = $pyjs.__last_exception_stack__; $pyjs.__last_exception_stack__ = null; throw %s; }" % (else_str, real_pyjs_try_err))
                 else:
                     self.w(None)
+            if self.is_generator:
+                self.w( self.spacing() + "$exc = null;")
             if hasattr(node, 'else_') and node.else_:
                 self.w( self.dedent() + "}")
 
