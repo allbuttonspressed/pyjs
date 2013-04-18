@@ -1660,7 +1660,7 @@ String.prototype.rsplit = function(sep, maxsplit) {
         pos=subject.lastIndexOf(sep);
         if (pos<0) break;
 
-        items.__array.push(subject.substr(pos+sep.lenght));
+        items.__array.push(subject.substr(pos+sep.length));
         subject = subject.substr(0, pos);
     }
     if (subject.length > 0) items.__array.push(subject);
