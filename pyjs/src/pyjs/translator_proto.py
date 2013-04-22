@@ -3384,7 +3384,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                                 dict(
                                     setattr=self.pyjslib_name('setattr'),
                                     l=lhs,
-                                    a=uescapejs(attr_name),
+                                    a=uescapejs(v.attrname),
                                     r=expr)
                                 )
                 assigns.append(desc_setattr)
@@ -3397,7 +3397,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                                 dict(
                                     setattr=self.pyjslib_name('setattr'),
                                     l=lhs,
-                                    a=uescapejs(attr_name),
+                                    a=uescapejs(v.attrname),
                                     r=expr)
                                 )
                 assigns.append(desc_setattr)
