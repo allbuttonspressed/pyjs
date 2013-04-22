@@ -6627,9 +6627,9 @@ def reduce(func, iterable, initializer=JS("(function(){return;})()")):
         iterable = iter(iterable)
     except:
         raise TypeError, "reduce() arg 2 must support iteration"
-    emtpy = True
+    empty = True
     for value in iterable:
-        emtpy = False
+        empty = False
         if JS("typeof @{{initializer}}== 'undefined'"):
             initializer = value
         else:
