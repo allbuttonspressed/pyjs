@@ -2951,14 +2951,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         attr_name = self.attrib_remap(v.attrname)
         if use_getattr:
             expr = self.expr(v.expr, current_klass)
-            return [self.pyjslib_name('getattr', (expr, uescapejs(attr_name)))]
+            return [self.pyjslib_name('getattr', (expr, uescapejs(v.attrname)))]
 
         if isinstance(v.expr, self.ast.Name):
             obj = self._typed_name(v.expr, current_klass, return_none_for_module=True)[0]
             if not use_getattr or attr_name == '__class__' or \
                     attr_name == '__name__':
                 return [obj, attr_name]
-            return [self.pyjslib_name('getattr', (obj, uescapejs(attr_name)))]
+            return [self.pyjslib_name('getattr', (obj, uescapejs(v.attrname)))]
 
         elif isinstance(v.expr, self.ast.Getattr):
             return self._getattr(v.expr, current_klass) + [attr_name]
