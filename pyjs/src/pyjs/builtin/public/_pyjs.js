@@ -8,9 +8,37 @@ var $pyjs_module_type = {
     __name__: 'module'
 };
 
+// Track recent tracebacks so we can debug errors in production
+var $pyjs_last_tracebacks = [];
+
 // create_exception
 function $pyce(exc) {
-    var err = new Error($p['repr'](exc));
+    var message = $p['repr'](exc);
+    if (!exc.__$super_cache__ || !($p.StopIteration.$H in exc.__$super_cache__)) {
+      try {
+        throw new Error(message);
+      } catch(e) {
+        var traceback = '';
+        if (typeof e.stack != 'undefined') {
+          traceback = e.stack;
+        }
+        var func_names = [];
+        var parent = arguments.callee.caller;
+        while (parent && func_names.length < 15) {
+          func_names.push(parent.__name__ || parent.name || 'anonymous');
+          parent = parent.caller;
+        }
+        if (traceback) {
+          traceback += '\n\nFunc name stack:\n';
+        }
+        traceback += '\n'.join(func_names);
+        $pyjs_last_tracebacks.splice(0, 0, traceback);
+        if ($pyjs_last_tracebacks.length > 3) {
+          $pyjs_last_tracebacks.pop();
+        }
+      }
+    }
+    var err = new Error(message);
     err['$pyjs_exc'] = exc;
     return err;
 };
