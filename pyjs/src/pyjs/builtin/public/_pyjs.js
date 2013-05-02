@@ -23,12 +23,16 @@ function $pyce(exc) {
           traceback = e.stack;
         }
         var func_names = [];
-        var parent = arguments.callee.caller;
-        while (parent && func_names.length < 15) {
-          func_names.push(parent.__name__ || parent.name || 'anonymous');
-          parent = parent.caller;
+        try {
+          var parent = arguments.callee.caller;
+          while (parent && func_names.length < 15) {
+            func_names.push(parent.__name__ || parent.name || 'anonymous');
+            parent = parent.caller;
+          }
+        } catch(e2) {
+          // We can get here if accessing .caller causes TypeError because of strict mode
         }
-        if (traceback) {
+        if (traceback && func_names.length) {
           traceback += '\n\nFunc name stack:\n';
         }
         traceback += '\n'.join(func_names);
