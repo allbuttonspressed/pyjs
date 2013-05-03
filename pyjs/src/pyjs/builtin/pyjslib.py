@@ -225,6 +225,24 @@ object.__str__ = JS("""function (self) {
 JS("@{{object}}.__mro__ = {__array: [@{{object}}]};")
 JS("@{{type}}.__module__ = @{{object}}.__module__;")
 
+def __array_index(arr, value, _start):
+    JS("""
+    var start = @{{_start}}.valueOf();
+    var len = @{{arr}}.__array.length >>> 0;
+
+    start = (start < 0)
+            ? Math.ceil(start)
+            : Math.floor(start);
+    if (start < 0)
+        start += len;
+
+    for (; start < len; start++) {
+        if (@{{op_eq}}(@{{self}}.__array[start], @{{value}}))
+            return start;
+    }
+    """)
+    return -1
+
 class tuple:
     def __new__(cls):
         JS("""
@@ -333,38 +351,14 @@ class tuple:
     def __len__(self):
         return INT(JS("""@{{self}}.__array.length"""))
 
-    
     def index(self, value, _start=0):
-        JS("""
-        var start = @{{_start}}.valueOf();
-        /* if (typeof valueXXX == 'number' || typeof valueXXX == 'string') {
-            start = selfXXX.__array.indexOf(valueXXX, start);
-            if (start >= 0)
-                return start;
-        } else */ {
-            var len = @{{self}}.__array.length >>> 0;
-
-            start = (start < 0)
-                    ? Math.ceil(start)
-                    : Math.floor(start);
-            if (start < 0)
-                start += len;
-
-            for (; start < len; start++) {
-                if ( /*start in selfXXX.__array && */
-                    @{{op_eq}}(@{{self}}.__array[start], @{{value}}))
-                    return start;
-            }
-        }
-        """)
-        raise ValueError("list.index(x): x not in list")
+        index = __array_index(self, value, _start)
+        if index >= 0:
+            return index
+        raise ValueError("tuple.index(x): x not in tuple")
 
     def __contains__(self, value):
-        try:
-            self.index(value)
-        except ValueError:
-            return False
-        return True
+        return __array_index(self, value, 0) >= 0
 
     def __iter__(self):
         return JS("new $iter_array(@{{self}}.__array)")
@@ -4522,28 +4516,9 @@ class list:
         """)
 
     def index(self, value, _start=0):
-        JS("""
-        var start = @{{_start}}.valueOf();
-        /* if (typeof valueXXX == 'number' || typeof valueXXX == 'string') {
-            start = selfXXX.__array.indexOf(valueXXX, start);
-            if (start >= 0)
-                return start;
-        } else */ {
-            var len = @{{self}}.__array.length >>> 0;
-
-            start = (start < 0)
-                    ? Math.ceil(start)
-                    : Math.floor(start);
-            if (start < 0)
-                start += len;
-
-            for (; start < len; start++) {
-                if ( /*start in selfXXX.__array && */
-                    @{{op_eq}}(@{{self}}.__array[start], @{{value}}))
-                    return start;
-            }
-        }
-        """)
+        index = __array_index(self, value, _start)
+        if index >= 0:
+            return index
         raise ValueError("list.index(x): x not in list")
 
     def insert(self, index, value):
@@ -4678,11 +4653,7 @@ class list:
         return INT(JS("""@{{self}}.__array.length"""))
 
     def __contains__(self, value):
-        try:
-            self.index(value)
-        except ValueError:
-            return False
-        return True
+        return __array_index(self, value, 0) >= 0
 
     def __iter__(self):
         return JS("new $iter_array(@{{self}}.__array)")
