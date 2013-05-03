@@ -237,7 +237,7 @@ def __array_index(arr, value, _start):
         start += len;
 
     for (; start < len; start++) {
-        if (@{{op_eq}}(@{{self}}.__array[start], @{{value}}))
+        if (@{{op_eq}}(@{{arr}}.__array[start], @{{value}}))
             return start;
     }
     """)
