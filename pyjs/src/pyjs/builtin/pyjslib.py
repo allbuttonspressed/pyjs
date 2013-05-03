@@ -97,7 +97,8 @@ def _create_class(clsname, bases=None, methods=None):
 
         if hasattr(bases[0], '__class__') and hasattr(bases[0], '__new__'):
             main_base = bases[0]
-            return JS("""@{{main_base}}.__class__(@{{clsname}}, @{{bases}}, @{{methods}})""")
+            ctor = JS("""@{{main_base}}.__class__""")
+            return JS("""@{{ctor}}(@{{clsname}}, @{{bases}}, @{{methods}})""")
 
     return type(clsname, bases, methods)
 
