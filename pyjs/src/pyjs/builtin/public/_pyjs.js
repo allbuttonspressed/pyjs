@@ -26,7 +26,11 @@ function $pyce(exc) {
         try {
           var parent = arguments.callee.caller;
           while (parent && func_names.length < 15) {
-            func_names.push(parent.__name__ || parent.name || 'anonymous');
+            var func_name = parent.__name__ || parent.name || '<anonymous>';
+            if (parent.__class__) {
+              func_name = (parent.__class__.__name__ || '<unknown>') + '.' + func_name;
+            }
+            func_names.push(func_name);
             parent = parent.caller;
           }
         } catch(e2) {
