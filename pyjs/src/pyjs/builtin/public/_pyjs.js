@@ -279,7 +279,7 @@ function $pyjs__exception_func_param(func_name, minargs, maxargs, nargs) {
     if (typeof $p['TypeError'] == 'function') {
         throw $pyce($p['TypeError'](String(msg)));
     }
-    throw msg;
+    throw new Error(msg);
 }
 
 function $pyjs__exception_func_multiple_values(func_name, key) {
