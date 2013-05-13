@@ -18,9 +18,9 @@ function $pyce(exc) {
       try {
         throw new Error(message);
       } catch(e) {
-        var traceback = '';
+        var traceback = (new Date()).toISOString().replace('T', ' ') + '\n';
         if (typeof e.stack != 'undefined') {
-          traceback = e.stack;
+          traceback += e.stack;
         }
         var func_names = [];
         try {
