@@ -39,9 +39,9 @@ function $pyce(exc) {
           // We can get here if accessing .caller causes TypeError because of strict mode
         }
         if (traceback && func_names.length) {
-          traceback += '\n\nFunc name stack:\n';
+          traceback += '\nFunc name stack:\n';
         }
-        traceback += '\n'.join(func_names);
+        traceback += '\n'.join(func_names) + '\n';
         $pyjs_last_tracebacks.splice(0, 0, traceback);
         if ($pyjs_last_tracebacks.length > 3) {
           $pyjs_last_tracebacks.pop();
