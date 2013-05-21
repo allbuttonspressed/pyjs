@@ -178,6 +178,10 @@ JS("""@{{type}}.toString = function() { return "<type 'type'>"; };""")
 # type.__mro__ is set below the definition of object since it depends on object
 
 class object:
+    @classmethod
+    def __subclasses__(cls):
+        return JS("""@{{:list}}(@{{cls}}.__sub_classes__)""")
+
     def __setattr__(self, name, value):
 #        // This is unnecessarily inefficient
 #        if (typeof @{{name}} != 'string') {
