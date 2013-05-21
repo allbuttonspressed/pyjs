@@ -572,14 +572,16 @@ function $pyjs__class_function(cls_fn, prop, bases) {
     cls_fn.__dict__ = cls_fn;
     cls_fn.__is_instance__ = false;
     cls_fn.__super_classes__ = bases;
-    cls_fn.__sub_classes__ = new Array();
-    for (var i = 0; i < bases.length; i++) {
-        if (typeof bases[i].__sub_classes__ == 'array') {
-            bases[i].__sub_classes__.push(cls_fn);
-        } else {
-            bases[i].__sub_classes__ = new Array();
-            bases[i].__sub_classes__.push(cls_fn);
-        }
+    cls_fn.__sub_classes__ = [];
+    if (class_name !== 'super') {
+      for (var i = 0; i < bases.length; i++) {
+          if (typeof bases[i].__sub_classes__ != 'undefined') {
+              bases[i].__sub_classes__.push(cls_fn);
+          } else {
+              bases[i].__sub_classes__ = [];
+              bases[i].__sub_classes__.push(cls_fn);
+          }
+      }
     }
 
     if (cls_fn.__new__.__args__ != null
