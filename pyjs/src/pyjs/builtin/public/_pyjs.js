@@ -14,7 +14,10 @@ var $pyjs_last_tracebacks = [];
 // create_exception
 function $pyce(exc) {
     var message = $p['repr'](exc);
-    if (!exc.__$super_cache__ || !($p.StopIteration.$H in exc.__$super_cache__)) {
+    if (!(exc.__$super_cache__ && $p.StopIteration.$H in exc.__$super_cache__) &&
+          message !== "NotImplementedError('/dev/urandom (or equivalent) not found',)" &&
+          message !== "NotImplementedError('System entropy source does not have state.',)" &&
+          message !== "ImportError('No module named threading.local, threading.local in context None',)") {
       try {
         throw new Error(message);
       } catch(e) {
