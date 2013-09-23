@@ -301,6 +301,7 @@ class tuple:
         }
         throw $pyce(@{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable"));
         """)
+    JS('@{{__new__}}.$ignore__args__ = true;')
 
     def __hash__(self):
         return '$tuple$' + '|'.join(map(hash, self))
@@ -4413,7 +4414,8 @@ class list:
         @{{self}}.__array = [];
         return @{{self}};
         """)
-    
+    JS('@{{__new__}}.$ignore__args__ = true;')
+
     def __init__(self, data=JS("[]")):
         # Basically the same as extend, but to save expensive function calls...
         JS("""
@@ -4836,6 +4838,7 @@ class dict:
         @{{self}}.__object = {};
         return @{{self}};
         """)
+    JS('@{{__new__}}.$ignore__args__ = true;')
 
     def __init__(self, seq=JS("[]"), **kwargs):
         # Transform data into an array with [key,value]
@@ -5215,6 +5218,7 @@ class BaseSet(object):
         @{{self}}.__object = {};
         return @{{self}};
         """)
+    JS('@{{__new__}}.$ignore__args__ = true;')
 
     def __cmp__(self, other):
         # We (mis)use cmp here for the missing __gt__/__ge__/...
@@ -5775,6 +5779,7 @@ class frozenset(BaseSet):
         while (i--);
         return @{{self}};
         """)
+    JS('@{{__new__}}.$ignore__args__ = true;')
     
     def __init__(self, *args, **kwargs):
         # init does nothing for frozensets!
@@ -6024,7 +6029,8 @@ class str(basestring):
             return @{{text}}.__str__();
         }
         return String(@{{text}});
-""")
+        """)
+    JS('@{{__new__}}.$ignore__args__ = true;')
 
 unicode = str
 
