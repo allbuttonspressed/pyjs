@@ -4465,7 +4465,7 @@ class list:
         raise TypeError("list objects are unhashable")
 
     def append(self, item):
-        JS("""@{{self}}.__array[@{{self}}.__array.length] = @{{item}};""")
+        JS("""@{{self}}.__array.push(@{{item}});""")
 
     # extend in place, just in case there's somewhere a shortcut to self.__array
     def extend(self, data):
@@ -4484,15 +4484,15 @@ class list:
                     @{{data}} = iter.__array;
                 }
                 @{{data}} = [];
-                var item, i = 0;
+                var item;
                 if (typeof iter.$genfunc == 'function') {
                     while (typeof (item=iter.next(true)) != 'undefined') {
-                        @{{data}}[i++] = item;
+                        @{{data}}.push(item);
                     }
                 } else {
                     try {
                         while (true) {
-                            @{{data}}[i++] = iter.next();
+                            @{{data}}.push(iter.next());
                         }
                     }
                     catch (e) {
@@ -4504,10 +4504,9 @@ class list:
             throw $pyce(@{{TypeError}}("'" + @{{repr}}(@{{data}}) + "' is not iterable"));
         }
         var l = @{{self}}.__array;
-        var j = @{{self}}.__array.length;
         var n = @{{data}}.length, i = 0;
         while (i < n) {
-            l[j++] = @{{data}}[i++];
+            l.push(@{{data}}[i++]);
         }
         """)
 
@@ -4528,11 +4527,11 @@ class list:
         raise ValueError("list.index(x): x not in list")
 
     def insert(self, index, value):
-        JS("""var a = @{{self}}.__array; @{{self}}.__array=a.slice(0, @{{index}}).concat(@{{value}}, a.slice(@{{index}}));""")
+        JS("""@{{self}}.__array.splice(@{{index}},0, @{{value}});""")
 
     def pop(self, _index = -1):
         JS("""
-        var index = @{{_index}}.valueOf();
+        var index = @{{_index}}|0;
         if (index<0) index += @{{self}}.__array.length;
         if (index < 0 || index >= @{{self}}.__array.length) {
             if (@{{self}}.__array.length == 0) {
