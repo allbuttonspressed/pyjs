@@ -1,7 +1,6 @@
 # TODO: make this more json module compliant (exceptions etc.)
 
 from __pyjamas__ import JS
-import math
 
 """
 /*
@@ -197,7 +196,7 @@ class JSONParser:
                         }
                         c = b.charCodeAt();
                         return '\\u00' +
-                            math.floor(c / 16).toString(16) +
+                            Math.floor(c / 16).toString(16) +
                             (c % 16).toString(16);
                     });
                 }
