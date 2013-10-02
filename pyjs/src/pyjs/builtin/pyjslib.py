@@ -6345,6 +6345,7 @@ def getattr(obj, name):
     var method = @{{obj}}[re_mapped];
 
     if (typeof method == 'undefined') {
+        /*
         if (typeof @{{obj}} == 'function' && re_mapped == '__call__') {
             return @{{obj}};
         }
@@ -6367,6 +6368,7 @@ def getattr(obj, name):
                 }
             }
         }
+        */
         if (arguments.length == 2) {
             throw $pyce(@{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'"));
         }
@@ -6391,6 +6393,7 @@ def getattr(obj, name):
                     && @{{obj}}.hasOwnProperty(re_mapped))))
         || re_mapped == '__class__') {
 
+        /*
         if (typeof method == 'function'
                 && typeof method.__is_instance__ == 'undefined'
                 && method.__is_classmethod__ !== true
@@ -6401,6 +6404,7 @@ def getattr(obj, name):
             }
             return @{{_wrap_unchecked_unbound_method}}(method);
         }
+        */
 
         return method;
     }
