@@ -456,6 +456,9 @@ CONTEXT_OPTIONS = {
     'pyjslib.isSet': dict(function_argument_checking=False),
     'pyjslib.BaseSet.__nonzero__': dict(function_argument_checking=False),
     'pyjslib._isinstance': dict(function_argument_checking=False),
+    'pyjslib.getattr': dict(function_argument_checking=False),
+    'pyjslib.setattr': dict(function_argument_checking=False),
+    'pyjslib.hasattr': dict(function_argument_checking=False),
     'random.Random.randrange': dict(operator_funcs=False, stupid_mode=True),
     'random.Random.randint': dict(operator_funcs=False, stupid_mode=True),
 }

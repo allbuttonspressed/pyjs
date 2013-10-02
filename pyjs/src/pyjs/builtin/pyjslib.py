@@ -6326,14 +6326,13 @@ _wrap_unchecked_unbound_method = JS("""function(method) {
 };
 """)
 
-_undefined = object()
-def getattr(obj, name, default_value=_undefined):
+def getattr(obj, name):
     JS("""
     if (@{{obj}} === null || typeof @{{obj}} == 'undefined') {
         if (arguments.length != 3 || typeof @{{obj}} == 'undefined') {
             throw $pyce(@{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}} + "'"));
         }
-        return @{{default_value}};
+        return arguments[2];
     }
     
     // always remap `name` if in attrib_remap so that manually executing
@@ -6362,16 +6361,16 @@ def getattr(obj, name, default_value=_undefined):
                     return @{{obj}}.__getattr__(@{{name}});
                 } catch (e) {
                     if (@{{isinstance}}(e['$pyjs_exc'] || e, @{{AttributeError}})) {
-                        return @{{default_value}}; 
+                        return arguments[2];
                     }
                     throw e;
                 }
             }
         }
-        if (@{{default_value}} === @{{_undefined}}) {
+        if (arguments.length == 2) {
             throw $pyce(@{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'"));
         }
-        return @{{default_value}};
+        return arguments[2];
     }
 
     if (method === null || @{{obj}}.$_fast_super)
