@@ -2490,6 +2490,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         is_builtin = False
         method_name = None
         fast_super_call = False
+        skip_args = 0
         fast_instantiation = False
         call_args = []
         kind = None
@@ -2565,6 +2566,15 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             super_node = self.ast.Getattr(RawNode(super_expr, v.node.expr.lineno),
                                           v.node.attrname, v.node.lineno)
             method_name = self.expr(super_node, current_klass)
+        elif isinstance(v.node, self.ast.Getattr) and \
+                self.kind_context and v.node.attrname == self.kind_context[-1] and \
+                v.args and isinstance(v.args[0], self.ast.Name) and \
+                v.args[0].name == 'self':
+            # Optimize SuperClass.current_method(self, ...) calls
+            fast_super_call = True
+            skip_args = 1
+            call_name = v.args[0].name
+            method_name = self.expr(v.node, current_klass)
         elif (isinstance(v.node, self.ast.Getattr) and
                 v.node.attrname == '__new__' and len(v.args) == 2 and
                 isinstance(v.args[1], (self.ast.Tuple, self.ast.List)) and
@@ -2637,7 +2647,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         if v.dstar_args:
             dstar_arg_name = self.expr(v.dstar_args, current_klass)
 
-        for ch4 in v.args:
+        for argindex, ch4 in enumerate(v.args):
+            if argindex < skip_args:
+                continue
             if isinstance(ch4, self.ast.Keyword):
                 kwarg = self.vars_remap(ch4.name) + ":" + \
                         self.expr(ch4.expr, current_klass)
@@ -2652,7 +2664,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         else:
             fn_kwargs = 'null'
 
-        if fast_instantiation and not star_arg_name and not kwargs and not dstar_arg_name and not method_name:
+        if fast_instantiation and not star_arg_name and not kwargs and \
+                not dstar_arg_name and not method_name:
             new_args = [call_name]
             init_args = []
             for orig_node, expr in zip(v.args, call_args):
@@ -2699,7 +2712,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             call_code = "$pykc(%s, %s, %s, %s, [%s], %s)" % (
                 call_name, method_name, star_arg_name, dstar_arg_name, fn_args, fn_kwargs)
         elif fast_super_call:
-            call_code = '%s.apply(%s, [%s])' % (method_name, call_name, ", ".join(call_args))
+            call_code = '%s.call(%s)' % (method_name, ", ".join([call_name] + call_args))
         else:
             if method_name is not None:
                 call_name = "%s['%s']" % (call_name, method_name)
