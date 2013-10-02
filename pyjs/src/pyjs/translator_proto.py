@@ -514,6 +514,11 @@ class RawNode(object):
         self.value = value
         self.lineno = lineno
 
+    def get_value(self):
+        if callable(self.value):
+            return self.value()
+        return self.value
+
 # pass in the compiler module (lib2to3 pgen or "standard" python one)
 # and patch transformer. see http://bugs.python.org/issue6978
 def monkey_patch_broken_transformer(compiler): # USELESS NOW
@@ -4465,9 +4470,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.output = StringIO()
         if isinstance(node, self.ast.ListComp):
             kind = ('list', None, None)
-            expr = self.expr(node.expr, current_klass)
             tnode = self.ast.Discard(
-                RawNode('%s.__array.push(%s)' % (resultvar, expr), node.lineno)
+                RawNode((lambda: '%s.__array.push(%s)'
+                                 % (resultvar, self.expr(node.expr, current_klass))),
+                        node.lineno)
             )
             varinit = '%(l)s.__new__(%(l)s)' % {'l': self.pyjslib_name("list")}
         elif isinstance(node, self.ast.SetComp):
@@ -4784,7 +4790,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.GenExpr):
             return self._genexpr(node, current_klass)
         elif isinstance(node, RawNode):
-            return node.value
+            return node.get_value()
         else:
             raise TranslationError(
                 "unsupported type (in expr)", node, self.module_name)
