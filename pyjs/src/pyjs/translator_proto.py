@@ -427,6 +427,7 @@ PYJSLIB_STATIC_KINDS = {
     'dict': ('func', ('dict', None, None)),
     'enumerate': ('func', ('generator', None, ('tuple', 2, 'number', None))),
     'hasattr': ('func', 'bool'),
+    'callable': ('func', 'bool'),
 
     '_isinstance': ('func', 'bool'),
     'isinstance': ('func', 'bool'),
@@ -511,6 +512,11 @@ def get_kind(kind, level=0, default=_nodefault):
         return kind[level]
     assert level == 0
     return kind
+
+def assert_len(args, numargs):
+    if isinstance(numargs, (tuple, list)):
+        return numargs[0] <= len(args) <= numargs[1]
+    return len(args) == numargs
 
 class RawNode(object):
     def __init__(self, value, lineno):
@@ -1353,11 +1359,10 @@ class Translator(object):
 
         if (depth < 0 and name_type == 'builtin') or \
                 (depth == 0 and self.module_name == 'pyjslib'):
-            kind_key = 'pyjslib.' + name
+            kind_key = 'pyjslib.' + pyname
             if kind_key in self.static_kinds and kind is None:
                 if name_type != 'builtin':
                     name_type = 'builtin'
-                    pyname = name
                     jsname = "$p['%s']" % self.attrib_remap(name)
                 kind = self.static_kinds[kind_key]
 
@@ -1610,7 +1615,7 @@ class Translator(object):
             return "('$n' + %s)" % i
         elif get_kind(index_kind) == 'string':
             return "('$s' + %s)" % i
-        elif get_kind(index_kind) == 'class':
+        elif get_kind(index_kind) in ('class', 'hashedobject'):
             return '(%s).$H' % i
         return None
 
@@ -2485,6 +2490,28 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 node.node.name in names and
                 self.lookup(node.node.name)[0] == 'builtin') else None
 
+    def _get_attrname(self, v):
+        if isinstance(v, self.ast.Getattr):
+            return v.attrname
+        return None
+
+    def _is_method(self, v, kind, attrname, numargs, current_klass):
+        if self._get_attrname(v.node) != attrname or not assert_len(v.args, numargs):
+            return False
+        path = self._get_pure_getattr(v.node)
+        if not path:
+            return False
+        object_kind = self._get_path_kind(path[:-1])
+        return get_kind(object_kind) == kind
+
+    def _is_hashable(self, node, current_klass):
+        return ((isinstance(node, self.ast.Const) or self._get_pure_getattr(node)) and
+                self.get_hash_key(node, *self._typed_expr(node, current_klass)))
+
+    def _is_hashed_method(self, v, kind, attrname, numargs, current_klass):
+        return self._is_method(v, kind, attrname, numargs, current_klass) and \
+               self._is_hashable(v.args[0], current_klass)
+
     def _typed_callfunc_code(self, v, current_klass, is_statement=False, optlocal_var=False):
         self.ignore_debug = False
         is_builtin = False
@@ -2566,8 +2593,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             super_node = self.ast.Getattr(RawNode(super_expr, v.node.expr.lineno),
                                           v.node.attrname, v.node.lineno)
             method_name = self.expr(super_node, current_klass)
-        elif isinstance(v.node, self.ast.Getattr) and \
-                self.kind_context and v.node.attrname == self.kind_context[-1] and \
+        elif self.kind_context and self._get_attrname(v.node) == self.kind_context[-1] and \
                 v.args and isinstance(v.args[0], self.ast.Name) and \
                 v.args[0].name == 'self':
             # Optimize SuperClass.current_method(self, ...) calls
@@ -2575,8 +2601,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             skip_args = 1
             call_name = v.args[0].name
             method_name = self.expr(v.node, current_klass)
-        elif (isinstance(v.node, self.ast.Getattr) and
-                v.node.attrname == '__new__' and len(v.args) == 2 and
+        elif (self._get_attrname(v.node) == '__new__' and len(v.args) == 2 and
                 isinstance(v.args[1], (self.ast.Tuple, self.ast.List)) and
                 isinstance(v.node.expr, self.ast.Name) and
                 v.node.expr.name == 'tuple' and self.lookup('tuple')[0] == 'builtin'):
@@ -2585,40 +2610,45 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             cls_name = self.expr(v.args[0], current_klass)
             elems = ','.join(self.expr(elem, current_klass) for elem in v.args[1].nodes)
             return '%s(%s, [%s])' % (self.pyjslib_name('_imm_tuple_new'), cls_name, elems), None
-        elif (isinstance(v.node, self.ast.Getattr) and
-                v.node.attrname == 'get' and 2 >= len(v.args) >= 1 and
-                isinstance(v.node.expr, self.ast.Name) and
-                get_kind(self.lookup(v.node.expr.name)[5]) == 'dict' and
-                isinstance(v.args[0], (self.ast.Name, self.ast.Const)) and
-                self.get_hash_key(v.args[0], *self._typed_expr(v.args[0], current_klass))):
-            # Optimize <dict>.get(<class> [, default_value]) calls
-            dict_name = '%s.__object' % self.expr(v.node.expr, current_klass)
+        elif self._is_hashed_method(v, 'dict', 'get', (1, 2), current_klass):
+            # Optimize <dict>.get(<hashable> [, default_value]) calls
+            obj = '%s.__object' % self.expr(v.node.expr, current_klass)
             key = self.get_hash_key(v.args[0], *self._typed_expr(v.args[0], current_klass))
             if len(v.args) == 2:
                 default = self.expr(v.args[1], current_klass)
             else:
                 default = 'null'
-            return "(typeof %s[%s] == 'undefined' ? %s : %s[%s][1])" % (
-                dict_name, key, default, dict_name, key), None
-        elif isinstance(v.node, self.ast.Getattr) and v.node.attrname == '__class__' and self._get_pure_getattr(v.node):
+            entry = '%s[%s]' % (obj, key)
+            result = "(typeof %s == 'undefined' ? %s : %s[1])" % (entry, default, entry)
+            path_kind = self._get_path_kind(self._get_pure_getattr(v.node)[:-1])
+            return result, get_kind(path_kind, 2, None)
+        elif self._is_hashed_method(v, 'dict', 'setdefault', 2, current_klass):
+            obj = '%s.__object' % self.expr(v.node.expr, current_klass)
+            default = self.expr(v.args[1], current_klass)
+            index, index_kind = self._typed_expr(v.args[0], current_klass)
+            key = self.get_hash_key(v.args[0], index, index_kind)
+            entry = '%s[%s]' % (obj, key)
+            result = "(%s || (%s = [%s, %s]))[1]" % (entry, entry, index, default)
+            path_kind = self._get_path_kind(self._get_pure_getattr(v.node)[:-1])
+            return result, get_kind(path_kind, 2, None)
+        elif self._is_hashed_method(v, 'set', 'add', 1, current_klass):
+            # Optimize <set>.add(<hashedobject>) calls
+            obj = '%s.__object' % self.expr(v.node.expr, current_klass)
+            index, index_kind = self._typed_expr(v.args[0], current_klass)
+            key = self.get_hash_key(v.args[0], index, index_kind)
+            return "(%s[%s] = %s)" % (obj, key, index), None
+        elif self._is_method(v, 'list', 'append', 1, current_klass):
+            obj = '%s.__object' % self.expr(v.node.expr, current_klass)
+            elem = self.expr(v.args[0], current_klass)
+            return "%s.push(%s)" % (obj, elem), None
+        elif self._get_attrname(v.node) == '__class__' and self._get_pure_getattr(v.node):
             # Optimize <...>.__class__(...) calls
             call_name = self.expr(v.node.expr, current_klass) + "['__class__']"
             fast_instantiation = True
         elif not self.getattr_support and isinstance(v.node, self.ast.Getattr):
-            call_path = self._get_pure_getattr(v.node)
-            if call_path:
-                kind_path = '.'.join(self.kind_context + call_path)
-                call_kind = None
-                if kind_path in self.static_kinds:
-                    call_kind = self.static_kinds[kind_path]
-                elif len(self.kind_context) >= 3:
-                    base_path = self.kind_context[:-1]
-                    base_path[-1] += '()'
-                    kind_path = '.'.join(base_path + call_path)
-                    if kind_path in self.static_kinds:
-                        call_kind = self.static_kinds[kind_path]
-                if get_kind(call_kind) == 'func':
-                    kind = get_kind(call_kind, 1)
+            call_kind = self._get_pure_getattr_kind(v.node)
+            if get_kind(call_kind) == 'func':
+                kind = get_kind(call_kind, 1)
             method_name = self.attrib_remap(v.node.attrname)
             if isinstance(v.node.expr, self.ast.Name):
                 call_name, method_name = self._name2(v.node.expr, current_klass, method_name)
@@ -3834,18 +3864,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif isinstance(node, self.ast.Subscript):
             return self._typed_subscript(node, current_klass)
         elif isinstance(node, self.ast.Getattr):
-            path = self._get_pure_getattr(node)
-            kind = None
-            if path is not None:
-                kind_path = '.'.join(self.kind_context + path)
-                if kind_path in self.static_kinds:
-                    kind = self.static_kinds[kind_path]
-                elif len(self.kind_context) >= 3:
-                    base_path = self.kind_context[:-1]
-                    base_path[-1] += '()'
-                    kind_path = '.'.join(base_path + path)
-                    if kind_path in self.static_kinds:
-                        kind = self.static_kinds[kind_path]
+            kind = self._get_pure_getattr_kind(node)
+            if kind is None and node.attrname == '__class__':
+                kind = 'class'
             if kind is not None:
                 return self.expr(node, current_klass), kind
         return self.expr(node, current_klass), None
@@ -3861,6 +3882,26 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 node = node.expr
             else:
                 return None
+
+    def _get_path_kind(self, path):
+        """For use with _get_pure_getattr()"""
+        kind = None
+        if path:
+            kind_path = '.'.join(self.kind_context + path)
+            if kind_path in self.static_kinds:
+                kind = self.static_kinds[kind_path]
+            elif len(self.kind_context) >= 3:
+                base_path = self.kind_context[:-1]
+                base_path[-1] += '()'
+                kind_path = '.'.join(base_path + path)
+                if kind_path in self.static_kinds:
+                    kind = self.static_kinds[kind_path]
+            if kind is None and len(path) == 1:
+                kind = self.lookup(path[0])[5]
+        return kind
+
+    def _get_pure_getattr_kind(self, node):
+        return self._get_path_kind(self._get_pure_getattr(node))
 
     def _for(self, node, current_klass): # DANIEL KLUEV VERSION
         save_is_generator = self.is_generator
@@ -3910,7 +3951,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                         special_optimization = 'reversed'
             if special_optimization in ('enumerate', 'reversed-enumerate'):
                 inner_kind = None
-                if get_kind(list_kind, 1) is None:
+                if get_kind(list_kind, 1) in (None, 'unchecked', 'wrapunchecked'):
                     inner_kind = get_kind(list_kind, 2)
                 list_kind = (get_kind(list_kind), None,
                              ('tuple', 2, 'number', inner_kind))
@@ -4385,8 +4426,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         if node.flags == "OP_DELETE":
             container, container_kind = self._typed_expr(node.expr, current_klass)
             index, index_kind = self._typed_expr(node.subs[0], current_klass)
-            if get_kind(container_kind) == 'dict' and get_kind(index_kind) == 'class':
-                self.w(self.spacing() + "delete %s.__object[%s.$H];" % (container, index))
+            hash_key = self.get_hash_key(node.subs[0], index, index_kind)
+            if get_kind(container_kind) == 'dict' and hash_key:
+                self.w(self.spacing() + "delete %s.__object[%s];" % (container, hash_key))
             else:
                 self.w(self.spacing() + self.track_call("%s.__delitem__(%s)" % (container, index), node.lineno) + ';')
         else:
