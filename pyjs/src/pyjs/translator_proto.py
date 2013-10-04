@@ -2638,7 +2638,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             key = self.get_hash_key(v.args[0], index, index_kind)
             return "(%s[%s] = %s)" % (obj, key, index), None
         elif self._is_method(v, 'list', 'append', 1, current_klass):
-            obj = '%s.__object' % self.expr(v.node.expr, current_klass)
+            obj = '%s.__array' % self.expr(v.node.expr, current_klass)
             elem = self.expr(v.args[0], current_klass)
             return "%s.push(%s)" % (obj, elem), None
         elif self._get_attrname(v.node) == '__class__' and self._get_pure_getattr(v.node):
