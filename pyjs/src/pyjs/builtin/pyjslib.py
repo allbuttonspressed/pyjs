@@ -6331,14 +6331,13 @@ _wrap_unchecked_unbound_method = JS("""function(method) {
 };
 """)
 
-_undefined = object()
-def getattr(obj, name, default_value=_undefined):
+def getattr(obj, name):
     JS("""
     if (@{{obj}} === null || typeof @{{obj}} == 'undefined') {
         if (arguments.length != 3 || typeof @{{obj}} == 'undefined') {
             throw $pyce(@{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}} + "'"));
         }
-        return @{{default_value}};
+        return arguments[2];
     }
     
     // always remap `name` if in attrib_remap so that manually executing
@@ -6351,6 +6350,7 @@ def getattr(obj, name, default_value=_undefined):
     var method = @{{obj}}[re_mapped];
 
     if (typeof method == 'undefined') {
+        /*
         if (typeof @{{obj}} == 'function' && re_mapped == '__call__') {
             return @{{obj}};
         }
@@ -6367,16 +6367,17 @@ def getattr(obj, name, default_value=_undefined):
                     return @{{obj}}.__getattr__(@{{name}});
                 } catch (e) {
                     if (@{{isinstance}}(e['$pyjs_exc'] || e, @{{AttributeError}})) {
-                        return @{{default_value}}; 
+                        return arguments[2];
                     }
                     throw e;
                 }
             }
         }
-        if (@{{default_value}} === @{{_undefined}}) {
+        */
+        if (arguments.length == 2) {
             throw $pyce(@{{AttributeError}}("'" + @{{repr}}(@{{obj}}) + "' has no attribute '" + @{{name}}+ "'"));
         }
-        return @{{default_value}};
+        return arguments[2];
     }
 
     if (method === null || @{{obj}}.$_fast_super)
@@ -6397,6 +6398,7 @@ def getattr(obj, name, default_value=_undefined):
                     && @{{obj}}.hasOwnProperty(re_mapped))))
         || re_mapped == '__class__') {
 
+        /*
         if (typeof method == 'function'
                 && typeof method.__is_instance__ == 'undefined'
                 && method.__is_classmethod__ !== true
@@ -6407,6 +6409,7 @@ def getattr(obj, name, default_value=_undefined):
             }
             return @{{_wrap_unchecked_unbound_method}}(method);
         }
+        */
 
         return method;
     }
