@@ -3548,7 +3548,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             for index, child in enumerate(child_nodes):
                 unpacked_value = tempName + "[" + str(index) + "]";
                 child_kind = None
-                if kind and get_kind(kind) in ('tuple', 'list'):
+                if kind and get_kind(kind) in ('tuple', 'list', 'jsarray'):
                     if get_kind(kind, 1) is None:
                         child_kind = get_kind(kind, 2)
                     else:
