@@ -3973,8 +3973,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             if get_kind(list_kind) == 'set':
                 special_optimization = 'set'
 
-        if special_optimization in ('range', 'set', 'dict-items'):
+        if special_optimization == 'range':
             rhs = nextval
+        elif special_optimization in ('set', 'dict-items'):
+            rhs = '%s[%s]' % (iterator_name, nextval)
         elif get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
             rhs = '%(iterator_name)s[%(nextval)s]' % locals()
             # Even if we can't optimize the unpacking process we can at least optimize
