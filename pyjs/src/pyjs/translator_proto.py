@@ -2485,7 +2485,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         if isinstance(names, basestring):
             names = (names,)
         return node.node.name if (isinstance(node, self.ast.CallFunc) and
-                len(node.args) == argcount and
+                assert_len(node.args, argcount) and
                 isinstance(node.node, self.ast.Name) and
                 node.node.name in names and
                 self.lookup(node.node.name)[0] == 'builtin') else None
@@ -2496,6 +2496,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         return None
 
     def _is_method(self, v, kind, attrname, numargs, current_klass):
+        if not isinstance(v, self.ast.CallFunc):
+            return False
         if self._get_attrname(v.node) != attrname or not assert_len(v.args, numargs):
             return False
         path = self._get_pure_getattr(v.node)
@@ -3529,9 +3531,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 
             tempName = self.uniqid("$tupleassign")
             # Check if this is a fixed-length tuple
-            if (kind and get_kind(kind) in ('tuple', 'list') and
+            if (kind and get_kind(kind) in ('tuple', 'list', 'jsarray') and
                     get_kind(kind, 1) is not None and len(kind) - 2 == len(child_nodes)):
-                unpack_call = '%s.__array' % expr
+                if get_kind(kind) == 'jsarray':
+                    unpack_call = expr
+                else:
+                    unpack_call = '%s.__array' % expr
             else:
                 unpack_call = self.track_call(
                     self.pyjslib_name('__ass_unpack', 
@@ -3543,7 +3548,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             for index, child in enumerate(child_nodes):
                 unpacked_value = tempName + "[" + str(index) + "]";
                 child_kind = None
-                if kind and get_kind(kind) in ('tuple', 'list'):
+                if kind and get_kind(kind) in ('tuple', 'list', 'jsarray'):
                     if get_kind(kind, 1) is None:
                         child_kind = get_kind(kind, 2)
                     else:
@@ -3955,13 +3960,23 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     inner_kind = get_kind(list_kind, 2)
                 list_kind = (get_kind(list_kind), None,
                              ('tuple', 2, 'number', inner_kind))
+        elif not self.is_generator and not node.else_:
+            if self._is_method(node.list, 'dict', 'items', 0, current_klass):
+                special_optimization = 'dict-items'
+                list_expr, list_kind = self._typed_expr(node.list.node.expr, current_klass)
 
         if special_optimization is None:
             list_expr, list_kind = self._typed_expr(node.list, current_klass,
                                                     accept_js_object=True)
 
+        if not self.is_generator and not node.else_:
+            if get_kind(list_kind) == 'set':
+                special_optimization = 'set'
+
         if special_optimization == 'range':
             rhs = nextval
+        elif special_optimization in ('set', 'dict-items'):
+            rhs = '%s[%s]' % (iterator_name, nextval)
         elif get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
             rhs = '%(iterator_name)s[%(nextval)s]' % locals()
             # Even if we can't optimize the unpacking process we can at least optimize
@@ -3985,6 +4000,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif get_kind(list_kind) in ('list', 'tuple', 'generator', 'jsarray') and \
                 get_kind(list_kind, 1) in (1, None, 'unchecked', 'wrapunchecked'):
             list_item_kind = get_kind(list_kind, 2)
+        elif special_optimization == 'set':
+            list_item_kind = get_kind(list_kind, 1)
+        elif special_optimization == 'dict-items':
+            list_item_kind = ('jsarray', 2, get_kind(list_kind, 1), get_kind(list_kind, 2))
 
         if special_optimization in ('enumerate', 'reversed-enumerate'):
             assigns = self._assigns_list(node.assign.nodes[0], current_klass, nextval,
@@ -4022,6 +4041,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             else:
                 self.w("""%(s)s%(nextval)s = -1;""" % locals())
                 condition = "++%(nextval)s < %(iterator_name)s.length" % locals()
+        elif special_optimization in ('set', 'dict-items'):
+            self.w( """\
+%(s)s%(iterator_name)s = """ % locals() + self.track_call("%(list_expr)s.__object" % locals(), node.lineno) + ';')
         elif self.inline_code:
             gentype = self.add_var("%s_type" % iterid)
             loopvar = self.add_var("%s_idx" % iterid)
@@ -4051,6 +4073,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.w( self.spacing() + "$generator_state[%d] = 0;" % (len(self.generator_states), ))
             self.generator_switch_case(increment=True)
             self.w( self.indent() + "for (;%s($generator_state[%d] > 0 || %s);$generator_state[%d] = 0) {" % (assTestvar, len(self.generator_states), condition, len(self.generator_states), ))
+        elif special_optimization in ('set', 'dict-items'):
+            self.w( self.indent() + """for (%s in %s) {""" % (nextval, iterator_name))
         else:
             self.w( self.indent() + """while (%s%s) {""" % (assTestvar, condition))
         self.generator_add_state()

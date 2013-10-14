@@ -5280,9 +5280,7 @@ class BaseSet(object):
 
     def __iter__(self):
         JS("""
-        var items = new Array(),
-            i = 0,
-            obj = @{{self}}.__object;
+        var items = [], i = 0, obj = @{{self}}.__object;
         for (var key in obj) {
             items[i++] = obj[key];
         }
