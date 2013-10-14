@@ -2571,7 +2571,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     is_builtin = True
                     if v.node.name == 'len' and len(v.args) == 1:
                         return self.inline_len_code(v, current_klass)
-                if name_type == 'builtin' and v.node.name in ('tuple', 'float', 'str', 'unicode') and len(v.args) == 1:
+                if name_type == 'builtin' and ((v.node.name in ('tuple', 'float', 'str', 'unicode') and len(v.args) == 1)
+                                               or (v.node.name in ('set', 'dict') and len(v.args) == 0)):
                     if v.node.name in ('str', 'unicode') and \
                             (isinstance(v.args[0], self.ast.Name) and
                              self.lookup(v.args[0].name)[5] == 'number'):
