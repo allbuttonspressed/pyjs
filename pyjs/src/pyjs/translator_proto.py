@@ -2640,6 +2640,12 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             index, index_kind = self._typed_expr(v.args[0], current_klass)
             key = self.get_hash_key(v.args[0], index, index_kind)
             return "(%s[%s] = %s)" % (obj, key, index), None
+        elif self._is_hashed_method(v, 'set', 'remove', 1, current_klass):
+            # Optimize <set>.remove(<hashedobject>) calls
+            obj = '%s.__object' % self.expr(v.node.expr, current_klass)
+            index, index_kind = self._typed_expr(v.args[0], current_klass)
+            key = self.get_hash_key(v.args[0], index, index_kind)
+            return "(delete %s[%s])" % (obj, key), None
         elif self._is_method(v, 'list', 'append', 1, current_klass):
             obj = '%s.__array' % self.expr(v.node.expr, current_klass)
             elem = self.expr(v.args[0], current_klass)
@@ -3751,7 +3757,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 return '%s.indexOf(%s) >= 0' % (rhs, lhs)
             return rhs + ".__contains__(" + lhs + ")"
         elif op == "not in":
-            return "!" + self.compare_code('in', lhs_node, lhs, rhs, lhs_type, rhs_type)
+            return "!(" + self.compare_code('in', lhs_node, lhs, rhs, lhs_type, rhs_type) + ")"
         if op == "is":
             if self.number_classes:
                 return "@{{:op_is}}(%s, %s)" % (lhs, rhs)
