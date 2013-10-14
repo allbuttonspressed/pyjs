@@ -41,6 +41,8 @@ var $min_int = -0x80000000;
 
 JS("@{{next_hash_id}} = 0;")
 
+_set_hash = JS("""function(obj) { obj.$H = ++@{{next_hash_id}}; }""")
+
 _handle_exception = JS("""function(err) {
     $pyjs.loaded_modules['sys'].save_exception_stack();
 
@@ -431,7 +433,7 @@ class tuple:
 
 JS("@{{object}}.__mro__ = @{{tuple}}([@{{object}}]);")
 JS("@{{object}}.__mro__ = @{{tuple}}([@{{object}}]);")
-JS("@{{object}}.$H = ++@{{next_hash_id}};")
+JS("@{{:_set_hash}}(@{{object}});")
 JS("@{{object}}.__$super_cache__[@{{object}}.$H] = null;")
 
 JS("@{{type}}.__mro__ = @{{tuple}}([@{{type}}, @{{object}}]);")
@@ -2120,7 +2122,7 @@ def bool(v):
     return true;
     """)
 JS("@{{bool}}.__$super_cache__ = {};")
-JS("@{{bool}}.$H = ++@{{next_hash_id}};")
+JS("@{{:_set_hash}}(@{{bool}});")
 JS("@{{bool}}.__$super_cache__[@{{bool}}.$H] = null;")
 
 class float:
@@ -6782,8 +6784,7 @@ if JS("typeof 'a'[0] == 'undefined'"):
             } catch (e) {
                 return obj;
             }
-            return @{{next_hash_id}};
-            return obj.$H = ++@{{next_hash_id}};
+            return obj.$H;
         }
         if (typeof obj.setAttribute == 'undefined') {
             return obj;
@@ -6826,8 +6827,7 @@ if JS("typeof 'a'[0] == 'undefined'"):
             } catch (e) {
                 return obj;
             }
-            return @{{next_hash_id}};
-            return obj.$H = ++@{{next_hash_id}};
+            return obj.$H;
         }
         if (typeof obj.setAttribute == 'undefined') {
             return obj;
