@@ -3781,14 +3781,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         return "(" + lhs + " " + op + " " + rhs + ")"
 
     def _not(self, node, current_klass):
-        expr, kind = self._typed_expr(node.expr, current_klass)
-        if self.stupid_mode or get_kind(kind) in ('bool', 'number', 'string'):
-            return "!(%s)" % expr
-        elif get_kind(kind) in ('list', 'tuple'):
-            return "!(%s).__array.length" % expr
-        elif get_kind(kind) == 'dict':
-            return "!((%s).__nonzero__())" % expr
-        return '!(%s)' % self.inline_bool_code(expr)
+        return '!(%s)' % self._bool_test_expr(node.expr, current_klass)
 
     def _typed_or(self, node, current_klass):
         if self.stupid_mode:
