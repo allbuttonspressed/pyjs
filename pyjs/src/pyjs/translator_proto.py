@@ -1646,6 +1646,7 @@ class Translator(object):
             if get_kind(expr_kind, 1) == 'wrapunchecked':
                 return "%(e)s.__unchecked_getitem__(%(i)s)" % locals(), kind
         if get_kind(expr_kind) == 'dict':
+            kind = get_kind(expr_kind, 2)
             key = self.get_hash_key(node.subs[0], i, index_kind)
             if key is not None:
                 if get_kind(expr_kind, 3, None) == 'unchecked' or \
