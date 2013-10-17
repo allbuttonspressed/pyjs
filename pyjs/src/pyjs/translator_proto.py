@@ -2615,6 +2615,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             return '%s(%s, [%s])' % (self.pyjslib_name('_imm_tuple_new'), cls_name, elems), None
         elif self._is_hashed_method(v, 'dict', 'get', (1, 2), current_klass):
             # Optimize <dict>.get(<hashable> [, default_value]) calls
+            objvar = self.add_unique('$dictget')
             obj = '%s.__object' % self.expr(v.node.expr, current_klass)
             key = self.get_hash_key(v.args[0], *self._typed_expr(v.args[0], current_klass))
             if len(v.args) == 2:
@@ -2622,7 +2623,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             else:
                 default = 'null'
             entry = '%s[%s]' % (obj, key)
-            result = "(typeof %s == 'undefined' ? %s : %s[1])" % (entry, default, entry)
+            result = "(typeof (%s=%s) == 'undefined' ? %s : %s[1])" % (
+                     objvar, entry, default, objvar)
             path_kind = self._get_path_kind(self._get_pure_getattr(v.node)[:-1])
             return result, get_kind(path_kind, 2, None)
         elif self._is_hashed_method(v, 'dict', 'setdefault', 2, current_klass):
