@@ -501,6 +501,62 @@ for a in ECMAScipt_Reserved_Words:
     pyjs_attrib_remap[a] = '$$' + a
 
 
+def _append_format_string_item(parts, value):
+    if isinstance(value, basestring):
+        if parts and isinstance(parts[-1], basestring):
+            parts[-1] += value
+        else:
+            parts.append(value)
+    else:
+        parts.append(value)
+    return parts
+
+FORMAT_STRING_TYPE_MAP = {'%': '%', 's': str, 'd': int, 'f': float}
+
+def split_format_string(value):
+    parts = []
+    index = 0
+    while index < len(value):
+        next = value[index]
+        if next == '%':
+            index += 1
+            next = FORMAT_STRING_TYPE_MAP.get(value[index])
+            if next is None:
+                return None
+        _append_format_string_item(parts, next)
+        index += 1
+    return parts
+
+INTERPOLATION_TYPE_MAP = {int: 'number', float: 'number', str: 'string'}
+STR_COMPATIBLE_INTERPOLATION = {'number'}
+
+def interpolate_format_string(parts, data):
+    if parts is None:
+        return None
+    result = []
+    auto_string = False
+    for part in parts:
+        if isinstance(part, basestring):
+            result.append(uescapejs(part))
+        else:
+            if not data:
+                return None
+            value, kind = data.pop(0)
+            if INTERPOLATION_TYPE_MAP[part] == get_kind(kind) or \
+                    (part is str and get_kind(kind) in STR_COMPATIBLE_INTERPOLATION):
+                if get_kind(kind) != 'string' and not auto_string:
+                    value = '(%s).toString()' % value
+                result.append(value)
+            else:
+                return None
+        auto_string = isinstance(part, basestring)
+    if data:
+        return None
+    return '(%s)' % ' + '.join(result)
+
+def compile_interpolation(value, data):
+    return interpolate_format_string(split_format_string(value), data)
+
 def bracket_fn(s):
     return s # "(%s)" % s
 
@@ -4369,6 +4425,19 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
 %(s)s\t@{{:op_mul}}(%(v1)s,%(v2)s))""" % locals(), kind
         return """@{{:op_mul}}(%(e1)s, %(e2)s)""" % locals(), kind
 
+    def compile_string_formatting(self, node, e1, kind1, e2, kind2, current_klass):
+        if isinstance(node.left, self.ast.Const) and isinstance(node.left.value, basestring):
+            if get_kind(kind2) in ('string', 'number'):
+                data = [(e2, kind2)]
+            elif isinstance(node.right, self.ast.Tuple):
+                data = []
+                for x in node.right.nodes:
+                    data.append(self._typed_expr(x, current_klass))
+            else:
+                return None
+            return compile_interpolation(node.left.value, data)
+        return None
+
     def _typed_mod(self, node, current_klass):
         e1, kind1 = self._typed_expr(node.left, current_klass)
         e2, kind2 = self._typed_expr(node.right, current_klass)
@@ -4377,7 +4446,10 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             kind = kind1
         elif get_kind(kind1) == 'string':
             kind = kind1
-            return self.track_call("@{{:sprintf}}(%s, %s)" % (e1, e2), node.lineno), kind
+            result = self.compile_string_formatting(node, e1, kind1, e2, kind2, current_klass)
+            if result is None:
+                result = self.track_call("@{{:sprintf}}(%s, %s)" % (e1, e2), node.lineno)
+            return result, kind
 
 
         if self.stupid_mode:
