@@ -4854,7 +4854,7 @@ class dict:
         } else if (typeof data.__object == 'object') {
             data = data.__object;
             for (sKey in data) {
-                @{{self}}.__object[sKey] = data[sKey].slice();
+                @{{self}}.__object[sKey] = data[sKey];
             }
             return null;
         } else if (typeof data.__iter__ == 'function') {
@@ -5180,7 +5180,14 @@ class dict:
         return self.__object
 
     def copy(self):
-        return dict(self.items())
+        JS("""
+        var result = @{{:dict}}.__new__(@{{:dict}});
+        data = @{{self}}.__object;
+        for (var sKey in data) {
+            result.__object[sKey] = data[sKey];
+        }
+        return result;
+        """)
 
     def clear(self):
         self.__object = JS("{}")
@@ -5207,6 +5214,16 @@ class dict:
     __str__ = __repr__
 
 JS("@{{dict}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type dict>'; };")
+
+_copy_dict_part = JS("""function (dict, index) {
+    var result = [];
+    var data = dict.__object;
+    for (var key in data) {
+        result.push(data[key][index]);
+    }
+    return result;
+}""")
+    
 
 class BaseSet(object):
     def __new__(cls):
