@@ -1727,15 +1727,27 @@ String.prototype.strip = function(chars) {
 };
 
 String.prototype.lstrip = function(chars) {
-    if (typeof chars == 'undefined') return this.$$replace(/^\s+/, "");
+    if (typeof chars == 'undefined') return this.replace(/^\s+/, "");
     if (chars.length == 0) return this;
-    return this.$$replace(new RegExp("^[" + chars + "]+"), "");
+    var start = 0;
+    for (; start < this.length; start++) {
+        if (chars.indexOf(this[start]) < 0) {
+            return this.slice(start);
+        }
+    }
+    return '';
 };
 
 String.prototype.rstrip = function(chars) {
-    if (typeof chars == 'undefined') return this.$$replace(/\s+$/, "");
+    if (typeof chars == 'undefined') return this.replace(/\s+$/, "");
     if (chars.length == 0) return this;
-    return this.$$replace(new RegExp("[" + chars + "]+$"), "");
+    var end = this.length;
+    while(end--) {
+        if (chars.indexOf(this[end]) < 0) {
+            return this.slice(0, end + 1);
+        }
+    }
+    return '';
 };
 
 String.prototype.startswith = function(prefix, start, end) {
@@ -6102,7 +6114,7 @@ def repr(x):
             return "'" + @{{x}}+ "'";
         if (@{{x}}.indexOf('"') == -1)
             return '"' + @{{x}}+ '"';
-        var s = @{{x}}.$$replace(new RegExp('"', "g"), '\\\\"');
+        var s = @{{x}}.replace(/"/g, '\\\\"');
         return '"' + s + '"';
     }
 
