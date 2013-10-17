@@ -1728,15 +1728,27 @@ String.prototype.strip = function(chars) {
 };
 
 String.prototype.lstrip = function(chars) {
-    if (typeof chars == 'undefined') return this.$$replace(/^\s+/, "");
+    if (typeof chars == 'undefined') return this.replace(/^\s+/, "");
     if (chars.length == 0) return this;
-    return this.$$replace(new RegExp("^[" + chars + "]+"), "");
+    var start = 0;
+    for (; start < this.length; start++) {
+        if (chars.indexOf(this[start]) < 0) {
+            return this.slice(start);
+        }
+    }
+    return '';
 };
 
 String.prototype.rstrip = function(chars) {
-    if (typeof chars == 'undefined') return this.$$replace(/\s+$/, "");
+    if (typeof chars == 'undefined') return this.replace(/\s+$/, "");
     if (chars.length == 0) return this;
-    return this.$$replace(new RegExp("[" + chars + "]+$"), "");
+    var end = this.length;
+    while(end--) {
+        if (chars.indexOf(this[end]) < 0) {
+            return this.slice(0, end + 1);
+        }
+    }
+    return '';
 };
 
 String.prototype.startswith = function(prefix, start, end) {
@@ -4856,7 +4868,7 @@ class dict:
         } else if (typeof data.__object == 'object') {
             data = data.__object;
             for (sKey in data) {
-                @{{self}}.__object[sKey] = data[sKey].slice();
+                @{{self}}.__object[sKey] = data[sKey];
             }
             return null;
         } else if (typeof data.__iter__ == 'function') {
@@ -5182,7 +5194,14 @@ class dict:
         return self.__object
 
     def copy(self):
-        return dict(self.items())
+        JS("""
+        var result = @{{:dict}}.__new__(@{{:dict}});
+        data = @{{self}}.__object;
+        for (var sKey in data) {
+            result.__object[sKey] = data[sKey];
+        }
+        return result;
+        """)
 
     def clear(self):
         self.__object = JS("{}")
@@ -5209,6 +5228,16 @@ class dict:
     __str__ = __repr__
 
 JS("@{{dict}}.toString = function() { return this.__is_instance__ ? this.__repr__() : '<type dict>'; };")
+
+_copy_dict_part = JS("""function (dict, index) {
+    var result = [];
+    var data = dict.__object;
+    for (var key in data) {
+        result.push(data[key][index]);
+    }
+    return result;
+}""")
+    
 
 class BaseSet(object):
     def __new__(cls):
@@ -6090,7 +6119,7 @@ def repr(x):
             return "'" + @{{x}}+ "'";
         if (@{{x}}.indexOf('"') == -1)
             return '"' + @{{x}}+ '"';
-        var s = @{{x}}.$$replace(new RegExp('"', "g"), '\\\\"');
+        var s = @{{x}}.replace(/"/g, '\\\\"');
         return '"' + s + '"';
     }
 

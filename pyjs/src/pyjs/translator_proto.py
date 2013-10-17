@@ -2499,7 +2499,13 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
     def _is_method(self, v, kind, attrname, numargs, current_klass):
         if not isinstance(v, self.ast.CallFunc):
             return False
-        if self._get_attrname(v.node) != attrname or not assert_len(v.args, numargs):
+        node_attrname = self._get_attrname(v.node)
+        if isinstance(attrname, (list, tuple)):
+            if node_attrname not in attrname:
+                return False
+        elif node_attrname != attrname:
+            return False
+        if not assert_len(v.args, numargs):
             return False
         path = self._get_pure_getattr(v.node)
         if not path:
@@ -2629,6 +2635,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             path_kind = self._get_path_kind(self._get_pure_getattr(v.node)[:-1])
             return result, get_kind(path_kind, 2, None)
         elif self._is_hashed_method(v, 'dict', 'setdefault', 2, current_klass):
+            # Optimize <dict>.setdefault(<hashable>, <default_value>) calls
             obj = '%s.__object' % self.expr(v.node.expr, current_klass)
             default = self.expr(v.args[1], current_klass)
             index, index_kind = self._typed_expr(v.args[0], current_klass)
@@ -2638,13 +2645,13 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             path_kind = self._get_path_kind(self._get_pure_getattr(v.node)[:-1])
             return result, get_kind(path_kind, 2, None)
         elif self._is_hashed_method(v, 'set', 'add', 1, current_klass):
-            # Optimize <set>.add(<hashedobject>) calls
+            # Optimize <set>.add(<hashable>) calls
             obj = '%s.__object' % self.expr(v.node.expr, current_klass)
             index, index_kind = self._typed_expr(v.args[0], current_klass)
             key = self.get_hash_key(v.args[0], index, index_kind)
             return "(%s[%s] = %s)" % (obj, key, index), None
         elif self._is_hashed_method(v, 'set', 'remove', 1, current_klass):
-            # Optimize <set>.remove(<hashedobject>) calls
+            # Optimize <set>.remove(<hashable>) calls
             obj = '%s.__object' % self.expr(v.node.expr, current_klass)
             index, index_kind = self._typed_expr(v.args[0], current_klass)
             key = self.get_hash_key(v.args[0], index, index_kind)
@@ -3775,14 +3782,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         return "(" + lhs + " " + op + " " + rhs + ")"
 
     def _not(self, node, current_klass):
-        expr, kind = self._typed_expr(node.expr, current_klass)
-        if self.stupid_mode or get_kind(kind) in ('bool', 'number', 'string'):
-            return "!(%s)" % expr
-        elif get_kind(kind) in ('list', 'tuple'):
-            return "!(%s).__array.length" % expr
-        elif get_kind(kind) == 'dict':
-            return "!((%s).__nonzero__())" % expr
-        return '!(%s)' % self.inline_bool_code(expr)
+        return '!(%s)' % self._bool_test_expr(node.expr, current_klass)
 
     def _typed_or(self, node, current_klass):
         if self.stupid_mode:
@@ -3970,23 +3970,36 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     inner_kind = get_kind(list_kind, 2)
                 list_kind = (get_kind(list_kind), None,
                              ('tuple', 2, 'number', inner_kind))
+        elif self._is_builtin_call(node.list, 'list') and \
+                self._is_method(node.list.args[0], 'dict', ('values', 'keys'), 0, current_klass):
+            index = 0 if node.list.args[0].node.attrname == 'keys' else 1
+            list_expr, dict_kind = self._typed_expr(node.list.args[0].node.expr, current_klass)
+            list_expr = self.pyjslib_name('_copy_dict_part', [list_expr, index])
+            list_kind = ('jsarray', None, get_kind(dict_kind, index + 1))
+            special_optimization = 'fast-dict-copy-iter'
         elif not self.is_generator and not node.else_:
-            if self._is_method(node.list, 'dict', 'items', 0, current_klass):
-                special_optimization = 'dict-items'
+            if self._is_method(node.list, 'dict', ('items', 'values', 'keys'), 0, current_klass):
+                special_optimization = 'dict-' + node.list.node.attrname
                 list_expr, list_kind = self._typed_expr(node.list.node.expr, current_klass)
 
         if special_optimization is None:
             list_expr, list_kind = self._typed_expr(node.list, current_klass,
                                                     accept_js_object=True)
 
-        if not self.is_generator and not node.else_:
-            if get_kind(list_kind) == 'set':
-                special_optimization = 'set'
+            if not self.is_generator and not node.else_:
+                if get_kind(list_kind) == 'set':
+                    special_optimization = 'set'
+                elif get_kind(list_kind) == 'dict':
+                    special_optimization = 'dict-keys'
 
         if special_optimization == 'range':
             rhs = nextval
         elif special_optimization in ('set', 'dict-items'):
             rhs = '%s[%s]' % (iterator_name, nextval)
+        elif special_optimization == 'dict-keys':
+            rhs = '%s[%s][0]' % (iterator_name, nextval)
+        elif special_optimization == 'dict-values':
+            rhs = '%s[%s][1]' % (iterator_name, nextval)
         elif get_kind(list_kind) in ('list', 'tuple', 'jsarray'):
             rhs = '%(iterator_name)s[%(nextval)s]' % locals()
             # Even if we can't optimize the unpacking process we can at least optimize
@@ -4010,10 +4023,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         elif get_kind(list_kind) in ('list', 'tuple', 'generator', 'jsarray') and \
                 get_kind(list_kind, 1) in (1, None, 'unchecked', 'wrapunchecked'):
             list_item_kind = get_kind(list_kind, 2)
-        elif special_optimization == 'set':
+        elif special_optimization in ('set', 'dict-keys'):
             list_item_kind = get_kind(list_kind, 1)
         elif special_optimization == 'dict-items':
             list_item_kind = ('jsarray', 2, get_kind(list_kind, 1), get_kind(list_kind, 2))
+        elif special_optimization == 'dict-values':
+            list_item_kind = get_kind(list_kind, 2)
 
         if special_optimization in ('enumerate', 'reversed-enumerate'):
             assigns = self._assigns_list(node.assign.nodes[0], current_klass, nextval,
@@ -4051,7 +4066,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             else:
                 self.w("""%(s)s%(nextval)s = -1;""" % locals())
                 condition = "++%(nextval)s < %(iterator_name)s.length" % locals()
-        elif special_optimization in ('set', 'dict-items'):
+        elif special_optimization in ('set', 'dict-keys', 'dict-values', 'dict-items'):
             self.w( """\
 %(s)s%(iterator_name)s = """ % locals() + self.track_call("%(list_expr)s.__object" % locals(), node.lineno) + ';')
         elif self.inline_code:
@@ -4083,7 +4098,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.w( self.spacing() + "$generator_state[%d] = 0;" % (len(self.generator_states), ))
             self.generator_switch_case(increment=True)
             self.w( self.indent() + "for (;%s($generator_state[%d] > 0 || %s);$generator_state[%d] = 0) {" % (assTestvar, len(self.generator_states), condition, len(self.generator_states), ))
-        elif special_optimization in ('set', 'dict-items'):
+        elif special_optimization in ('set', 'dict-keys', 'dict-values', 'dict-items'):
             self.w( self.indent() + """for (%s in %s) {""" % (nextval, iterator_name))
         else:
             self.w( self.indent() + """while (%s%s) {""" % (assTestvar, condition))
