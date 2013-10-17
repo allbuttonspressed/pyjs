@@ -4844,7 +4844,6 @@ class dict:
     def __init__(self, seq=JS("[]"), **kwargs):
         # Transform data into an array with [key,value]
         # Input data can be Array(key, val), iteratable (key,val) or Object/Function
-        self.__object = JS("{}")
         def init(_data):
             JS("""
         var item, i, n, sKey, key;

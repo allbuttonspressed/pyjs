@@ -2616,6 +2616,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             return '%s(%s, [%s])' % (self.pyjslib_name('_imm_tuple_new'), cls_name, elems), None
         elif self._is_hashed_method(v, 'dict', 'get', (1, 2), current_klass):
             # Optimize <dict>.get(<hashable> [, default_value]) calls
+            objvar = self.add_unique('$dictget')
             obj = '%s.__object' % self.expr(v.node.expr, current_klass)
             key = self.get_hash_key(v.args[0], *self._typed_expr(v.args[0], current_klass))
             if len(v.args) == 2:
@@ -2623,7 +2624,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             else:
                 default = 'null'
             entry = '%s[%s]' % (obj, key)
-            result = "(typeof %s == 'undefined' ? %s : %s[1])" % (entry, default, entry)
+            result = "(typeof (%s=%s) == 'undefined' ? %s : %s[1])" % (
+                     objvar, entry, default, objvar)
             path_kind = self._get_path_kind(self._get_pure_getattr(v.node)[:-1])
             return result, get_kind(path_kind, 2, None)
         elif self._is_hashed_method(v, 'dict', 'setdefault', 2, current_klass):
@@ -4555,32 +4557,34 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
     def _typed_collcomp(self, node, current_klass):
         kind = None
         self.push_lookup()
-        resultvar = self.add_unique("$collcomp")
         save_output = self.output
         self.output = StringIO()
         if isinstance(node, self.ast.ListComp):
             kind = ('list', None, None)
+            resultvar = self.add_unique('$collcomp', kind=kind)
             tnode = self.ast.Discard(
-                RawNode((lambda: '%s.__array.push(%s)'
-                                 % (resultvar, self.expr(node.expr, current_klass))),
-                        node.lineno)
+                self.ast.CallFunc(
+                    self.ast.Getattr(self.ast.Name(resultvar), 'append'),
+                    [node.expr], None, None)
             )
-            varinit = '%(l)s.__new__(%(l)s)' % {'l': self.pyjslib_name("list")}
+            varinit = '%(l)s.__new__(%(l)s)' % {'l': self.pyjslib_name('list')}
         elif isinstance(node, self.ast.SetComp):
             kind = ('set', None)
+            resultvar = self.add_unique('$collcomp', kind=kind)
             tnode = self.ast.Discard(
                 self.ast.CallFunc(
                     self.ast.Getattr(self.ast.Name(resultvar), 'add'),
                     [node.expr], None, None)
             )
-            varinit = self.pyjslib_name("set", args='')
+            varinit = '%(l)s.__new__(%(l)s)' % {'l': self.pyjslib_name('set')}
         elif isinstance(node, self.ast.DictComp):
             kind = ('dict', None, None)
+            resultvar = self.add_unique('$collcomp', kind=kind)
             tnode = self.ast.Assign([
                 self.ast.Subscript(self.ast.Name(resultvar),
                                    'OP_ASSIGN', [node.key])
                 ], node.value)
-            varinit = self.pyjslib_name("dict", args='')
+            varinit = '%(l)s.__new__(%(l)s)' % {'l': self.pyjslib_name('dict')}
         else:
             raise TranslationError("unsupported collection comprehension", 
                                    node, self.module_name)
