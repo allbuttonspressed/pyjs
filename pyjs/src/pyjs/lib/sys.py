@@ -49,6 +49,9 @@ def exc_info():
         while tb and start > 0:
             tb = tb.tb_next
             start -= 1
+    else:
+        tb = le
+        tb.tb_next = None
     return (cls, le.error, tb)
 
 def exc_clear():

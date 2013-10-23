@@ -70,9 +70,10 @@ function $pymg()
     return $generator['$run']($val, null);
   };
   $generator['$$throw'] = function ($exc_type, $exc_value) {
-      var exc=(typeof $exc_value == 'undefined' ? $exc_type() :
-                                              ($p['isinstance']($exc_value, $exc_type)
-                                               ? $exc_value : $exc_type($exc_value)));
+      var exc= ($exc_tb && $exc_tb.$pyjs_exc ? $exc_tb :
+        (typeof $exc_value == 'undefined' ? $exc_type() :
+                                    ($p['isinstance']($exc_value, $exc_type)
+                                     ? $exc_value : $exc_type($exc_value))));
       return $generator['$run'](null, exc);
   };
   $generator['close'] = function () {
