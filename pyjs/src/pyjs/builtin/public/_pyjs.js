@@ -69,7 +69,7 @@ function $pymg()
   $generator['send'] = function ($val) {
     return $generator['$run']($val, null);
   };
-  $generator['$$throw'] = function ($exc_type, $exc_value) {
+  $generator['$$throw'] = function ($exc_type, $exc_value, $exc_tb) {
       var exc= ($exc_tb && $exc_tb.$pyjs_exc ? $exc_tb :
         (typeof $exc_value == 'undefined' ? $exc_type() :
                                     ($p['isinstance']($exc_value, $exc_type)
