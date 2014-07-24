@@ -144,7 +144,7 @@ class time:
         if tzinfo != None:
             raise NotImplementedError("tzinfo")
         if d is None:
-            d = JS("""new Date(1970, 1, 1, @{{hour}}, @{{minute}}, @{{second}}, 0.5 + @{{microsecond}} / 1000.0)""")
+            d = JS("""new Date(1970, 0, 1, @{{hour}}, @{{minute}}, @{{second}}, 0.5 + @{{microsecond}} / 1000.0)""")
         self._d = d
         self.hour = d.getHours()
         self.minute = d.getMinutes()
@@ -284,7 +284,7 @@ class datetime(date, time):
             minute = self.minute + ((other.seconds / 60.0) % 60)
             second = self.second + (other.seconds % 60)
             microsecond = self.microsecond + other.microseconds
-            d = JS("""new Date(@{{year}}, @{{month}}, @{{day}}, @{{hour}}, @{{minute}}, @{{second}}, @{{microsecond}})""")
+            d = JS("""new Date(@{{year}}, @{{month}} - 1, @{{day}}, @{{hour}}, @{{minute}}, @{{second}}, @{{microsecond}})""")
             return datetime(d=d)
         else:
             raise TypeError("expected timedelta object")
@@ -302,7 +302,7 @@ class datetime(date, time):
             second = self.second - (other.seconds % 60)
             microsecond = self.microsecond - other.microseconds
 
-            d = JS("""new Date(@{{year}}, @{{month}}, @{{day}}, @{{hour}}, @{{minute}}, @{{second}}, @{{microsecond}})""")
+            d = JS("""new Date(@{{year}}, @{{month}} - 1, @{{day}}, @{{hour}}, @{{minute}}, @{{second}}, @{{microsecond}})""")
             return datetime(d=d)
         else:
             raise TypeError("expected date or datetime object")
