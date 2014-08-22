@@ -277,14 +277,8 @@ class datetime(date, time):
 
     def __add__(self, other):
         if isinstance(other, timedelta):
-            year = self.year
-            month = self.month
-            day = self.day + other.days
-            hour = self.hour + (other.seconds / 3600.0)
-            minute = self.minute + ((other.seconds / 60.0) % 60)
-            second = self.second + (other.seconds % 60)
-            microsecond = self.microsecond + other.microseconds
-            d = JS("""new Date(@{{year}}, @{{month}} - 1, @{{day}}, @{{hour}}, @{{minute}}, @{{second}}, @{{microsecond}})""")
+            milliseconds = self._d.getTime() + other._get_microseconds() / 1000
+            d = JS("""new Date(@{{milliseconds}})""")
             return datetime(d=d)
         else:
             raise TypeError("expected timedelta object")
@@ -294,15 +288,8 @@ class datetime(date, time):
             diff = self._d.getTime() - other._d.getTime()
             return timedelta(int(diff / 86400000.0), int(diff / 1000.0) % 86400, milliseconds=(diff % 86400000))
         elif isinstance(other, timedelta):
-            year = self.year
-            month = self.month
-            day = self.day - other.days
-            hour = self.hour - (other.seconds / 3600.0)
-            minute = self.minute - ((other.seconds / 60.0) % 60)
-            second = self.second - (other.seconds % 60)
-            microsecond = self.microsecond - other.microseconds
-
-            d = JS("""new Date(@{{year}}, @{{month}} - 1, @{{day}}, @{{hour}}, @{{minute}}, @{{second}}, @{{microsecond}})""")
+            milliseconds = self._d.getTime() - other._get_microseconds() / 1000
+            d = JS("""new Date(@{{milliseconds}})""")
             return datetime(d=d)
         else:
             raise TypeError("expected date or datetime object")
@@ -316,6 +303,9 @@ class timedelta:
         self.days = (weeks * 7.0) + days
         self.seconds = (hours * 3600.0) + (minutes * 60.0) + seconds
         self.microseconds = (milliseconds * 1000.0) + microseconds
+
+    def _get_microseconds(self):
+        return self.microseconds + (self.seconds + self.days * 24 * 60 * 60) * 1000000
 
 class tzinfo(object):
     pass
