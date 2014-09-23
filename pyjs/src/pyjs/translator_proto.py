@@ -19,15 +19,16 @@ import os
 import copy
 from cStringIO import StringIO
 import re
+from sourcemaps import SourceMap
 try:
     from hashlib import md5
 except:
     from md5 import md5
 import logging
 
-from options import (all_compile_options, add_compile_options,
-                     get_compile_options, debug_options, speed_options, 
-                     pythonic_options)
+from .options import (all_compile_options, add_compile_options,
+                      get_compile_options, debug_options, speed_options, 
+                      pythonic_options)
 
 if os.environ.has_key('PYJS_SYSPATH'):
     sys.path[0:0] = [os.environ['PYJS_SYSPATH']]
@@ -974,6 +975,7 @@ class Translator(object):
         self.src = src.split("\n")
 
         self.output = output
+        self.sourcemap_tokens = []
         self.dynamic = dynamic
         self.findFile = findFile
 
@@ -1076,72 +1078,76 @@ class Translator(object):
             attribute_checking = False
 
         save_output = self.output
+        save_tokens = self.sourcemap_tokens
         self.output = StringIO()
+        self.sourcemap_tokens = []
 
         mod.lineno = 1
         self.track_lineno(mod, True)
-        for child in mod.node:
+        for node in mod.node:
             self.has_js_return = False
             self.has_yield = False
             self.is_generator = False
-            self.track_lineno(child)
+            self.track_lineno(node)
             assert self.top_level
-            if isinstance(child, self.ast.Function):
-                self._function(child, None)
-            elif isinstance(child, self.ast.Class):
-                self._class(child)
-            elif isinstance(child, self.ast.Import):
-                self._import(child, None, True)
-            elif isinstance(child, self.ast.From):
-                self._from(child, None, True)
-            elif isinstance(child, self.ast.Discard):
-                self._discard(child, None)
-            elif isinstance(child, self.ast.Assign):
-                self._assign(child, None)
-            elif isinstance(child, self.ast.AugAssign):
-                self._augassign(child, None)
-            elif isinstance(child, self.ast.If):
-                self._if(child, None)
-            elif isinstance(child, self.ast.For):
-                self._for(child, None)
-            elif isinstance(child, self.ast.While):
-                self._while(child, None)
-            elif isinstance(child, self.ast.Subscript):
-                self._subscript_stmt(child, None)
-            elif isinstance(child, self.ast.Global):
-                self._global(child, None)
-            elif isinstance(child, self.ast.Printnl):
-                self._print(child, None)
-            elif isinstance(child, self.ast.Print):
-                self._print(child, None)
-            elif isinstance(child, self.ast.TryExcept):
-                self._tryExcept(child, None)
-            elif isinstance(child, self.ast.TryFinally):
-                self._tryFinally(child, None)
-            elif isinstance(child, self.ast.With):
-                self._with(child, None)
-            elif isinstance(child, self.ast.Raise):
-                self._raise(child, None)
-            elif isinstance(child, self.ast.Assert):
-                self._assert(child, None)
-            elif isinstance(child, self.ast.Stmt):
-                self._stmt(child, None, True)
-            elif isinstance(child, self.ast.AssAttr):
-                self._assattr(child, None)
-            elif isinstance(child, self.ast.AssName):
-                self._assname(child, None)
-            elif isinstance(child, self.ast.AssTuple):
-                for node in child.nodes:
+            if isinstance(node, self.ast.Function):
+                self._function(node, None)
+            elif isinstance(node, self.ast.Class):
+                self._class(node)
+            elif isinstance(node, self.ast.Import):
+                self._import(node, None, True)
+            elif isinstance(node, self.ast.From):
+                self._from(node, None, True)
+            elif isinstance(node, self.ast.Discard):
+                self._discard(node, None)
+            elif isinstance(node, self.ast.Assign):
+                self._assign(node, None)
+            elif isinstance(node, self.ast.AugAssign):
+                self._augassign(node, None)
+            elif isinstance(node, self.ast.If):
+                self._if(node, None)
+            elif isinstance(node, self.ast.For):
+                self._for(node, None)
+            elif isinstance(node, self.ast.While):
+                self._while(node, None)
+            elif isinstance(node, self.ast.Subscript):
+                self._subscript_stmt(node, None)
+            elif isinstance(node, self.ast.Global):
+                self._global(node, None)
+            elif isinstance(node, self.ast.Printnl):
+                self._print(node, None)
+            elif isinstance(node, self.ast.Print):
+                self._print(node, None)
+            elif isinstance(node, self.ast.TryExcept):
+                self._tryExcept(node, None)
+            elif isinstance(node, self.ast.TryFinally):
+                self._tryFinally(node, None)
+            elif isinstance(node, self.ast.With):
+                self._with(node, None)
+            elif isinstance(node, self.ast.Raise):
+                self._raise(node, None)
+            elif isinstance(node, self.ast.Assert):
+                self._assert(node, None)
+            elif isinstance(node, self.ast.Stmt):
+                self._stmt(node, None, True)
+            elif isinstance(node, self.ast.AssAttr):
+                self._assattr(node, None)
+            elif isinstance(node, self.ast.AssName):
+                self._assname(node, None)
+            elif isinstance(node, self.ast.AssTuple):
+                for node in node.nodes:
                     self._stmt(node, None)
-            elif isinstance(child, self.ast.Slice):
-                self.w( self.spacing() + self._typed_slice(child, None)[0])
+            elif isinstance(node, self.ast.Slice):
+                self.w( self.spacing() + self._typed_slice(node, None)[0])
             else:
                 raise TranslationError(
                     "unsupported type (in __init__)",
-                    child, self.module_name)
+                    node, self.module_name)
 
         captured_output = self.output.getvalue()
+        captured_tokens = self.sourcemap_tokens
         self.output = save_output
+        self.sourcemap_tokens = save_tokens
         if self.source_tracking and self.store_source:
             for l in self.track_lines.keys():
                 self.w( self.spacing() + '''%s__track_lines__[%d] = %s;''' % (self.module_prefix, l, uescapejs(self.track_lines[l])), translate=False)
@@ -1153,6 +1159,9 @@ class Translator(object):
         if captured_output.find("@ATTRIB_REMAP_DECLARATION@") >= 0:
             captured_output = captured_output.replace("@ATTRIB_REMAP_DECLARATION@", self.attrib_remap_decl())
         self.w( captured_output, False)
+        line_shift = self.output.getvalue().count('\n')
+        self.sourcemap_tokens.extend(t._replace(src_line=t.src_line + line_shift)
+                                     for t in captured_tokens)
 
         if attribute_checking:
             self.w( self.dedent() + "} catch ($pyjs_attr_err) {throw $pyce(@{{:_errorMapping}}($pyjs_attr_err));};")
@@ -1179,6 +1188,9 @@ class Translator(object):
             self.w( 'PYJS_JS: %s' % repr(self.imported_js))
             self.w( '*/')
 
+        self.sourcemap = SourceMap(self.sourcemap_tokens,
+                                   {self.module_name.replace('.', '/') + '.py': self.src})
+
     def set_compile_options(self, opts):
         opts = dict(all_compile_options, **opts)
         for opt, value in opts.iteritems():
@@ -1196,10 +1208,9 @@ class Translator(object):
         if self.number_classes:
             self.operator_funcs = True        
 
-    def w(self, txt, newline=True, output=None, translate=True):
+    def w(self, txt, newline=True, translate=True):
         if translate and txt:
             txt = self.translate_escaped_names(txt, None, pyjslib_only=True) # TODO: current_klss
-        output = output or self.output
         assert(isinstance(newline, bool))
         if newline:
             if txt is None:
@@ -1843,8 +1854,7 @@ $generator['$genfunc'] = function () {
         self.w( self.spacing() + ", %s)" % args)
 
     def _instance_method_init(self, node, arg_names, varargname, kwargname,
-                              current_klass, is_method, output=None):
-        output = output or self.output
+                              current_klass, is_method):
         maxargs1 = len(arg_names) - 1
         maxargs2 = len(arg_names)
         minargs1 = maxargs1 - len(node.defaults)
@@ -1913,13 +1923,13 @@ $generator['$genfunc'] = function () {
         if self.universal_methfuncs:
             self.w(self.indent() + """\
 if (this.__is_instance__ === true) {\
-""", output=output)
+""")
 
         if self.universal_methfuncs or is_method:
             if arg_names:
                 self.w( self.spacing() + """\
 %s%s = this;\
-""" % (lpself, arg_names[0]), output=output)
+""" % (lpself, arg_names[0]))
 
             if node.varargs:
                 self._varargs_handler(node, varargname, maxargs1, lp,
@@ -1928,49 +1938,49 @@ if (this.__is_instance__ === true) {\
             if node.kwargs:
                 self.w( self.spacing() + """\
 %s%s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[arguments.length];\
-""" % (lpself, kwargname, maxargs1), output=output)
+""" % (lpself, kwargname, maxargs1))
                 s = self.spacing()
                 self.w( """\
 %(s)sif (typeof %(lp)s%(kwargname)s != 'object' || %(lp)s%(kwargname)s === null || %(lp)s%(kwargname)s.__name__ !== 'dict' || typeof %(lp)s%(kwargname)s.$pyjs_is_kwarg == 'undefined') {\
-""" % locals(), output=output)
+""" % locals())
                 if node.varargs:
                     self.w( """\
 %(s)s\tif (typeof %(lp)s%(kwargname)s != 'undefined') %(lp)s%(varargname)s.push(%(lp)s%(kwargname)s);\
-""" % locals(), output=output)
+""" % locals())
                 self.w( """\
 %(s)s\t%(lpself)s%(kwargname)s = arguments[arguments.length+1];
 %(s)s} else {
 %(s)s\tdelete %(lp)s%(kwargname)s['$pyjs_is_kwarg'];
 %(s)s}\
-""" % locals(), output=output)
+""" % locals())
 
             if self.function_argument_checking:
                 self.w( self.spacing() + """\
 if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.__name__, %d, %s, arguments.length+1);\
-""" % (argcount1, minargs2, maxargs2str), output=output)
+""" % (argcount1, minargs2, maxargs2str))
 
         if self.universal_methfuncs:
             self.w( self.dedent() + """\
 } else {\
-""", output=output)
+""")
             self.indent()
 
             if arg_names:
                 self.w( self.spacing() + """\
 %s%s = arguments[0];\
-""" % (lpself, arg_names[0]), output=output)
+""" % (lpself, arg_names[0]))
             arg_idx = 0
             for arg_name in arg_names[1:]:
                 arg_idx += 1
                 self.w( self.spacing() + """\
 %s%s = arguments[%d];\
-""" % (lp, arg_name, arg_idx), output=output)
+""" % (lp, arg_name, arg_idx))
 
         if self.universal_methfuncs or not is_method:
             if not is_method and self.function_argument_checking:
                 self.w( self.spacing() + """\
 if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.__name__, %d, %s, arguments.length);\
-""" % (argcount2, minargs2, maxargs2str), output=output)
+""" % (argcount2, minargs2, maxargs2str))
 
             if node.varargs:
                 self._varargs_handler(node, varargname, maxargs2, lp)
@@ -1978,29 +1988,29 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             if node.kwargs:
                 self.w( self.spacing() + """\
 %s%s = arguments.length >= %d ? arguments[arguments.length-1] : arguments[arguments.length];\
-""" % (lpself, kwargname, maxargs2), output=output)
+""" % (lpself, kwargname, maxargs2))
                 s = self.spacing()
                 self.w( """\
 %(s)sif (typeof %(lp)s%(kwargname)s != 'object' || %(lp)s%(kwargname)s === null || %(lp)s%(kwargname)s.__name__ != 'dict' || typeof %(lp)s%(kwargname)s.$pyjs_is_kwarg == 'undefined') {\
-""" % locals(), output=output)
+""" % locals())
                 if node.varargs:
                     self.w( """\
 %(s)s\tif (typeof %(lp)s%(kwargname)s != 'undefined') %(lp)s%(varargname)s.push(%(lp)s%(kwargname)s);\
-""" % locals(), output=output)
+""" % locals())
                 self.w( """\
 %(s)s\t%(lp)s%(kwargname)s = arguments[arguments.length+1];
 %(s)s} else {
 %(s)s\tdelete %(lp)s%(kwargname)s['$pyjs_is_kwarg'];
 %(s)s}\
-""" % locals(), output=output)
+""" % locals())
 
             if is_method and self.function_argument_checking:
                 self.w( """\
 %sif ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.__name__, %d, %s, arguments.length);\
-""" % (self.spacing(), argcount2, minargs2, maxargs2str), output=output)
+""" % (self.spacing(), argcount2, minargs2, maxargs2str))
 
         if self.universal_methfuncs:
-            self.w( self.dedent() + "}", output=output)
+            self.w( self.dedent() + "}")
 
         if node.varargs:
             self.w( """\
@@ -2008,9 +2018,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 """ % (self.spacing(), varargname, varargname, varargname))
 
 
-    def _default_args_handler(self, node, arg_names, current_klass, kwargname,
-                              lp, output=None):
-        output = output or self.output
+    def _default_args_handler(self, node, arg_names, current_klass, kwargname, lp):
         if node.kwargs:
             # This is necessary when **kwargs in function definition
             # and the call didn't pass the $pykc().
@@ -2027,7 +2035,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self.w( """\
 %(s)sif (typeof %(lp)s%(k)s == 'undefined') {
 %(s)s\t%(lp)s%(k)s = %(d)s.__new__(%(d)s);\
-""" % {'lp': lp, 's': self.spacing(), 'k': kwargname, 'd': self.pyjslib_name('dict')}, output=output)
+""" % {'lp': lp, 's': self.spacing(), 'k': kwargname, 'd': self.pyjslib_name('dict')})
 
             for v in revargs:
                 self.w( """\
@@ -2037,12 +2045,12 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 %(s)s\t\t\t%(lp)s%(v)s = arguments[%(a)d];
 %(s)s\t\t}
 %(s)s\t} else\
-""" % {'lp': lp, 's': self.spacing(), 'v': v, 'k': kwargname, 'a': len(arg_names)}, False, output=output)
+""" % {'lp': lp, 's': self.spacing(), 'v': v, 'k': kwargname, 'a': len(arg_names)}, False)
             self.w( """\
 {
 %(s)s\t}
 %(s)s}\
-""" % {'s': self.spacing()}, output=output)
+""" % {'s': self.spacing()})
 
         if len(node.defaults):
             default_pos = len(arg_names) - len(node.defaults)
@@ -2051,7 +2059,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                 default_name = arg_names[default_pos]
                 default_pos += 1
                 #self.w( self.spacing() + "if (typeof %s == 'undefined') %s=%s;" % (default_name, default_name, default_value))
-                self.w( self.spacing() + "if (typeof %s%s == 'undefined') %s%s=arguments.callee.__args__[%d][1];" % (lp, default_name, lp, default_name, default_pos+1), output=output)
+                self.w( self.spacing() + "if (typeof %s%s == 'undefined') %s%s=arguments.callee.__args__[%d][1];" % (lp, default_name, lp, default_name, default_pos+1))
 
     def _varargs_handler(self, node, varargname, start, lp, prepend_this=False):
         if node.kwargs:
@@ -2291,7 +2299,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         # Record generated function code, so it can be passed to decorators below
         save_function_output = self.output
+        save_function_tokens = self.sourcemap_tokens
         self.output = StringIO()
+        self.sourcemap_tokens = []
 
         lookup_type = 'function'
         if self.is_class_definition:
@@ -2384,17 +2394,20 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         if not defaults_done_by_inline:
             self._default_args_handler(node, declared_arg_names, current_klass, kwargname, "")
 
-        self.top_level = False
-        save_output = self.output
-
         # We convert the code twice. The first time we only collect type information.
+        self.top_level = False
         self.needs_last_exception[tuple(self.kind_context)] = False
+        save_output = self.output
+        save_tokens = self.sourcemap_tokens
         self.output = StringIO()
+        self.sourcemap_tokens = []
         save_lookup_stack = self.lookup_stack[-1].copy()
         for child in node.code:
             self._stmt(child, current_klass)
 
+        # Now generate the real code
         self.output = StringIO()
+        self.sourcemap_tokens = []
         self.lookup_stack[-1] = save_lookup_stack.copy()
         if self.needs_last_exception[tuple(self.kind_context)]:
             self.w(self.spacing() + "  var $pyjs_last_exception, $pyjs_last_exception_stack;")
@@ -2406,6 +2419,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         if not self.has_yield and self.source_tracking and self.has_js_return:
             self.source_tracking = False
             self.output = StringIO()
+            self.sourcemap_tokens = []
             for child in node.code:
                 self._stmt(child, None)
         elif self.has_yield:
@@ -2414,6 +2428,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self.is_generator = True
             self.generator_states = [0]
             self.output = StringIO()
+            self.sourcemap_tokens = []
             self.indent()
             if self.source_tracking:
                 self.w( self.spacing() + "$pyjs.track={module:%s__name__,lineno:%d};$pyjs.trackstack.push($pyjs.track);" % (self.module_prefix, node.lineno))
@@ -2427,7 +2442,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self.dedent()
 
         captured_output = self.output.getvalue()
+        captured_tokens = self.sourcemap_tokens
         self.output = save_output
+        self.sourcemap_tokens = save_tokens
         self.w( self.local_js_vars_decl(py_arg_names))
         if self.is_generator:
             self.generator(captured_output)
@@ -2452,7 +2469,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         self.func_args(node, current_klass, declared_arg_names, varargname, kwargname)
 
         function_code = self.output.getvalue().rstrip()
+        function_tokens = self.sourcemap_tokens
         self.output = save_function_output
+        self.sourcemap_tokens = save_function_tokens
 
         function_code = decorator_code % function_code
 
@@ -3053,7 +3072,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             body_nodes[0:0] = [self.ast.Assign([v.vars],
                                                self.ast.Name(withvar))]
         save_output = self.output
+        save_tokens = self.sourcemap_tokens
         self.output = StringIO()
+        self.sourcemap_tokens = []
         self.indent()
         
         for node in body_nodes:
@@ -3061,7 +3082,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             
         self.dedent()
         captured_output = self.output
+        captured_tokens = self.sourcemap_tokens
         self.output = save_output
+        self.sourcemap_tokens = save_tokens
         
         self.w(self.spacing() + "%(__with)s(%(expr)s, function(%(withvar)s){" %
                dict(expr=expr,
@@ -4645,7 +4668,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         kind = None
         self.push_lookup()
         save_output = self.output
+        save_tokens = self.sourcemap_tokens
         self.output = StringIO()
+        self.sourcemap_tokens = []
         if isinstance(node, self.ast.ListComp):
             kind = ('list', None, None)
             resultvar = self.add_unique('$collcomp', kind=kind)
@@ -4690,7 +4715,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self._for(tnode, current_klass)
 
         captured_output = self.output
+        captured_tokens = self.sourcemap_tokens
         self.output = save_output
+        self.sourcemap_tokens = save_tokens
         collcomp_code = (
             """function(){\n"""
             """\t%(declarations)s\n"""
@@ -4731,7 +4758,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             raise TranslationError(
                 "varargs not supported (in _genexpr)", node, self.module_name)
         save_output = self.output
+        save_tokens = self.sourcemap_tokens
         self.output = StringIO()
+        self.sourcemap_tokens = []
         self.indent()
         self.generator_switch_open()
         self.generator_switch_case(increment=False)
@@ -4757,12 +4786,16 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.generator_switch_close()
 
         captured_output = self.output.getvalue()
+        captured_tokens = self.sourcemap_tokens
         self.output = StringIO()
+        self.sourcemap_tokens = []
         self.w( "function(){")
         self.generator(captured_output)
         self.w( self.dedent() + "}()")
         captured_output = self.output.getvalue()
+        captured_tokens = self.sourcemap_tokens
         self.output = save_output
+        self.sourcemap_tokens = save_tokens
         self.generator_states = save_generator_states
         self.state_max_depth = len(self.generator_states)
         self.is_generator = save_is_generator
