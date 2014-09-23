@@ -1088,61 +1088,21 @@ class Translator(object):
             self.has_js_return = False
             self.has_yield = False
             self.is_generator = False
-            self.track_lineno(node)
             assert self.top_level
-            if isinstance(node, self.ast.Function):
-                self._function(node, None)
-            elif isinstance(node, self.ast.Class):
-                self._class(node)
+            self.track_lineno(node)
+            if isinstance(node, (self.ast.Return, self.ast.Yield, self.ast.Break,
+                                 self.ast.Continue)):
+                raise TranslationError("unsupported type (in __init__)",
+                                       node, self.module_name)
             elif isinstance(node, self.ast.Import):
                 self._import(node, None, True)
             elif isinstance(node, self.ast.From):
                 self._from(node, None, True)
-            elif isinstance(node, self.ast.Discard):
-                self._discard(node, None)
-            elif isinstance(node, self.ast.Assign):
-                self._assign(node, None)
-            elif isinstance(node, self.ast.AugAssign):
-                self._augassign(node, None)
-            elif isinstance(node, self.ast.If):
-                self._if(node, None)
-            elif isinstance(node, self.ast.For):
-                self._for(node, None)
-            elif isinstance(node, self.ast.While):
-                self._while(node, None)
-            elif isinstance(node, self.ast.Subscript):
-                self._subscript_stmt(node, None)
-            elif isinstance(node, self.ast.Global):
-                self._global(node, None)
-            elif isinstance(node, self.ast.Printnl):
-                self._print(node, None)
-            elif isinstance(node, self.ast.Print):
-                self._print(node, None)
-            elif isinstance(node, self.ast.TryExcept):
-                self._tryExcept(node, None)
-            elif isinstance(node, self.ast.TryFinally):
-                self._tryFinally(node, None)
-            elif isinstance(node, self.ast.With):
-                self._with(node, None)
-            elif isinstance(node, self.ast.Raise):
-                self._raise(node, None)
-            elif isinstance(node, self.ast.Assert):
-                self._assert(node, None)
-            elif isinstance(node, self.ast.Stmt):
-                self._stmt(node, None, True)
-            elif isinstance(node, self.ast.AssAttr):
-                self._assattr(node, None)
-            elif isinstance(node, self.ast.AssName):
-                self._assname(node, None)
-            elif isinstance(node, self.ast.AssTuple):
-                for node in node.nodes:
-                    self._stmt(node, None)
-            elif isinstance(node, self.ast.Slice):
-                self.w( self.spacing() + self._typed_slice(node, None)[0])
             else:
-                raise TranslationError(
-                    "unsupported type (in __init__)",
-                    node, self.module_name)
+                self._stmt(node, None)
+            if 0:
+                raise TranslationError("unsupported type (in __init__)",
+                                       node, self.module_name)
 
         captured_output = self.output.getvalue()
         captured_tokens = self.sourcemap_tokens
@@ -1158,10 +1118,10 @@ class Translator(object):
             self.w( self.constant_decl())
         if captured_output.find("@ATTRIB_REMAP_DECLARATION@") >= 0:
             captured_output = captured_output.replace("@ATTRIB_REMAP_DECLARATION@", self.attrib_remap_decl())
-        self.w( captured_output, False)
         line_shift = self.output.getvalue().count('\n')
         self.sourcemap_tokens.extend(t._replace(src_line=t.src_line + line_shift)
                                      for t in captured_tokens)
+        self.w( captured_output, False)
 
         if attribute_checking:
             self.w( self.dedent() + "} catch ($pyjs_attr_err) {throw $pyce(@{{:_errorMapping}}($pyjs_attr_err));};")
