@@ -19,7 +19,7 @@ import os
 import copy
 from cStringIO import StringIO
 import re
-from sourcemaps import SourceMap
+import sourcemaps
 try:
     from hashlib import md5
 except:
@@ -339,7 +339,6 @@ PYJSLIB_BUILTIN_FUNCTIONS=frozenset((
     "slice",
     "__import_all__",
     "_globals",
-    "_handle_exception",
     ))
 
 PYJSLIB_BUILTIN_CLASSES=[
@@ -648,7 +647,6 @@ class __Pyjamas__(object):
             if (     isinstance(node.args[0], translator.ast.Const)
                  and isinstance(node.args[0].value, str)
                ):
-                translator.ignore_debug = True
                 unescape = lambda content: translator.translate_escaped_names(content, current_klass)
                 converted = func(node.args[0].value, unescape=unescape, translator=translator, current_klass=current_klass, is_statement=is_statement)
                 return converted, re_return.search(converted) is not None
@@ -665,7 +663,6 @@ class __Pyjamas__(object):
             raise TranslationError(
                 "wnd function doesn't support arguments",
                 node.node)
-        translator.ignore_debug = True
         return '$wnd', False
 
     def doc(self, translator, node, *args, **kwargs):
@@ -673,7 +670,6 @@ class __Pyjamas__(object):
             raise TranslationError(
                 "doc function doesn't support arguments",
                 node.node)
-        translator.ignore_debug = True
         return '$doc', False
 
     def jsinclude(self, translator, node, *args, **kwargs):
@@ -689,7 +685,6 @@ class __Pyjamas__(object):
             except IOError as e:
                 raise TranslationError(
                     "Cannot include file '%s': %s" % (node.args[0].value, e), node.node)
-            translator.ignore_debug = True
             return data, False
         else:
             raise TranslationError(
@@ -741,7 +736,6 @@ class __Pyjamas__(object):
                     "jsimport location argument must be early, middle or late",
                 node.node)
         translator.add_imported_js(path, mode, location)
-        translator.ignore_debug = True
         return '', False
 
     def debugger(self, translator, node, *args, **kwargs):
@@ -749,7 +743,6 @@ class __Pyjamas__(object):
             raise TranslationError(
                 "debugger function doesn't support arguments",
                 node.node)
-        translator.ignore_debug = True
         return 'debugger', False
 
     def setCompilerOptions(self, translator, node, *args, **kwargs):
@@ -773,7 +766,6 @@ class __Pyjamas__(object):
                 raise TranslationError(
                     "setCompilerOptions invalid option '%s'" % option,
                     node.node)
-        translator.ignore_debug = True
         return '', False
 
     def INT(self, translator, node, *args, **kwargs):
@@ -905,8 +897,6 @@ def kind_context(func):
 class Translator(object):
 
     decorator_compiler_options = {\
-        'Debug': [('debug', True)],
-        'noDebug': [('debug', False)],
         'PrintStatements': [('print_statements', True)],
         'noPrintStatements': [('print_statements', False)],
         'FunctionArgumentChecking': [('function_argument_checking', True)],
@@ -927,12 +917,6 @@ class Translator(object):
         'noBoundMethods': [('bound_methods', False)],
         'Descriptors': [('descriptors', True)],
         'noDescriptors': [('descriptors', False)],
-        'SourceTracking': [('source_tracking', True)],
-        'noSourceTracking': [('source_tracking', False)],
-        'LineTracking': [('line_tracking', True)],
-        'noLineTracking': [('line_tracking', False)],
-        'StoreSource': [('store_source', True)],
-        'noStoreSource': [('store_source', False)],
         'noInlineBool': [('inline_bool', False)],
         'InlineBool': [('inline_bool', True)],
         'noInlineLen': [('inline_len', False)],
@@ -975,7 +959,7 @@ class Translator(object):
         self.src = src.split("\n")
 
         self.output = output
-        self.sourcemap_tokens = []
+        self.sourcemap = sourcemaps.SourceMap((), {self.module_name: src})
         self.dynamic = dynamic
         self.findFile = findFile
 
@@ -994,8 +978,6 @@ class Translator(object):
         self.imported_js = []
         self.is_class_definition = False
         self.local_prefix = self.module_prefix[:-1] if self.module_prefix else None
-        self.track_lines = {}
-        self.stacksize_depth = 0
         self.option_stack = []
         self.lookup_stack = [{}]
         self.kind_lookup_stack = [{}]
@@ -1062,8 +1044,6 @@ class Translator(object):
         self.w( self.spacing() + self.module_prefix + '__class__ = ' + '$pyjs_module_type;')
         self.w( self.spacing() + self.module_prefix + "__was_initialized__ = true;")
         self.w( self.spacing() + "%s__name__ = __mod_name__ || '%s';" % (self.module_prefix, module_name))
-        if self.source_tracking:
-            self.w( self.spacing() + "%s__track_lines__ = [];" % self.module_prefix)
         name = module_name.split(".")
         if len(name) > 1:
             jsname = self.jsname('variable', name[-1])
@@ -1078,18 +1058,16 @@ class Translator(object):
             attribute_checking = False
 
         save_output = self.output
-        save_tokens = self.sourcemap_tokens
+        save_sourcemap = self.sourcemap
         self.output = StringIO()
-        self.sourcemap_tokens = []
+        self.sourcemap = sourcemaps.SourceMap()
 
         mod.lineno = 1
-        self.track_lineno(mod, True)
         for node in mod.node:
             self.has_js_return = False
             self.has_yield = False
             self.is_generator = False
             assert self.top_level
-            self.track_lineno(node)
             if isinstance(node, (self.ast.Return, self.ast.Yield, self.ast.Break,
                                  self.ast.Continue)):
                 raise TranslationError("unsupported type (in __init__)",
@@ -1100,17 +1078,11 @@ class Translator(object):
                 self._from(node, None, True)
             else:
                 self._stmt(node, None)
-            if 0:
-                raise TranslationError("unsupported type (in __init__)",
-                                       node, self.module_name)
 
         captured_output = self.output.getvalue()
-        captured_tokens = self.sourcemap_tokens
+        captured_sourcemap = self.sourcemap
         self.output = save_output
-        self.sourcemap_tokens = save_tokens
-        if self.source_tracking and self.store_source:
-            for l in self.track_lines.keys():
-                self.w( self.spacing() + '''%s__track_lines__[%d] = %s;''' % (self.module_prefix, l, uescapejs(self.track_lines[l])), translate=False)
+        self.sourcemap = save_sourcemap
         self.w( self.local_js_vars_decl([]))
         if captured_output.find("@CONSTANT_DECLARATION@") >= 0:
             captured_output = captured_output.replace("@CONSTANT_DECLARATION@", self.constant_decl())
@@ -1119,8 +1091,8 @@ class Translator(object):
         if captured_output.find("@ATTRIB_REMAP_DECLARATION@") >= 0:
             captured_output = captured_output.replace("@ATTRIB_REMAP_DECLARATION@", self.attrib_remap_decl())
         line_shift = self.output.getvalue().count('\n')
-        self.sourcemap_tokens.extend(t._replace(src_line=t.src_line + line_shift)
-                                     for t in captured_tokens)
+        map(self.sourcemap.add_token,
+            sourcemaps.shift_tokens(captured_sourcemap.tokens, line_shift))
         self.w( captured_output, False)
 
         if attribute_checking:
@@ -1148,8 +1120,7 @@ class Translator(object):
             self.w( 'PYJS_JS: %s' % repr(self.imported_js))
             self.w( '*/')
 
-        self.sourcemap = SourceMap(self.sourcemap_tokens,
-                                   {self.module_name.replace('.', '/') + '.py': self.src})
+        assert self.sourcemap.sources_content
 
     def set_compile_options(self, opts):
         opts = dict(all_compile_options, **opts)
@@ -1159,7 +1130,6 @@ class Translator(object):
             else:
                 raise Exception("Translator got an unknown option %s" % opt)
         
-        self.ignore_debug = False
         self.inline_bool = self.inline_code
         self.inline_len = self.inline_code
         self.inline_eq = self.inline_code
@@ -1201,23 +1171,21 @@ class Translator(object):
 
     def push_options(self):
         self.option_stack.append((\
-            self.debug, self.debuggable_function_names, self.print_statements,
+            self.debuggable_function_names, self.print_statements,
             self.function_argument_checking,
             self.attribute_checking, self.name_checking, self.getattr_support,
             self.setattr_support, self.call_support, self.universal_methfuncs,
             self.bound_methods, self.descriptors,
-            self.source_tracking, self.line_tracking, self.store_source,
             self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp,
             self.inline_getitem, self.operator_funcs, self.number_classes,
         ))
     def pop_options(self):
         (\
-            self.debug, self.debuggable_function_names, self.print_statements,
+            self.debuggable_function_names, self.print_statements,
             self.function_argument_checking,
             self.attribute_checking, self.name_checking, self.getattr_support,
             self.setattr_support, self.call_support, self.universal_methfuncs,
             self.bound_methods, self.descriptors,
-            self.source_tracking, self.line_tracking, self.store_source,
             self.inline_bool, self.inline_eq, self.inline_len, self.inline_cmp,
             self.inline_getitem, self.operator_funcs, self.number_classes,
         ) = self.option_stack.pop()
@@ -1238,7 +1206,7 @@ class Translator(object):
                                       dstar_args=None,
                                       lineno=lineno)
 
-            return code % self._typed_callfunc_code(tnode, None)[0]
+            return code % self._typed_callfunc(tnode, None)[0]
 
         for d in node.decorators:
             code = add_callfunc(code, d)
@@ -1650,28 +1618,12 @@ class Translator(object):
     def md5(self, node):
         return md5(self.module_name + str(node.lineno) + repr(node)).hexdigest()
 
-    def track_lineno(self, node, module=False):
-        if self.source_tracking and node.lineno:
-            if module:
-                self.w( self.spacing() + "$pyjs.track.module=%s__name__;" % self.module_prefix)
-            if self.line_tracking:
-                self.w( self.spacing() + "$pyjs.track.lineno=%d;" % node.lineno)
-            if self.store_source:
-                self.track_lines[node.lineno] = self.get_line_trace(node)
-
-    def track_call(self, call_code, lineno=None):
-        if not self.ignore_debug and self.debug and len(call_code.strip()) > 0:
-            dbg = self.uniqid("$pyjs_dbg_")
-            s = self.spacing()
-            call_code = """\
-(function(){try{try{$pyjs.in_try_except += 1;
-%(s)sreturn %(call_code)s;
-}finally{$pyjs.in_try_except-=1;}}catch(%(dbg)s_err){\
-if (!@{{:isinstance}}(%(dbg)s_err['$pyjs_exc'] || %(dbg)s_err, @{{:StopIteration}}))\
-{@{{:_handle_exception}}(%(dbg)s_err);}\
-throw %(dbg)s_err;
-}})()""" % locals()
-        return call_code
+    def track_lineno(self, node):
+        if node.lineno:
+            token = sourcemaps.Token(dst_line=self.output.getvalue().count('\n'),
+                                     src=self.module_name, src_line=node.lineno - 1)
+            if token not in self.sourcemap.tokens:
+                self.sourcemap.add_token(token)
 
     __generator_code_str = """\
 var $generator_state = [0], $generator_exc = [null], $yield_value = null, $exc = null, $is_executing=false;
@@ -1714,27 +1666,21 @@ $generator['$genfunc'] = function () {
 
     def generator(self, code):
         if self.is_generator:
+            lines_before = self.output.getvalue().count('\n')
             s = self.spacing()
-            if self.source_tracking:
-                src1 = "var $pyjs__trackstack_size_%d = $pyjs.trackstack.length;" % self.stacksize_depth
-                src2 = """\
-%(s)ssys.save_exception_stack();
-%(s)sif ($pyjs.trackstack.length > $pyjs__trackstack_size_%(d)d) {
-%(s)s\t$pyjs.trackstack = $pyjs.trackstack.slice(0,$pyjs__trackstack_size_%(d)d);
-%(s)s\t$pyjs.track = $pyjs.trackstack.slice(-1)[0];
-%(s)s}
-%(s)s$pyjs.track.module=%(mp)s__name__;""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'mp': self.module_prefix}
-            else:
-                src1 = src2 = ""
+            src1 = src2 = ""
 
             self.w( self.__generator_code_str % locals())
             self.indent()
+            line_shift = self.output.getvalue().count('\n') - lines_before
             self.w( code)
             self.w( self.spacing() + "return;")
             self.w( self.dedent() + "};")
             self.w( self.spacing() + "return $generator;")
+            return line_shift
         else:
-            self.w( captured_output, False)
+            self.w( code, False)
+            return 0
 
     def generator_switch_open(self):
         if self.is_generator:
@@ -2102,6 +2048,8 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
     def _import(self, node, current_klass, root_level = False):
         # XXX: hack for in-function checking, we should have another
         # object to check our scope
+        if set(n[0] for n in node.names) - {'__pyjamas__', '__javascript__'}:
+            self.track_lineno(node)
         self._doImport(node.names, current_klass, root_level, True)
 
     def _doImport(self, names, current_klass, root_level, assignBase, all=False):
@@ -2134,9 +2082,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
             mod = self.lookup(importName)
             package_mod = self.lookup(importName.split('.', 1)[0])
-
-            if self.source_tracking:
-                self.w( self.spacing() + "$pyjs.track={module:$pyjs.track.module,lineno:$pyjs.track.lineno};$pyjs.trackstack.push($pyjs.track);")
 
             import_stmt = None
             if (   mod[0] != 'root-module'
@@ -2186,9 +2131,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     stmt = "%s = %s);"% (lhs, import_stmt)
                 self.w( self.spacing() + stmt)
 
-            if self.source_tracking:
-                self.w( self.spacing() + "$pyjs.trackstack.pop();$pyjs.track=$pyjs.trackstack.pop();$pyjs.trackstack.push($pyjs.track);")
-
     def _from(self, node, current_klass, root_level=False):
         if node.modname == '__pyjamas__':
             # special module to help make pyjamas modules loadable in
@@ -2219,6 +2161,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
                     # Ignoring from __future__ import name[0]
                     pass
             return
+        self.track_lineno(node)
         modname = node.modname
         if hasattr(node, 'level') and node.level > 0:
             if self.relative_import_context is not None:
@@ -2259,9 +2202,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         # Record generated function code, so it can be passed to decorators below
         save_function_output = self.output
-        save_function_tokens = self.sourcemap_tokens
+        save_function_sourcemap = self.sourcemap
         self.output = StringIO()
-        self.sourcemap_tokens = []
+        self.sourcemap = sourcemaps.SourceMap()
 
         lookup_type = 'function'
         if self.is_class_definition:
@@ -2355,44 +2298,29 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self._default_args_handler(node, declared_arg_names, current_klass, kwargname, "")
 
         # We convert the code twice. The first time we only collect type information.
+        # Save function definition code
+        save_output = self.output
+        self.output = StringIO()
+        self.sourcemap = sourcemaps.SourceMap()
         self.top_level = False
         self.needs_last_exception[tuple(self.kind_context)] = False
-        save_output = self.output
-        save_tokens = self.sourcemap_tokens
-        self.output = StringIO()
-        self.sourcemap_tokens = []
         save_lookup_stack = self.lookup_stack[-1].copy()
         for child in node.code:
             self._stmt(child, current_klass)
 
         # Now generate the real code
         self.output = StringIO()
-        self.sourcemap_tokens = []
+        self.sourcemap = sourcemaps.SourceMap()
         self.lookup_stack[-1] = save_lookup_stack.copy()
-        if self.needs_last_exception[tuple(self.kind_context)]:
-            self.w(self.spacing() + "  var $pyjs_last_exception, $pyjs_last_exception_stack;")
-        if self.source_tracking:
-            self.w( self.spacing() + "$pyjs.track={module:%s__name__,lineno:%d};$pyjs.trackstack.push($pyjs.track);" % (self.module_prefix, node.lineno))
-        self.track_lineno(node, True)
-        for child in node.code:
-            self._stmt(child, current_klass)
-        if not self.has_yield and self.source_tracking and self.has_js_return:
-            self.source_tracking = False
-            self.output = StringIO()
-            self.sourcemap_tokens = []
+        if not self.has_yield:
+            if self.needs_last_exception[tuple(self.kind_context)]:
+                self.w(self.spacing() + "  var $pyjs_last_exception, $pyjs_last_exception_stack;")
             for child in node.code:
-                self._stmt(child, None)
-        elif self.has_yield:
-            if self.has_js_return:
-                self.source_tracking = False
+                self._stmt(child, current_klass)
+        else:
             self.is_generator = True
             self.generator_states = [0]
-            self.output = StringIO()
-            self.sourcemap_tokens = []
             self.indent()
-            if self.source_tracking:
-                self.w( self.spacing() + "$pyjs.track={module:%s__name__,lineno:%d};$pyjs.trackstack.push($pyjs.track);" % (self.module_prefix, node.lineno))
-            self.track_lineno(node, True)
             self.generator_switch_open()
             self.generator_switch_case(increment=False)
             for child in node.code:
@@ -2401,24 +2329,27 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self.generator_switch_close()
             self.dedent()
 
+        # Save inner function code
         captured_output = self.output.getvalue()
-        captured_tokens = self.sourcemap_tokens
+
+        # Restore function definition code
         self.output = save_output
-        self.sourcemap_tokens = save_tokens
         self.w( self.local_js_vars_decl(py_arg_names))
+        line_shift = self.output.getvalue().count('\n')
         if self.is_generator:
-            self.generator(captured_output)
+            line_shift += self.generator(captured_output)
         else:
             self.w( captured_output, False)
+        self.sourcemap = sourcemaps.SourceMap(
+            sourcemaps.shift_tokens(self.sourcemap.tokens, line_shift))
 
+        if not self.is_generator:
             # we need to return null always, so it is not undefined
             if node.code.nodes:
                 lastStmt = node.code.nodes[-1]
             else:
                 lastStmt = None
             if not isinstance(lastStmt, self.ast.Return):
-                if self.source_tracking:
-                    self.w( self.spacing() + "$pyjs.trackstack.pop();$pyjs.track=$pyjs.trackstack.pop();$pyjs.trackstack.push($pyjs.track);")
                 # FIXME: check why not on on self._isNativeFunc(lastStmt)
                 if not self._isNativeFunc(lastStmt):
                     self.w(self.spacing() + "return null;")
@@ -2429,9 +2360,12 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         self.func_args(node, current_klass, declared_arg_names, varargname, kwargname)
 
         function_code = self.output.getvalue().rstrip()
-        function_tokens = self.sourcemap_tokens
+        function_sourcemap = self.sourcemap
         self.output = save_function_output
-        self.sourcemap_tokens = save_function_tokens
+        self.sourcemap = save_function_sourcemap
+        map(self.sourcemap.add_token,
+            sourcemaps.shift_tokens(function_sourcemap.tokens,
+                                    self.output.getvalue().count('\n')))
 
         function_code = decorator_code % function_code
 
@@ -2467,22 +2401,15 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         expr = self.expr(node.value, current_klass)
         # in python a function call always returns None, so we do it
         # here too
-        self.track_lineno(node)
         if self.is_generator:
             if isinstance(node.value, self.ast.Const):
                 if node.value.value is None:
-                    if self.source_tracking:
-                        self.w( self.spacing() + "$pyjs.trackstack.pop();$pyjs.track=$pyjs.trackstack.pop();$pyjs.trackstack.push($pyjs.track);")
                     self.w( self.spacing() + "$exc = null;")
                     self.w( self.spacing() + "return;")
                     return
             raise TranslationError(
                 "'return' with argument inside generator",
                  node, self.module_name)
-        elif self.source_tracking:
-            self.w( self.spacing() + "var $pyjs__ret = " + expr + ";")
-            self.w( self.spacing() + "$pyjs.trackstack.pop();$pyjs.track=$pyjs.trackstack.pop();$pyjs.trackstack.push($pyjs.track);")
-            self.w( self.spacing() + "return $pyjs__ret;")
         else:
             self.w( self.spacing() + "return " + expr + ";")
 
@@ -2491,12 +2418,9 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         # http://www.python.org/doc/2.5.2/ref/yieldexpr.html
         self.has_yield = True
         expr = self.expr(node.value, current_klass)
-        self.track_lineno(node)
         #self.w( self.spacing() + "$generator_state[%d] = %d;" % (len(self.generator_states)-1, self.generator_states[-1]+1)
 
         self.w( self.spacing() + "$yield_value = " + expr + ";")
-        if self.source_tracking:
-            self.w( self.spacing() + "$pyjs.trackstack.pop();$pyjs.track=$pyjs.trackstack.pop();$pyjs.trackstack.push($pyjs.track);")
         self.w( self.spacing() + "$yielding = true;")
         self.w( self.spacing() + "$generator_state[%d] = %d;" % (len(self.generator_states)-1, self.generator_states[-1]+1))
         self.w( self.spacing() + "return $yield_value;")
@@ -2556,8 +2480,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         return self._is_method(v, kind, attrname, numargs, current_klass) and \
                self._is_hashable(v.args[0], current_klass)
 
-    def _typed_callfunc_code(self, v, current_klass, is_statement=False, optlocal_var=False):
-        self.ignore_debug = False
+    def _typed_callfunc(self, v, current_klass, is_statement=False, optlocal_var=False):
         is_builtin = False
         method_name = None
         fast_super_call = False
@@ -2570,6 +2493,16 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             if name_type == '__pyjamas__':
                 try:
                     raw_js = getattr(__pyjamas__, v.node.name)
+                    if v.node.name == 'JS':
+                        raw_content = '\n'.join(v.args[0].value.splitlines()[1:])
+                        if raw_content.strip():
+                            tokens = sourcemaps.identity_tokenize(raw_content,
+                                                                  self.module_name)
+                            line_shift = self.output.getvalue().count('\n') + 1
+                            tokens = sourcemaps.shift_tokens(tokens, dst_line=line_shift,
+                                                             src_line=v.lineno)
+                            map(self.sourcemap.add_token, tokens)
+
                     if callable(raw_js):
                         raw_js, has_js_return = raw_js(self, v, current_klass,
                                                        is_statement=is_statement)
@@ -2803,17 +2736,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             call_code = call_name + "(" + ", ".join(call_args) + ")"
         return call_code, kind
 
-    def _typed_callfunc(self, v, current_klass, is_statement=False, optlocal_var=False):
-        call_code, kind = self._typed_callfunc_code(
-            v,
-            current_klass,
-            is_statement=is_statement,
-            optlocal_var=optlocal_var,
-        )
-        if not self.ignore_debug:
-            call_code = self.track_call(call_code, v.lineno)
-        return call_code, kind
-
     def _print(self, node, current_klass):
         if not self.print_statements:
             return
@@ -2821,7 +2743,7 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         for ch4 in node.nodes:
             arg = self.expr(ch4, current_klass)
             call_args.append(arg)
-        self.w( self.spacing() + self.track_call("@{{:printFunc}}([%s], %d)" % (', '.join(call_args), int(isinstance(node, self.ast.Printnl))), node.lineno) + ';')
+        self.w( self.spacing() + "@{{:printFunc}}([%s], %d);" % (', '.join(call_args), int(isinstance(node, self.ast.Printnl))))
 
     def _tryFinally(self, node, current_klass):
         body = node.body
@@ -2839,20 +2761,12 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
         if self.is_generator:
             self.is_generator = self.compiler.walk(node, GeneratorExitVisitor(), walker=GeneratorExitVisitor()).has_yield
         self.try_depth += 1
-        self.stacksize_depth += 1
         save_state_max_depth = self.state_max_depth
         start_states = len(self.generator_states)
         pyjs_try_err = '$pyjs_try_err'
         real_pyjs_try_err = '$real_pyjs_try_err'
-        if self.source_tracking:
-            self.w( self.spacing() + "var $pyjs__trackstack_size_%d = $pyjs.trackstack.length;" % self.stacksize_depth)
         self.generator_switch_case(increment=True)
         self.w( self.indent() + "try {")
-        added_try_except_counter = not self.ignore_debug and self.debug
-        if added_try_except_counter:
-            self.w( self.spacing() + "try {")
-            self.indent()
-            self.w( self.spacing() + "$pyjs.in_try_except += 1;")
         if self.is_generator:
             self.w( self.spacing() + "if (typeof $generator_exc[%d] != 'undefined' && $generator_exc[%d] !== null) throw $generator_exc[%d];" % (\
                 self.try_depth, self.try_depth, self.try_depth))
@@ -2873,8 +2787,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 
         self.generator_switch_case(increment=True)
         self.generator_switch_close()
-        if added_try_except_counter:
-            self.w( self.dedent() + "} finally { $pyjs.in_try_except -= 1; }")
 
         has_handlers = getattr(node, 'handlers', None) or getattr(node, 'else_', None)
 
@@ -2883,9 +2795,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
             self.indent()
             self.w( self.spacing() + "var %(e)s = %(r)s['$pyjs_exc'] || %(r)s;" % {'e': pyjs_try_err, 'r': real_pyjs_try_err})
 
-            if self.source_tracking:
-                self.w( self.spacing() + "$pyjs_last_exception_stack = $pyjs.__last_exception_stack__ = sys.save_exception_stack($pyjs__trackstack_size_%d - 1);" % self.stacksize_depth)
-                self.w( self.spacing() + "$pyjs.__active_exception_stack__ = null;")
             if self.is_generator:
                 self.w( self.spacing() + "$generator_exc[%d] = %s;" % (self.try_depth, real_pyjs_try_err))
             try_state_max_depth = self.state_max_depth
@@ -2916,13 +2825,6 @@ if ($pyjs.options.arg_count && %s) $pyjs__exception_func_param(arguments.callee.
 var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__name__ );\
 """ % {'e': pyjs_try_err})
             self.w( self.spacing() + "$pyjs_last_exception = $pyjs.__last_exception__ = {error: %s, module: %s__name__};" % (real_pyjs_try_err, self.module_prefix))
-            if self.source_tracking:
-                self.w( """\
-    %(s)sif ($pyjs.trackstack.length > $pyjs__trackstack_size_%(d)d) {
-    %(s)s\t$pyjs.trackstack = $pyjs.trackstack.slice(0,$pyjs__trackstack_size_%(d)d);
-    %(s)s\t$pyjs.track = $pyjs.trackstack.slice(-1)[0];
-    %(s)s}
-    %(s)s$pyjs.track.module=%(mp)s__name__;""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'mp': self.module_prefix})
 
             if hasattr(node, 'handlers'):
                 else_str = self.spacing()
@@ -3013,7 +2915,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.generator_clear_state()
         self.generator_del_state()
         self.try_depth -= 1
-        self.stacksize_depth -= 1
         self.generator_switch_case(increment=True)
         self.is_generator = save_is_generator
         
@@ -3032,9 +2933,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             body_nodes[0:0] = [self.ast.Assign([v.vars],
                                                self.ast.Name(withvar))]
         save_output = self.output
-        save_tokens = self.sourcemap_tokens
+        save_sourcemap = self.sourcemap
         self.output = StringIO()
-        self.sourcemap_tokens = []
+        self.sourcemap = sourcemaps.SourceMap()
         self.indent()
         
         for node in body_nodes:
@@ -3042,14 +2943,18 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             
         self.dedent()
         captured_output = self.output
-        captured_tokens = self.sourcemap_tokens
+        captured_sourcemap = self.sourcemap
         self.output = save_output
-        self.sourcemap_tokens = save_tokens
-        
+        self.sourcemap = save_sourcemap
+        lines_before = self.output.getvalue().count('\n')
+
         self.w(self.spacing() + "%(__with)s(%(expr)s, function(%(withvar)s){" %
                dict(expr=expr,
                     __with=self.pyjslib_name('__with'),
                     withvar=withvar))
+        line_shift = self.output.getvalue().count('\n') - lines_before
+        map(self.sourcemap.add_token,
+            sourcemaps.shift_tokens(captured_sourcemap.tokens, line_shift))
         self.w(captured_output.getvalue().rstrip())
         self.w(self.spacing() + "});")
 
@@ -3164,8 +3069,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.local_prefix = local_prefix
             self._stmt(child, current_klass)
 
-        self.track_lineno(node, False)
-
         create_class = """\
 %(s)svar $bases = [%(bases)s];"""
         if self.module_name == 'pyjslib':
@@ -3194,8 +3097,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.w( self.spacing() + "$generator_state[%d]=%d;" % (len(self.generator_states)-1, self.generator_states[-1]+1))
 
         if node.expr1:
-            if self.source_tracking:
-                self.w( self.spacing() + "$pyjs.__active_exception_stack__ = null;")
             if node.expr2:
                 if node.expr3:
                     self.w( """
@@ -3236,10 +3137,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     node.expr1, current_klass))
         else:
             self.needs_last_exception[tuple(self.kind_context)] = True
-            if self.source_tracking:
-                self.w( self.spacing() + "if (typeof $pyjs_last_exception_stack != 'undefined') { $pyjs.__last_exception_stack__ = $pyjs_last_exception_stack; }")
-                self.w( self.spacing() + "$pyjs.__active_exception_stack__ = $pyjs.__last_exception_stack__;")
-                self.w( self.spacing() + "$pyjs.__last_exception_stack__ = null;")
             s = self.spacing()
             self.w( self.spacing() + """if (typeof $pyjs_last_exception != 'undefined') { $pyjs.__last_exception__ = $pyjs_last_exception; }""")
             self.w( """\
@@ -3262,7 +3159,11 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         pass
 
     def _stmt(self, node, current_klass):
-        self.track_lineno(node)
+        if isinstance(node, self.ast.Pass):
+            return
+
+        if not isinstance(node, (self.ast.Import, self.ast.From, self.ast.Global)):
+            self.track_lineno(node)
 
         if isinstance(node, self.ast.Return):
             self._return(node, current_klass)
@@ -3288,8 +3189,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self._subscript_stmt(node, current_klass)
         elif isinstance(node, self.ast.Global):
             self._global(node, current_klass)
-        elif isinstance(node, self.ast.Pass):
-            pass
         elif isinstance(node, self.ast.Function):
             self._function(node, current_klass)
         elif isinstance(node, self.ast.Printnl):
@@ -3316,8 +3215,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self._assert(node, current_klass)
         elif isinstance(node, self.ast.Class):
             self._class(node, current_klass)
-        #elif isinstance(node, self.ast.CallFunc):
-        #    self._typed_callfunc(node, current_klass)[0]
         elif isinstance(node, self.ast.Slice):
             self.w( self.spacing() + self._typed_slice(node, current_klass)[0])
         elif isinstance(node, self.ast.AssName):
@@ -3539,14 +3436,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                             assigns.append('%s.__array[%s] = %s' % (obj, idx, expr))
                             return assigns
                 if get_kind(kind) == 'list' and get_kind(kind, 1) == 'unchecked':
-                    assigns.append(self.track_call("%s.__array[%s] = %s" % (obj, idx, expr), v.lineno) + ';')
+                    assigns.append("%s.__array[%s] = %s;" % (obj, idx, expr))
                 elif get_kind(kind) == 'list' and get_kind(kind, 1) == 'wrapunchecked':
-                    assigns.append(self.track_call("%s.__unchecked_setitem__(%s, %s)" % (obj, idx, expr), v.lineno) + ';')
+                    assigns.append("%s.__unchecked_setitem__(%s, %s);" % (obj, idx, expr))
                 elif get_kind(kind) == 'dict' and idxkey is not None and \
                         isinstance(v.subs[0], (self.ast.Const, self.ast.Name)):
-                    assigns.append(self.track_call("%s.__object[%s] = [%s, %s]" % (obj, idxkey, idx, expr), v.lineno) + ';')
+                    assigns.append("%s.__object[%s] = [%s, %s];" % (obj, idxkey, idx, expr))
                 else:
-                    assigns.append(self.track_call("%s.__setitem__(%s, %s)" % (obj, idx, expr), v.lineno) + ';')
+                    assigns.append("%s.__setitem__(%s, %s);" % (obj, idx, expr))
                 return assigns
             else:
                 raise TranslationError(
@@ -3563,9 +3460,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                     upper = self.expr(v.upper, current_klass)
                 obj = self.expr(v.expr, current_klass)
                 slice_inst = self._make_slice_inst(lower, upper)
-                assigns.append(self.track_call(
-                    '%s.__setitem__(%s, %s)' % (obj, slice_inst, expr),
-                    v.lineno) + ';')
+                assigns.append('%s.__setitem__(%s, %s);' % (obj, slice_inst, expr))
                 return assigns
             else:
                 raise TranslationError(
@@ -3594,10 +3489,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 else:
                     unpack_call = '%s.__array' % expr
             else:
-                unpack_call = self.track_call(
-                    self.pyjslib_name('__ass_unpack', 
-                                      args=[expr, len(child_nodes), extended_unpack]
-                                      ), v.lineno)
+                unpack_call = self.pyjslib_name('__ass_unpack', 
+                                      args=[expr, len(child_nodes), extended_unpack])
 
             assigns.append("var " + tempName + " = " + unpack_call + ";")
 
@@ -3645,8 +3538,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             )[0]
             if isinstance(node.expr.node, self.ast.Name):
                 name_type, pyname, jsname, depth, is_local, kind = self.lookup(node.expr.node.name)
-                if name_type == '__pyjamas__' and \
-                   jsname in __pyjamas__.native_js_funcs:
+                if name_type == '__pyjamas__' and jsname in __pyjamas__.native_js_funcs:
                     self.w( expr)
                     return
             self.w( self.spacing() + expr + ";")
@@ -3714,12 +3606,12 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             expr = self._bool_test_expr(test, current_klass)
 
             if not self.is_generator:
-                self.w( self.indent() +keyword + " (" + self.track_call(expr, test.lineno)+") {")
+                self.w( self.indent() +keyword + " (" + expr + ") {")
             else:
                 self.generator_states[-1] += 1
                 self.w( self.indent() +keyword + "(($generator_state[%d]==%d)||($generator_state[%d]<%d&&(" % (\
                     len(self.generator_states)-1, self.generator_states[-1], len(self.generator_states)-1, self.generator_states[-1],) + \
-                    self.track_call(expr, test.lineno)+"))) {")
+                    expr + "))) {")
                 self.w( self.spacing() + "$generator_state[%d]=%d;" % (len(self.generator_states)-1, self.generator_states[-1]))
 
         else:
@@ -4077,13 +3969,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         else:
             assigns = self._assigns_list(node.assign, current_klass, rhs, list_item_kind)
 
-        if self.source_tracking:
-            self.stacksize_depth += 1
-            var_trackstack_size = self.add_var("$pyjs__trackstack_size_%d" % self.stacksize_depth)
-            self.w( self.spacing() + "%s=$pyjs.trackstack.length;" % var_trackstack_size)
         s = self.spacing()
         if special_optimization == 'range':
-            self.w("""%(s)s%(iterator_name)s = """ % locals() + self.track_call(list_expr, node.lineno) + ';')
+            self.w("""%(s)s%(iterator_name)s = """ % locals() + list_expr + ';')
             if len(node.list.args) == 1:
                 start = '-1'
             elif len(node.list.args) == 2:
@@ -4098,7 +3986,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             if special_optimization == 'reversed-enumerate':
                 iterator_value = '%s.slice(0)' % iterator_value
             self.w("""\
-%(s)s%(iterator_name)s = """ % locals() + self.track_call(iterator_value, node.lineno) + ';')
+%(s)s%(iterator_name)s = """ % locals() + iterator_value + ';')
             if special_optimization in ('reversed', 'reversed-enumerate'):
                 self.w("""%(s)s%(nextval)s = %(iterator_name)s.length;""" % locals())
                 condition = "--%(nextval)s >= 0" % locals()
@@ -4107,13 +3995,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 condition = "++%(nextval)s < %(iterator_name)s.length" % locals()
         elif special_optimization in ('set', 'dict-keys', 'dict-values', 'dict-items'):
             self.w( """\
-%(s)s%(iterator_name)s = """ % locals() + self.track_call("%(list_expr)s.__object" % locals(), node.lineno) + ';')
+%(s)s%(iterator_name)s = """ % locals() + "%(list_expr)s.__object" % locals() + ';')
         elif self.inline_code:
             gentype = self.add_var("%s_type" % iterid)
             loopvar = self.add_var("%s_idx" % iterid)
             array = self.add_var("%s_array" % iterid)
             self.w( """\
-%(s)s%(iterator_name)s = """ % locals() + self.track_call("%(list_expr)s" % locals(), node.lineno) + ';')
+%(s)s%(iterator_name)s = """ % locals() + "%(list_expr)s" % locals() + ';')
             self.w( """\
 %(s)sif (typeof (%(array)s = %(iterator_name)s.__array) != 'undefined') {
 %(s)s\t%(gentype)s = 0;
@@ -4125,7 +4013,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             condition = "typeof (%(nextval)s=(%(gentype)s?(%(gentype)s > 0?%(iterator_name)s.next(true,%(reuse_tuple)s):%(wrapped_next)s(%(iterator_name)s)):%(array)s[%(loopvar)s++])) != 'undefined'" % dict(locals(), wrapped_next=self.pyjslib_name('wrapped_next'))
         else:
             self.w( """\
-%(s)s%(iterator_name)s = """ % locals() + self.track_call("%(list_expr)s" % locals(), node.lineno) + ';')
+%(s)s%(iterator_name)s = """ % locals() + "%(list_expr)s" % locals() + ';')
             self.w( """\
 %(s)s%(nextval)s=@{{:__iter_prepare}}(%(iterator_name)s,%(reuse_tuple)s);\
 """ % locals())
@@ -4164,14 +4052,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
                 self._stmt(n, current_klass)
             self.w( self.dedent() + "}")
 
-        if self.source_tracking:
-            self.w( """\
-%(s)sif ($pyjs.trackstack.length > $pyjs__trackstack_size_%(d)d) {
-%(s)s\t$pyjs.trackstack = $pyjs.trackstack.slice(0,$pyjs__trackstack_size_%(d)d);
-%(s)s\t$pyjs.track = $pyjs.trackstack.slice(-1)[0];
-%(s)s}
-%(s)s$pyjs.track.module=%(mp)s__name__;""" % {'s': self.spacing(), 'd': self.stacksize_depth, 'mp': self.module_prefix})
-            self.stacksize_depth -= 1
         self.generator_switch_case(increment=True)
         self.is_generator = save_is_generator
 
@@ -4194,13 +4074,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             self.generator_switch_case(increment=True)
             self.w( self.indent() + "for (;%s($generator_state[%d] > 0)||(" % (\
                 (assTestvar, len(self.generator_states),)) + \
-                self.track_call(test, node.lineno) + ");$generator_state[%d] = 0) {" % (len(self.generator_states), ))
+                test + ");$generator_state[%d] = 0) {" % (len(self.generator_states), ))
 
             self.generator_add_state()
             self.generator_switch_open()
             self.generator_switch_case(increment=False)
         else:
-            self.w( self.indent() + "while (" + assTestvar + self.track_call(test, node.lineno) + ") {")
+            self.w( self.indent() + "while (" + assTestvar + test + ") {")
 
         if isinstance(node.body, self.ast.Stmt):
             for child in node.body.nodes:
@@ -4432,7 +4312,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             kind = kind1
             result = self.compile_string_formatting(node, e1, kind1, e2, kind2, current_klass)
             if result is None:
-                result = self.track_call("@{{:sprintf}}(%s, %s)" % (e1, e2), node.lineno)
+                result = "@{{:sprintf}}(%s, %s)" % (e1, e2)
             return result, kind
 
 
@@ -4534,7 +4414,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             if get_kind(container_kind) == 'dict' and hash_key:
                 self.w(self.spacing() + "delete %s.__object[%s];" % (container, hash_key))
             else:
-                self.w(self.spacing() + self.track_call("%s.__delitem__(%s)" % (container, index), node.lineno) + ';')
+                self.w(self.spacing() + "%s.__delitem__(%s);" % (container, index))
         else:
             raise TranslationError(
                 "unsupported flag (in _subscript)", node, self.module_name)
@@ -4563,7 +4443,7 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         if len(node.nodes) == 0:
             return "@{{:list}}['__new__'](@{{:list}})", kind
         exprs = [self.expr(x, current_klass) for x in node.nodes]
-        return self.track_call("@{{:_imm_list}}([%s])" % ", ".join(exprs), node.lineno), kind
+        return "@{{:_imm_list}}([%s])" % ", ".join(exprs), kind
 
     def _dict(self, node, current_klass):
         if len(node.items) == 0:
@@ -4574,8 +4454,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             value = self.expr(x[1], current_klass)
             items.append("[" + key + ", " + value + "]")
         varname = self.add_unique('$dict')
-        return self.track_call("(%s=@{{:dict}}['__new__'](@{{:dict}}), %s['__init__']([%s]), %s)" %
-                            (varname, varname, ", ".join(items), varname))
+        return "(%s=@{{:dict}}['__new__'](@{{:dict}}), %s['__init__']([%s]), %s)" % \
+                            (varname, varname, ", ".join(items), varname)
 
     def _typed_tuple(self, node, current_klass, accept_js_object=False):
         if accept_js_object:
@@ -4592,17 +4472,16 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             kind += (expr_kind,)
         if accept_js_object:
             return '[%s]' % ', '.join(exprs), kind
-        return self.track_call("@{{:_imm_tuple}}([%s])" % ", ".join(exprs), node.lineno), kind
+        return "@{{:_imm_tuple}}([%s])" % ", ".join(exprs), kind
 
     def _set(self, node, current_klass):
         if len(node.nodes) == 0:
             return "@{{:set}}['__new__'](@{{:set}})"
-        return self.track_call("@{{:set}}([%s])" % ", ".join([self.expr(x, current_klass) for x in node.nodes]), node.lineno)
+        return "@{{:set}}([%s])" % ", ".join([self.expr(x, current_klass) for x in node.nodes])
 
     def _sliceobj(self, node, current_klass):
         args = ", ".join([self.expr(x, current_klass) for x in node.nodes])
-        return self.track_call(self.pyjslib_name("slice", args=args),
-                               node.lineno)
+        return self.pyjslib_name("slice", args=args)
 
     def _lambda(self, node, current_klass):
         save_local_prefix = self.local_prefix
@@ -4628,9 +4507,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         kind = None
         self.push_lookup()
         save_output = self.output
-        save_tokens = self.sourcemap_tokens
+        save_sourcemap = self.sourcemap
         self.output = StringIO()
-        self.sourcemap_tokens = []
+        self.sourcemap = sourcemaps.SourceMap()
         if isinstance(node, self.ast.ListComp):
             kind = ('list', None, None)
             resultvar = self.add_unique('$collcomp', kind=kind)
@@ -4675,9 +4554,8 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self._for(tnode, current_klass)
 
         captured_output = self.output
-        captured_tokens = self.sourcemap_tokens
         self.output = save_output
-        self.sourcemap_tokens = save_tokens
+        self.sourcemap = save_sourcemap
         collcomp_code = (
             """function(){\n"""
             """\t%(declarations)s\n"""
@@ -4703,7 +4581,6 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.generator_states = [0]
         self.state_max_depth = len(self.generator_states)
         self.push_options()
-        self.source_tracking = self.debug = False
 
         if not isinstance(node.code, self.ast.GenExprInner):
             raise TranslationError(
@@ -4718,9 +4595,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             raise TranslationError(
                 "varargs not supported (in _genexpr)", node, self.module_name)
         save_output = self.output
-        save_tokens = self.sourcemap_tokens
+        save_sourcemap = self.sourcemap
         self.output = StringIO()
-        self.sourcemap_tokens = []
+        self.sourcemap = sourcemaps.SourceMap()
         self.indent()
         self.generator_switch_open()
         self.generator_switch_case(increment=False)
@@ -4746,16 +4623,14 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
         self.generator_switch_close()
 
         captured_output = self.output.getvalue()
-        captured_tokens = self.sourcemap_tokens
         self.output = StringIO()
-        self.sourcemap_tokens = []
+        self.sourcemap = sourcemaps.SourceMap()
         self.w( "function(){")
         self.generator(captured_output)
         self.w( self.dedent() + "}()")
         captured_output = self.output.getvalue()
-        captured_tokens = self.sourcemap_tokens
         self.output = save_output
-        self.sourcemap_tokens = save_tokens
+        self.sourcemap = save_sourcemap
         self.generator_states = save_generator_states
         self.state_max_depth = len(self.generator_states)
         self.is_generator = save_is_generator
@@ -4904,22 +4779,13 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             if not self.attribute_checking:
                 attr = attr_code
             else:
-                if attr.find('(') < 0 and not self.debug:
+                if attr.find('(') < 0:
                     attrstr = attr.replace("\n", "\n\\")
                     attr = """(typeof %(attr)s=='undefined'?
 %(s)s\t\t(function(){throw TypeError("%(attrstr)s is undefined");})():
 %(s)s\t\t%(attr_code)s)""" % locals()
                 else:
                     attr_ = attr
-                    if self.source_tracking or self.debug:
-                        _source_tracking = self.source_tracking
-                        _debug = self.debug
-                        _attribute_checking = self.attribute_checking
-                        self.attribute_checking = self.source_tracking = self.debug = False
-                        attr_ = self.attrib_join(self._getattr(node, current_klass))
-                        self.source_tracking = _source_tracking
-                        self.debug = _debug
-                        self.attribute_checking = _attribute_checking
                     attrstr = attr_.replace("\n", "\\\n")
                     attr = """(function(){
 %(s)s\tvar $pyjs__testval=%(attr_code)s;
@@ -4932,11 +4798,9 @@ var %(e)s_name = (typeof %(e)s.__name__ == 'undefined' ? %(e)s.name : %(e)s.__na
             bound_methods = self.bound_methods and "true" or "false"
             descriptors = self.descriptors and "true" or "false"
             attribute_checking = self.attribute_checking and "true" or "false"
-            source_tracking = self.source_tracking and "true" or "false"
             attr = """\
 @{{:__getattr_check}}(%(attr)s, %(attr_left)s, %(attr_right)s,\
-"%(attrstr)s", %(bound_methods)s, %(descriptors)s, %(attribute_checking)s,\
-%(source_tracking)s)
+"%(attrstr)s", %(bound_methods)s, %(descriptors)s, %(attribute_checking)s)
                 """ % locals()
             return attr
         elif isinstance(node, self.ast.List):
@@ -5281,9 +5145,6 @@ class AppTranslator:
                  attribute_checking=True,
                  bound_methods=True,
                  descriptors=True,
-                 source_tracking=True,
-                 line_tracking=True,
-                 store_source=True,
                  inline_code=False,
                  operator_funcs=True,
                  number_classes=True,
@@ -5296,15 +5157,11 @@ class AppTranslator:
         self.library_dirs = path + library_dirs
         self.dynamic = dynamic
         self.verbose = verbose
-        self.debug = debug
         self.print_statements = print_statements
         self.function_argument_checking = function_argument_checking
         self.attribute_checking = attribute_checking
         self.bound_methods = bound_methods
         self.descriptors = descriptors
-        self.source_tracking = source_tracking
-        self.line_tracking = line_tracking
-        self.store_source = store_source
         self.inline_code = inline_code
         self.operator_funcs = operator_funcs
         self.number_classes = number_classes
@@ -5355,15 +5212,11 @@ class AppTranslator:
         t = Translator(self.compiler,
                        module_name, file_name, src, mod, output,
                        self.dynamic, self.findFile,
-                       debug = self.debug,
                        print_statements = self.print_statements,
                        function_argument_checking = self.function_argument_checking,
                        attribute_checking = self.attribute_checking,
                        bound_methods = self.bound_methods,
                        descriptors = self.descriptors,
-                       source_tracking = self.source_tracking,
-                       line_tracking = self.line_tracking,
-                       store_source = self.store_source,
                        inline_code = self.inline_code,
                        operator_funcs = self.operator_funcs,
                        number_classes = self.number_classes,

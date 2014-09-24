@@ -18,10 +18,9 @@
 
 from __pyjamas__ import INT, JS, setCompilerOptions, debugger
 
-setCompilerOptions("noDebug", "noBoundMethods", "noDescriptors", "noNameChecking",
+setCompilerOptions("noBoundMethods", "noDescriptors", "noNameChecking",
                    "noGetattrSupport", 'noSetattrSupport', "noCallSupport",
-                   "noAttributeChecking", "noSourceTracking", "noLineTracking",
-                   "noStoreSource", "noUniversalMethFuncs")
+                   "noAttributeChecking", "noUniversalMethFuncs")
 
 platform = JS("$pyjs.platform")
 sys = None
@@ -42,20 +41,6 @@ var $min_int = -0x80000000;
 JS("@{{next_hash_id}} = 0;")
 
 _set_hash = JS("""function(obj) { obj.$H = ++@{{next_hash_id}}; }""")
-
-_handle_exception = JS("""function(err) {
-    $pyjs.loaded_modules['sys'].save_exception_stack();
-
-    if (!$pyjs.in_try_except) {
-        var $pyjs_msg = $pyjs.loaded_modules['sys']._get_traceback(err);
-        $pyjs.__active_exception_stack__ = null;
-        $pyjs.track = {module:'__main__', lineno: 1};
-        $pyjs.trackstack = [$pyjs.track];
-        @{{debugReport}}($pyjs_msg);
-    }
-    throw err;
-};
-""")
 
 _check_name = JS("""function(name, value) {
     if (typeof value == 'undefined')
@@ -1159,13 +1144,11 @@ JS("""
 #     Try the parent if it has an object that resolves to [context.]path
 # If the module doesn't exist and dynamic loading is enabled, try dynamic loading
 def ___import___(path, context, module_name=None, get_base=True):
-    save_track_module = JS("$pyjs.track.module")
     sys = JS("$pyjs.loaded_modules['sys']")
     pyjslib = JS("$pyjs.loaded_modules['pyjslib']")
     if JS("@{{sys}}.__was_initialized__ != true"):
         module = JS("$pyjs.loaded_modules[@{{path}}]")
         module()
-        JS("$pyjs.track.module = @{{save_track_module}};")
         if path == 'sys':
             module.modules = dict({'pyjslib': pyjslib,
                                    '__builtin__':pyjslib,
@@ -1208,7 +1191,6 @@ def ___import___(path, context, module_name=None, get_base=True):
             sys.modules[inContextParentName] = module
             JS("@{{module}}.__was_initialized__ = false;")
             module(None)
-            JS("$pyjs.track.module = @{{save_track_module}};")
             if JS("typeof @{{module}}[@{{objName}}] != 'undefined'"):
                 if get_base:
                     return JS("$pyjs.loaded_modules[@{{inContextTopName}}]")
@@ -1221,7 +1203,6 @@ def ___import___(path, context, module_name=None, get_base=True):
             sys.modules[inContextImportName] = module
             JS("@{{module}}.__was_initialized__ = false;")
             module(module_name)
-            JS("$pyjs.track.module = @{{save_track_module}};")
             if get_base:
                 return JS("$pyjs.loaded_modules[@{{inContextTopName}}]")
             return module
@@ -1235,7 +1216,6 @@ def ___import___(path, context, module_name=None, get_base=True):
                         in_context = True
                         if depth == 1:
                             module(module_name)
-                            JS("$pyjs.track.module = @{{save_track_module}};")
                             return module
                         else:
                             module(None)
@@ -1262,7 +1242,6 @@ def ___import___(path, context, module_name=None, get_base=True):
             sys.modules[parentName] = module
             JS("@{{module}}.__was_initialized__ = false;")
             module(None)
-            JS("$pyjs.track.module = @{{save_track_module}};")
             if JS("typeof @{{module}}[@{{objName}}] != 'undefined'"):
                 if get_base:
                     return JS("$pyjs.loaded_modules[@{{topName}}]")
@@ -1276,7 +1255,6 @@ def ___import___(path, context, module_name=None, get_base=True):
             if importName != 'pyjslib' and importName != 'sys':
                 JS("@{{module}}.__was_initialized__ = false;")
             module(module_name)
-            JS("$pyjs.track.module = @{{save_track_module}};")
             if get_base:
                 return JS("$pyjs.loaded_modules[@{{topName}}]")
             return module
@@ -1286,7 +1264,6 @@ def ___import___(path, context, module_name=None, get_base=True):
         module = __dynamic_load__(importName)
         if JS("""typeof @{{module}}== 'function'"""):
             module(module_name)
-            JS("$pyjs.track.module = @{{save_track_module}};")
             if get_base:
                 return JS("$pyjs.loaded_modules[@{{topName}}]")
             return module
@@ -1296,7 +1273,6 @@ def ___import___(path, context, module_name=None, get_base=True):
 
 def __dynamic_load__(importName):
     global __nondynamic_modules__
-    setCompilerOptions("noDebug")
     module = JS("""$pyjs.loaded_modules[@{{importName}}]""")
     if sys is None or dynamic is None or __nondynamic_modules__.has_key(importName):
         return module
@@ -6296,7 +6272,7 @@ def _issubtype(object_, classinfo):
 
 def __getattr_check(attr, attr_left, attr_right, attrstr,
                 bound_methods, descriptors,
-                attribute_checking, source_tracking):
+                attribute_checking):
     """
        (function(){
             var $pyjs__testval;
